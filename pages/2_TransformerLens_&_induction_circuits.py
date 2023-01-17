@@ -588,7 +588,7 @@ cv.attention.attention_heads(tokens=gpt2_str_tokens, attention=attention_pattern
     st.info(r"""
 Note - this library is currently under development, and still might have a few bugs. In particular, the attention diagrams sometimes shrink when you hover over them, depending on the IDE you're using. One solution is to write the diagrams to an HTML file instead:
 
-```
+```python
 html = cv.attention.attention_heads(tokens=gpt2_str_tokens, attention=attention_pattern)
 with open("layer0_attn_patterns.html", "w") as f:
     f.write(str(html))
@@ -1287,15 +1287,15 @@ If this function has been implemented correctly, you should see a result matchin
 
         with st.expander("Help - I'm not sure how to implement this function."):
             st.markdown(r"""
-    To get the induction stripe, you can use:
+To get the induction stripe, you can use:
 
-    ```python
-    torch.diagonal(pattern, dim1=-2, dim2=-1, offset=1-seq_len)
-    ```
+```python
+torch.diagonal(pattern, dim1=-2, dim2=-1, offset=1-seq_len)
+```
 
-    since this returns the diagonal of each attention scores matrix, for every element in the batch and every attention head.
+since this returns the diagonal of each attention scores matrix, for every element in the batch and every attention head.
 
-    Once you have this, you can then take the mean over the batch and diagonal dimensions, giving you a tensor of length `n_heads`. You can then write this to the global `induction_score_store` tensor, using the `hook.layer()` method to get the correct row number.
+Once you have this, you can then take the mean over the batch and diagonal dimensions, giving you a tensor of length `n_heads`. You can then write this to the global `induction_score_store` tensor, using the `hook.layer()` method to get the correct row number.
     """)
 
 
@@ -1375,13 +1375,7 @@ Your mission here is to write a function to look at how much each component cont
 * Each layer 1 head
 
 To emphasise, these are not paths from the start to the end of the model, these are paths from the output of some component directly to the logits - we make no assumptions about how each path was calculated!
-""")
 
-#     st.info(r"""
-# Note - this exercise is less about the features of TransformerLens, and more about understanding the weights of the transformer / working with matrix multiplications. If you're just looking to get an overview of the library, you can just use the solution from this exercise and return to it later.
-# """)
-
-    st.markdown(r"""
 A few important notes for this exercise:
 
 * Here we are just looking at the DIRECT effect on the logits, i.e. the thing that this component writes / embeds into the residual stream - if heads compose with other heads and affect logits like that, or inhibit logits for other tokens to boost the correct one we will not pick up on this!
@@ -1447,16 +1441,16 @@ If you're stuck, you can look at the solution below.""")
 
         with st.expander("Solution"):
             st.markdown(r"""
-    ```python
-    def logit_attribution(embed, l1_results, l2_results, W_U, tokens) -> t.Tensor:
-        W_U_correct_tokens = W_U[:, tokens[1:]]
+```python
+def logit_attribution(embed, l1_results, l2_results, W_U, tokens) -> t.Tensor:
+    W_U_correct_tokens = W_U[:, tokens[1:]]
 
-        direct_attributions = einsum("emb seq, seq emb -> seq", W_U_correct_tokens, embed[:-1])
-        l1_attributions = einsum("emb seq, seq nhead emb -> seq nhead", W_U_correct_tokens, l1_results[:-1])
-        l2_attributions = einsum("emb seq, seq nhead emb -> seq nhead", W_U_correct_tokens, l2_results[:-1])
-        return t.cat([direct_attributions.unsqueeze(-1), l1_attributions, l2_attributions], dim=-1)
-    ```
-    """)
+    direct_attributions = einsum("emb seq, seq emb -> seq", W_U_correct_tokens, embed[:-1])
+    l1_attributions = einsum("emb seq, seq nhead emb -> seq nhead", W_U_correct_tokens, l1_results[:-1])
+    l2_attributions = einsum("emb seq, seq nhead emb -> seq nhead", W_U_correct_tokens, l2_results[:-1])
+    return t.cat([direct_attributions.unsqueeze(-1), l1_attributions, l2_attributions], dim=-1)
+```
+""")
     st.markdown(r"""
 
 Once you've got the tests working, you can visualise the logit attributions for each path through the model.
@@ -1495,20 +1489,20 @@ You should find that the most variation in the logit attribution comes from the 
 """)
         with st.expander("Solution"):
             st.markdown(r"""
-    The tokens with very high logit attribution are the ones which "offer very probable bigrams". For instance, the highest contribution on the direct path comes from `| manip|`, because this is very likely to be followed by `|ulative|` (or presumably a different stem like `| ulation|`). `| super|` -> `|human|` is another example of a bigram formed when the tokenizer splits one word into multiple tokens.
+The tokens with very high logit attribution are the ones which "offer very probable bigrams". For instance, the highest contribution on the direct path comes from `| manip|`, because this is very likely to be followed by `|ulative|` (or presumably a different stem like `| ulation|`). `| super|` -> `|human|` is another example of a bigram formed when the tokenizer splits one word into multiple tokens.
 
-    There are also examples that come from two different words, rather than a single word split by the tokenizer. These include:
+There are also examples that come from two different words, rather than a single word split by the tokenizer. These include:
 
-    * `| more|` -> `| likely|`
-    * `| machine|` -> `| learning|`
-    * `| by|` -> `| default|`
-    * `| how|` -> `| to|`
+* `| more|` -> `| likely|`
+* `| machine|` -> `| learning|`
+* `| by|` -> `| default|`
+* `| how|` -> `| to|`
 
-    See later for a discussion of all the ~infuriating~ fun quirks of tokenization!
-    """)
+See later for a discussion of all the ~infuriating~ fun quirks of tokenization!
+""")
 
         st.markdown(r"""
-    Another feature of the plot - the heads in the second layer seem to have much higher contributions than the heads in the first layer. Why do you think this might be?""")
+Another feature of the plot - the heads in the second layer seem to have much higher contributions than the heads in the first layer. Why do you think this might be?""")
         with st.expander("Hint"):
             st.markdown(r"""
 Think about what this graph actually represents, in terms of paths through the transformer.""")
@@ -1528,40 +1522,41 @@ Remember, you'll need to split the sequence in two, with one overlapping token (
 
         with st.expander("Note - the first plot will be pretty meaningless. Can you see why?"):
             st.markdown(r"""
-    Because the first plot shows the logit attribution for the first half of the sequence, i.e. the first occurrence of each of the tokens. Since there is no structure to this sequence (it is purely random), there is no reason to expect the heads to be doing meaningful computation. The structure lies in the second half of the sequence, when the tokens are repeated, and the heads with high logit attributions will be the ones that can perform induction.
-    """)
+Because the first plot shows the logit attribution for the first half of the sequence, i.e. the first occurrence of each of the tokens. Since there is no structure to this sequence (it is purely random), there is no reason to expect the heads to be doing meaningful computation. The structure lies in the second half of the sequence, when the tokens are repeated, and the heads with high logit attributions will be the ones that can perform induction.
+""")
 
         st.markdown(r"""
-    ```python
-    if MAIN:
-        seq_len = 50
+```python
+if MAIN:
+    seq_len = 50
 
-        embed = rep_cache["hook_embed"]
-        l1_results = rep_cache["blocks.0.attn.hook_result"]
-        l2_results = rep_cache["blocks.1.attn.hook_result"]
-        first_half_tokens = rep_tokens[0, :seq_len+1]
-        second_half_tokens = rep_tokens[0, seq_len:]
-        
-        "YOUR CODE HERE:"
-        "Define `first_half_logit_attr` and `second_half_logit_attr`"
+    embed = rep_cache["hook_embed"]
+    l1_results = rep_cache["blocks.0.attn.hook_result"]
+    l2_results = rep_cache["blocks.1.attn.hook_result"]
+    first_half_tokens = rep_tokens[0, :seq_len+1]
+    second_half_tokens = rep_tokens[0, seq_len:]
+    
+    "YOUR CODE HERE:"
+    "Define `first_half_logit_attr` and `second_half_logit_attr`"
 
-        assert first_half_logit_attr.shape == (seq_len, 2*model.cfg.n_heads + 1)
-        assert second_half_logit_attr.shape == (seq_len, 2*model.cfg.n_heads + 1)
-        
-        plot_logit_attribution(first_half_logit_attr, first_half_tokens)
-        plot_logit_attribution(second_half_logit_attr, second_half_tokens)
-    ```""")
+    assert first_half_logit_attr.shape == (seq_len, 2*model.cfg.n_heads + 1)
+    assert second_half_logit_attr.shape == (seq_len, 2*model.cfg.n_heads + 1)
+    
+    plot_logit_attribution(first_half_logit_attr, first_half_tokens)
+    plot_logit_attribution(second_half_logit_attr, second_half_tokens)
+```""")
 
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
 first_half_logit_attr = logit_attribution(embed[:seq_len+1], l1_results[:seq_len+1], l2_results[:seq_len+1], model.W_U, first_half_tokens)
 second_half_logit_attr = logit_attribution(embed[seq_len:], l1_results[seq_len:], l2_results[seq_len:], model.W_U, second_half_tokens)
+```
 """)
         with st.expander("Click here to see the output you should be getting."):
             st.markdown(r"""
 We only show the second plot (since as discussed, the first plot is meaningless).
-    """)
+""")
             st.plotly_chart(fig_dict["true_images/rep_logit_attribution"], use_container_width=True)
 
         st.markdown(r"""What is the interpretation of this plot, in the context of our induction head circuit?""")
@@ -3229,7 +3224,7 @@ If $X=A$, then the key is a good match for the query (since it's exactly what th
 
 ---
 
-To conclude, we've argued that the $(A, X)$th element of the matrix is large when $X=A$, and small when $X \neq A$. This is equivalent to saying that the largest element in each **column** is the diagonal element (note this is different from the previous case, where we were looking at **rows**, so you'll have to transpose your matrix - the `FactoredMatrix` class has a transpose method).
+To summarize, we've argued that the $(A, X)$th element of the matrix is large when $X=A$, and small when $X \neq A$. This is equivalent to saying that the largest element in each **column** is the diagonal element (note this is different from the previous case, where we were looking at **rows**, so you'll have to transpose your matrix - the `FactoredMatrix` class has a transpose method).
 """)
 
 # Note - this actually shows why the largest element of each **row** of the matrix should be the diagonal one, rather than the largest element on each column. It's important to get this the right way round - remember that logits are invariant to the addition of a constant, so it's meaningless to compare across two different logit distributions! That's why, in the code below, we've applied the test to the transpose of your function's output.
@@ -3246,27 +3241,21 @@ Calculate the matrix above, as a `FactoredMatrix` object.""")
         
         with st.expander("Aside about multiplying FactoredMatrix objects together."):
             st.markdown(r"""
-If  `M1 = A1 @ B1` and `M2 = A2 @ B2` are factored matrices, then `M = M1 @ M2` returns:
+If  `M1 = A1 @ B1` and `M2 = A2 @ B2` are factored matrices, then `M = M1 @ M2` returns a new factored matrix. This might be:
 
 ```python
 FactoredMatrix(M1.AB @ M2.A, M2.B)
 ```
 
-In other words, the factorisation is:
-
-$$
-M = (A_1 B_1) (A_2 B_2) = (A_1 B_1 A_2) B_2
-$$
-
-This means that the bottleneck dimension for the factored matrix will be the same as the bottleneck for the `M2` matrix. If you want to have the bottleneck be from `M1`, then you can explicitly define:
+or it might be:
 
 ```python
-M = FactoredMatrix(M1.A, M1.B @ M2)
+FactoredMatrix(M1.A, M1.B @ M2.AB)
 ```
 
-This only matters for computational reasons (having the smaller bottleneck dimension will result in some computations being faster). Importantly, it doesn't change the $USV^T$ factorisation of the matrix or any other properties derived from this like the singular values, since these are independent of which factorisation we choose.
+with these two objects corresponding to the factorisations $M = (A_1 B_1) (A_2 B_2)$ and $M = A_1 (B_1 A_2 B_2)$ respectively.
 
-Furthermore, in these exercises you won't have to worry about this, because your bottleneck dimension should always be `d_head = 64`.
+Which one gets returned depends on the size of the hidden dimension, e.g. `M1.mdim < M2.mdim` then the factorisation used will be $M = (A_1 B_1) (A_2 B_2)$.
 """)
         st.markdown(r"""
 
@@ -3537,7 +3526,6 @@ if MAIN:
         color_continuous_scale="RdBu",
         color_continuous_midpoint=comp_scores_baseline.mean(),
     ).show()
-
 ```""")
         with st.expander("Click to see the output you should be getting"):
             st.markdown(r"The plots for Q, K and V composition respectively:")
