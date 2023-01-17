@@ -47,7 +47,7 @@ We'll start by looking at our bracket classifier and dataset, and see how it wor
 
 ## 2️⃣ Moving backwards
 
-If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **resudiaul stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.
+If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **residual stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.
 
 This will require learning how to use **hooks**, to capture inputs and outputs of intermediate layers in the model.
 
