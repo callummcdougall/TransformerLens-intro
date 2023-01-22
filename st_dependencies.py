@@ -30,6 +30,9 @@ div[data-testid="column"] {
     background-color: #f9f5ff;
     padding: 15px;
 }
+.stAlert h4 {
+    padding-top: 0px;
+}
 .st-ae code {
     padding: 0px !important;
 }

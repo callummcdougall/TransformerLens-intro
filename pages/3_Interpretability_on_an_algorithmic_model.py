@@ -19,41 +19,120 @@ def read_from_html(filename):
     filename = f"images/{filename}.html"
     with open(filename) as f:
         html = f.read()
-    call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
-    call_args = json.loads(f'[{call_arg_str}]')
     try:
-        plotly_json = {'data': call_args[1], 'layout': call_args[2]}
-        fig = pio.from_json(json.dumps(plotly_json))
+        call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
+        call_args = json.loads(f'[{call_arg_str}]')
+        try:
+            plotly_json = {'data': call_args[1], 'layout': call_args[2]}
+            fig = pio.from_json(json.dumps(plotly_json))
+        except:
+            del call_args[2]["template"]["data"]["scatter"][0]["fillpattern"]
+            plotly_json = {'data': call_args[1], 'layout': call_args[2]}
+            fig = pio.from_json(json.dumps(plotly_json))
     except:
+        call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
+        call_arg_str = re.split(r'"responsive": true', call_arg_str)[0].rstrip("{, ")
+        call_args = json.loads(f'[{call_arg_str}]')
         del call_args[2]["template"]["data"]["scatter"][0]["fillpattern"]
-        plotly_json = {'data': call_args[1], 'layout': call_args[2]}
+        frame_arg_str = re.findall(r'Plotly\.addFrames\((.*)\)', html)[0].split(", ")[1]
+        frame_args = json.loads(frame_arg_str)
+        plotly_json = {'data': call_args[1], 'layout': call_args[2], 'frames': frame_args}
         fig = pio.from_json(json.dumps(plotly_json))
+
     return fig
 
-NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "true_images/attn_probs_red", "true_images/attn_qpos1"]
+WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
+NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "attn_probs_red", "attn_qpos1"]
 def get_fig_dict():
     return {name: read_from_html(name) for name in NAMES}
+def update_fig_dict(fig_dict):
+    for name in [
+        r"hists_per_comp", 
+        r"failure_types_scatter", 
+        r"failure_types_scatter_21", 
+        r"failure_types_scatter_20", 
+        r"attn_probs_20", 
+        r"hists_per_comp_20", 
+        r"mlp_attribution_0", 
+        r"mlp_attribution_1", 
+        r"get_out_by_neuron", 
+        r"neuron_contributions_0", 
+        r"neuron_contributions_1", 
+        # r"neuron_contributions_bar_0", 
+        # r"neuron_contributions_bar_1"
+        r"attn_plot",
+        r"attn_probs_00", 
+    ]:
+        # if os.path.exists(WIP + "/" + name + ".json"):
+        #     fig_dict[name] = pio.read_json(WIP + "/" + name + ".json")
+        if os.path.exists(WIP + "/" + name + ".html"):
+            fig_dict[name] = read_from_html("written_images/" + name)
+    return fig_dict
+
 if "fig_dict" not in st.session_state:
     st.session_state["fig_dict"] = {}
 if NAMES[0] not in st.session_state["fig_dict"]:
     st.session_state["fig_dict"] |= get_fig_dict()
 fig_dict = st.session_state["fig_dict"]
+fig_dict = update_fig_dict(fig_dict)
+
+
 
 def section_home():
     st.markdown(r"""
+# Interpretability on an algorithmic model - why should we care?
+
+When models are trained on synthetic, algorithmic tasks, they often learn to do some clean, interpretable computation inside. Choosing a suitable task and trying to reverse engineer a model can be a rich area of interesting circuits to interpret! In some sense, this is interpretability on easy mode - the model is normally trained on a single task (unlike language models, which need to learn everything about language!), we know the exact ground truth about the data and optimal solution, and the models are tiny. So why care?
+
+Working on algorithmic problems gives us the opportunity to:
+
+* Practice interpretability, and build intuitions and learn techniques.
+* Refine our understanding of the right tools and techniques, by trying them out on problems with well-understood ground truth.
+* Isolate a particularly interesting kind of behaviour, in order to study it in detail and understand it better (e.g. Anthropic's [Toy Models of Superposition](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=EuO4CLwSIzX7AEZA1ZOsnwwF) paper).
+* Take the insights you've learned from reverse-engineering small models, and investigate which results will generalise, or whether any of the techniques you used to identify circuits can be automated and used at scale.
+
+The algorithmic problem we'll work on in these exercises is **bracket classification**, i.e. taking a string of parentheses like `"(())()"` and trying to output a prediction of "balanced" or "unbalanced". We will find an algorithmic solution for solving this problem, and reverse-engineer one of the circuits in our model that is responsible for implementing one part of this algorithm.
+
 ## 1️⃣ Bracket classifier
 
-We'll start by looking at our bracket classifier and dataset, and see how it works. We'll also write our own hand-coded solution to the balanced bracket problem (understanding what a closed-form solution looks like will be helpful as we discover how our transformer is solving the problem).
+We'll start by looking at our bracket classifier and dataset, and see how it works. We'll also write our own hand-coded solution to the balanced bracket problem (understanding what a closed-form solution looks like will be helpful as we discover how our transformer is solving the problem).""")
 
+    st.info(r"""
+#### Learning Objectives
+
+* Understand how we can use transformers as classifiers (via **bidirectional attention**, special **classification tokens**, and having a different **output vocabulary** than input vocabulary).
+* Review hooks, and understand how to use **permanent hooks** to modify your model's behaviour.
+* Understand the bracket classifier model and dataset.
+* Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).""")
+
+    st.markdown(r"""
 ## 2️⃣ Moving backwards
 
-If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **residual stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.
+If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **residual stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.""")
 
-This will require learning how to use **hooks**, to capture inputs and outputs of intermediate layers in the model.
+    st.info(r"""
+#### Learning Objectives
+
+* Understand the idea of having an **"unbalanced direction"** in the residual stream, which maximally points in the direction of classifying the bracket string as unbalanced.
+* Decompose the residual stream into a sum of terms, and use **logit attribution** to identify which components are important.
+* Generalize the "unbalanced direction" concept by thinking about the unbalanced direction for the inputs to different model components.
+* Classify unbalanced bracket strings by the different ways in which they can fail to be balanced, and observe that one of your attention heads seems to specialize in identifying a certain class of unbalanced strings.""")
+
+    st.markdown(r"""
 
 ## 3️⃣ Total elevation circuit
 
-In this section (which is the meat of the exercises), we'll hone in on a particular circuit and try to figure out what kinds of composition it is using.
+In this section (which is the meat of the exercises), we'll hone in on a particular circuit and try to figure out what kinds of composition it is using.""")
+
+    st.info(r"""
+#### Learning Objectives
+
+* Identify the path through the model which is responsible for implementing the **net elevation** circuit (i.e. identifying whether the number of left and right brackets match).
+* Interpret different attention patterns, as doing things like "copying information from sequence position $i$ to $j$", or as "averaging information over all sequence positions".
+* Understand the role of **MLPs** as taking a linear function of the sequence (e.g. difference between number of left and right brackets) and converting it into a nonlinear function (e.g. the boolean information `num_left == num_right`).
+""")
+
+    st.markdown(r"""
 
 ## 4️⃣ Bonus exercises
 
@@ -118,13 +197,18 @@ GPT uses **causal attention**, where the attention scores get masked wherever th
 
 GPT is trained via gradient descent on the cross-entropy loss between its predictions for the next token and the actual next tokens. Models designed to perform classification are trained in a very similar way, but instead of outputting probability distributions over the next token, they output a distribution over class labels. We do this by having an unembedding matrix of size `[d_model, num_classifications]`, and only using a single sequence position (usually the 0th position) to represent our classification probabilities.
 
-Below is a schematic to compare the model architectures and how they're used (you might need to open the image in a new tab to see it clearly):
+Below is a schematic to compare the model architectures and how they're used:
 """)
 
-    st_image("true_images/gpt-vs-bert.png", 1200)
+    st_image("gpt-vs-bert.png", 1200)
     st.markdown("")
 
     st.markdown(r"""
+Note that, just because the outputs at all other sequence positions are discarded, doesn't mean those sequence positions aren't useful. They will almost certainly be the sites of important intermediate calculations. But it does mean that the model will always have to move the information from those positions to the 0th position in order for the information to be used for classification.
+
+#### A note on softmax
+
+We use the softmax function to convert our logits 
 
 #### Masking padding tokens
 
@@ -135,6 +219,15 @@ The end token goes at the end of every bracket sequence, and then we add padding
 ```
 [start] + ( + ( + ) + ) + [end] + [pad] + [pad] + ... + [pad]
 ```
+
+When we calculate the attention scores, we mask them at all (query, key) positions where the key is a padding token. This makes sure that information doesn't flow from padding tokens to other tokens in the sequence (just like how GPT's causal masking makes sure that information doesn't flow from future tokens to past tokens).
+""")
+
+    st_image("gpt-vs-bert-3.png", 900)
+    st.markdown("")
+
+    st.markdown(r"""
+Note that the attention scores aren't masked when the query is a padding token and the key isn't. In theory, this means that information can be stored in the padding token positions. However, because the padding token key positions are always masked, this information can't flow back into the rest of the sequence, so it never affects the final output. (Also, note that if we masked query positions as well, we'd get numerical errors, since we'd be taking softmax across a row where every element is minus infinity, which is not well-defined!)
 """)
 
     with st.expander("Aside on how this relates to BERT"):
@@ -147,11 +240,8 @@ This is all very similar to how the bidirectional transformer **BERT** works:
 If you're interested in reading more on this, you can check out [this link](https://albertauyeung.github.io/2020/06/19/bert-tokenization.html/).
 """)
 
-    st_image("true_images/gpt-vs-bert-2.png", 800)
-    st.markdown("")
-
     st.markdown(r"""
-TransformerLens does not (yet) provide support for this type of masking, so we have implemented it for you using TransformerLens's **permanent hooks** feature. If you are interested then you can read the code below to see how it works, but it's more important that you understand what padding is happening than understanding exactly how it's implemented.
+We've implemented this type of masking for you, using TransformerLens's **permanent hooks** feature. We will discuss the details of this below (permanent hooks are a recent addition to TransformerLens which we havent' covered yet, and they're useful to understand).
 
 #### Other details
 
@@ -171,10 +261,16 @@ Here is a summary of all the relevant architectural details:
     * We can then softmax to get our classification probabilities.
 * Activation function is `ReLU`.
 
-To refer to attention heads, we'll again use the shorthand `layer.head` where both layer and head are zero-indexed. So `2.1` is the second attention head (index 1) in the third layer (index 2). With this shorthand, the network graph looks like:""")
+To refer to attention heads, we'll again use the shorthand `layer.head` where both layer and head are zero-indexed. So `2.1` is the second attention head (index 1) in the third layer (index 2).
 
-    st_image("true_images/bracket-transformer-entire-model.png", 300)
-    st.markdown("")
+#### Some useful diagrams
+
+Below, you can see the architecture of the model, side by side with a diagram of the activation names for the layers in the model (and how you reference them).""")
+
+    with st.expander("Your transformer's architecture"):
+        st_image("bracket-transformer-entire-model.png", 300)
+        st.markdown("")
+    
     # st.write("""<figure style="max-width:400px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNp9k19vgjAUxb8K6bMulEey-DI1MWHORN9gWaq9ajPaklISjfjdV-j4YyHw1PvrObcnl_aBTpICCtFFkezqHZaJ8MyXF0cLPiTPpAChc7tRfQf5C8KbzxdeyYSGC6iyRit-BBrXy_ejWtQlZeLyXWsjcgflb0RMKO2Tz2g3gHhIxmTBkDiydbTtl-XtR0jFS2_NBElrx9bUcV3aDl4FWjWFajyqjJgAohqay7Pm5FZ6e7uo-Vehs0J3U9rJnGkmnUEZasfUbJN0YlZdt4bY7a0ft-Gtw3_z3Zn2zGN6PKHvYHOeKdwWBvkvv8xpgFs3dq24nxYP0o7o8YS-g81542nxy81xGgStO3CtQT9tMEg7oscT-g42542nDboLbN0gKJohDooTRs2LfVQ4QfoKHBIUmiWFMylSnaBEPI20yCjRsKJMS4XCM0lzmCFSaLm_ixMKtSqgES0ZMe-d_6uefzWyPj4" /></figure>""", unsafe_allow_html=True)
 
 # ```mermaid
@@ -194,24 +290,30 @@ To refer to attention heads, we'll again use the shorthand `layer.head` where bo
 #     end
 # ```
     st.markdown(r"""
-Again, here is a diagram showing the hook names in an attention block, to serve as a useful reference:""")
+And here is a diagram showing the internal parts of your model, as well as a cheat sheet for getting activation hook names and model parameters:""")
 
-    with st.expander("Full diagram"):
-        st.markdown(r"""
-Note that you can access the layernorms using e.g. `utils.get_act_name("normalized", 3, "ln2")` (for the layernorm before MLPs in the 3rd layer).
+    with st.expander("Cheat sheet"):
+        st_image("diagram-tl.png", 1600)
+        st.markdown("")
 
-Another note - make sure you don't get mixed up by `pre` and `post` for the MLPs. This refers to pre and post-activation function, not pre and post-MLP. The input to the MLP is `ln2.hook_normalized`, and the output is `mlp_out`.
+#     with st.expander("Full diagram"):
+#         st.markdown(r"""
+# Note that you can access the layernorms using e.g. `utils.get_act_name("normalized", 3, "ln2")` (for the layernorm before MLPs in the 3rd layer).
 
-The other hooks not shown in this diagram which are useful to know:
+# Another note - make sure you don't get mixed up by `pre` and `post` for the MLPs. This refers to pre and post-activation function, not pre and post-MLP. The input to the MLP is `ln2.hook_normalized`, and the output is `mlp_out`.
 
-* `hook_embed` for token embeddings
-* `hook_pos_embed` for positional embeddings
-* `ln_final.hook_normalized` for the output of the final layernorm (i.e. just before the unembedding)
-""")
-        st.write("""<figure style="max-width:680px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNrdV1FP2zAQ_itWpI1tasSIeApdJaYWJqGNIRA8UBS5sdNadeLUdkJbwn_fOUkJ6ZoCm9R2y4N955yT786fz-cHyxeEWq41lDgeoatuP0LwqGRQDPSttopxhJSecfplLxCRthWbU9c5jKd7nSuJIxUIGVL5lQt_3N431p2-VXzGPD7HSnVpgGgY6xm6Z0SP3M_xtDWibDjSRjxaYW1gQcOFdCUlYFHZSKoY8WJJb_vWk9wmLF2gHAhJqLS1iF0nniIlOCNowLE_PgqxHLIof5U70N6HeZ12_rdydvXTytsDxxh_UHTSQsQLwZp_bO-bWeDrnW3b3Vt057pu7qNtdzJMSFZgCxmB973G97FQunIElG16UgW5kl7LBR4doPc0VPFR2T1v0ZruJev17QrK5ah9zGl9KAKeYg6ASTVOI7KCWAiWCGXguJbY1yikOIJosZRBbAczCADJ8u_DuuX95pbs4NliFShvPA7gBtBmlYMArFL-VUJhrSP0Flqgt3Z_1jYwLq2rk7o6rqvGN0_5AihXf3FSV2MwpDKqD57W1XldhU8mXDdQvGKFyUI33rWhznWWAmHSzfFkRDHxGJkaxhi5nktPl3LlfX5QUIJwOkQiQCnmCUUp9bWQKpsD9PlOQF_sx_OsWIIiq4OwHXTLW9HAg5wWIpFSmVuqFoJzCA0YVsCC8ywnpUgM8IW47WO1mbkXhrkX2QTATnaFuSdLzCVCo1gKksAhgrmIhuWsVnE8IRwRFGI1zp6lg0XwC20jnlVOgY8XeXtWcwx4IwId4mlW5iMAWUq7AdA-bSbKmSHKWTYGzOOdIcrfFVoOevHYW1cWOU11kbO2MIJK9qlQBXmbqeG1BZqzsxWa81-UaCGPX1tfNRByJfnyykcule_mbvRiVeMsQs7ykLMoK-6JG70hHqJPjZwFunoBoCpufZu97zXjgoDBYW8iBl0Gq1qWAaW05a1uo17JzXzVC_HdOwQAfxx_720E3eW345-933bNlkFYLSukQH1GLNd6MJD6lh7RkPYtF0RCA2yuArDlHsE0iQnWtEcY1M2WG2CuaMvCiRaXs8i3XC0TujDqMgz7PyytHn8BSKkJUQ" /></figure>""", unsafe_allow_html=True)
+# The other hooks not shown in this diagram which are useful to know:
+
+# * `hook_embed` for token embeddings
+# * `hook_pos_embed` for positional embeddings
+# * `ln_final.hook_normalized` for the output of the final layernorm (i.e. just before the unembedding)
+# """)
+#         st.write("""<figure style="max-width:680px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNrdV1FP2zAQ_itWpI1tasSIeApdJaYWJqGNIRA8UBS5sdNadeLUdkJbwn_fOUkJ6ZoCm9R2y4N955yT786fz-cHyxeEWq41lDgeoatuP0LwqGRQDPSttopxhJSecfplLxCRthWbU9c5jKd7nSuJIxUIGVL5lQt_3N431p2-VXzGPD7HSnVpgGgY6xm6Z0SP3M_xtDWibDjSRjxaYW1gQcOFdCUlYFHZSKoY8WJJb_vWk9wmLF2gHAhJqLS1iF0nniIlOCNowLE_PgqxHLIof5U70N6HeZ12_rdydvXTytsDxxh_UHTSQsQLwZp_bO-bWeDrnW3b3Vt057pu7qNtdzJMSFZgCxmB973G97FQunIElG16UgW5kl7LBR4doPc0VPFR2T1v0ZruJev17QrK5ah9zGl9KAKeYg6ASTVOI7KCWAiWCGXguJbY1yikOIJosZRBbAczCADJ8u_DuuX95pbs4NliFShvPA7gBtBmlYMArFL-VUJhrSP0Flqgt3Z_1jYwLq2rk7o6rqvGN0_5AihXf3FSV2MwpDKqD57W1XldhU8mXDdQvGKFyUI33rWhznWWAmHSzfFkRDHxGJkaxhi5nktPl3LlfX5QUIJwOkQiQCnmCUUp9bWQKpsD9PlOQF_sx_OsWIIiq4OwHXTLW9HAg5wWIpFSmVuqFoJzCA0YVsCC8ywnpUgM8IW47WO1mbkXhrkX2QTATnaFuSdLzCVCo1gKksAhgrmIhuWsVnE8IRwRFGI1zp6lg0XwC20jnlVOgY8XeXtWcwx4IwId4mlW5iMAWUq7AdA-bSbKmSHKWTYGzOOdIcrfFVoOevHYW1cWOU11kbO2MIJK9qlQBXmbqeG1BZqzsxWa81-UaCGPX1tfNRByJfnyykcule_mbvRiVeMsQs7ykLMoK-6JG70hHqJPjZwFunoBoCpufZu97zXjgoDBYW8iBl0Gq1qWAaW05a1uo17JzXzVC_HdOwQAfxx_720E3eW345-933bNlkFYLSukQH1GLNd6MJD6lh7RkPYtF0RCA2yuArDlHsE0iQnWtEcY1M2WG2CuaMvCiRaXs8i3XC0TujDqMgz7PyytHn8BSKkJUQ" /></figure>""", unsafe_allow_html=True)
 
 
     st.markdown(r"""
+I'd recommend opening both these images in a different tab.
+
 ## Imports
 
 Run the code below for all necessary imports.
@@ -468,7 +570,9 @@ def is_balanced_forloop(parens: str) -> bool:
             return False
     
     return cumsum == 0
-```
+```""")
+
+    st.markdown(r"""
 
 ## Hand-Written Solution - Vectorized
 
@@ -486,15 +590,9 @@ def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
     pass
 ```
 """)
-    with st.expander(r"""Hint - Vectorized"""):
-        st.markdown(r"""You can do this by indexing into a lookup table of size `vocab_size` and a `t.cumsum`. The lookup table represents the change in "nesting depth""")
-
-    with st.expander("Instructions - Vectorized"):
+    with st.expander("Hint - Vectorized"):
         st.markdown(r"""
-One solution is to map begin, pad, and end tokens to zero, map open paren to 1 and close paren to -1. Then calculate the cumulative sum of the sequence. Your sequence is unbalanced if and only if:
-
-- The last element of the cumulative sum is nonzero
-- Any element of the cumulative sum is negative""")
+One solution is to map begin, pad, and end tokens to zero, map open paren to 1 and close paren to -1. Then take the cumulative sum, and check the two conditions which are necessary and sufficient for the bracket string to be balanced.""")
     with st.expander("Solution - Vectorized"):
         st.markdown(r"""
 ```python
@@ -513,7 +611,7 @@ def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
 
     return no_total_elevation_failure & no_negative_failure
 ```""")
-    st.markdown("")
+        st.markdown("")
 
     st.markdown(r"""
 ```python
@@ -584,7 +682,7 @@ We'll do this by starting from the model outputs and working backwards, finding 
 
 The final part of the model is the classification head, which has three stages - the final layernorm, the unembedding, and softmax, at the end of which we get our probabilities.""")
 
-    st_image("true_images/bracket-transformer-first-attr-0.png", 550)
+    st_image("bracket-transformer-first-attr-0.png", 550)
 
     st.markdown(r"""
 Note - for simplicity, we'll ignore the batch dimension in the following discussion.
@@ -618,12 +716,14 @@ We can now put the difference in logits as a function of $W$ and $x_{\text{linea
 ```
 logit_diff = (final_LN_output @ W_U)[0, 0] - (final_LN_output @ W_U)[0, 1]
 
-           = final_LN_output[0, :] @ (W_U[0, :] - W_U[1, :])
+           = final_LN_output[0, :] @ (W_U[:, 0] - W_U[:, 0])
 ```
 
-So a high difference in the logits follows from a high dot product of the output of the LayerNorm with the vector `W_U[0, :] - W_U[1, :]`. We can now ask, "What leads to LayerNorm's output having high dot product with this vector?".
+(recall that the `(i, j)`th element of matrix `AB` is `A[i, :] @ B[:, j]`)
 
-Use the weights of the final linear layer (`model.decoder`) to identify the direction in the space that goes into the linear layer (and out of the LN) corresponding to an 'unbalanced' classification. Hint: this is a one line function.
+So a high difference in the logits follows from a high dot product of the output of the LayerNorm with the vector `W_U[0, :] - W_U[1, :]`. We can call this the **unbalanced direction** for inputs to the unembedding matrix. We can now ask, "What leads to LayerNorm's output having high dot product with this vector?".
+
+In the function below, you should compute this vector (this should just be a one-line function).
 
 ```python
 def get_post_final_ln_dir(model: HookedTransformer) -> TT["d_model"]:
@@ -689,9 +789,9 @@ When applying this kind of analysis to LLMs, it's sometimes harder to abstract a
 
     st.markdown(r"""
 
-Now, we can ask "What leads to the _input_ to the LayerNorm having a high dot-product with this new vector?""")
+Now, we can ask 'What leads to the _input_ to the LayerNorm having a high dot-product with this new vector?'""")
 
-    st_image("true_images/bracket-transformer-first-attr.png", 600)
+    st_image("bracket-transformer-first-attr.png", 600)
     st.markdown("")
 
     st.markdown(r"""
@@ -705,10 +805,13 @@ def get_activations(model: HookedTransformer, data: BracketsDataset, names: Unio
     '''
     Uses hooks to return activations from the model.
 
-    If names is a string, returns a tensor of activations for that hook name.
+    If names is a string, returns the activations for that hook name.
     If names is a list of strings, returns a dictionary mapping hook names to tensors of activations.
     '''
     pass
+
+if MAIN:
+    tests.test_get_activations(get_activations)
 ```
 """)
 
@@ -720,6 +823,8 @@ To record the activations, define an empty dictionary `activations_dict`, and us
 def hook_fn(value, hook):
     activations_dict[hook.name] = value
 ```
+
+The `fwd_hooks` argument of `run_with_hooks` can be a function which takes `hook_name` and returns `True` if the hook is in hook names, else `False`.
 """)
     with st.expander("Solution"):
         st.markdown(r"""
@@ -728,25 +833,23 @@ def get_activations(model: HookedTransformer, data: BracketsDataset, names: Unio
     '''
     Uses hooks to return activations from the model.
 
-    If names is a string, returns a tensor of activations for that hook name.
+    If names is a string, returns the activations for that hook name.
     If names is a list of strings, returns a dictionary mapping hook names to tensors of activations.
     '''
     activations_dict = {}
-    names = [names] if isinstance(names, str) else names
+    hook_names_list = names if isinstance(names, list) else [names]
 
     def hook_fn(value, hook):
         activations_dict[hook.name] = value
 
+    hook_name_filter = lambda name: name in hook_names_list
     model.run_with_hooks(
         data.toks,
         return_type=None,
-        fwd_hooks=[(lambda hook_name: hook_name in names, hook_fn)]
+        fwd_hooks=[(hook_name_filter, hook_fn)]
     )
 
-    if len(names) == 1:
-        return activations_dict[names[0]]
-    else:
-        return activations_dict
+    return activations_dict if isinstance(names, list) else activations_dict[hook_names_list[0]]
 ```
 """)
 
@@ -756,65 +859,71 @@ Now, use these functions and the [sklearn LinearRegression class](https://scikit
 
 A few notes:
 
-* We've provided you with the helper function `get_input_and_output_hook_names_for_layernorm`. This returns the names of the hooks immediately before and after a given layernorm (see the docstring for how to use it).
+* We've provided you with the helper function `LN_hook_names`. This returns the names of the hooks immediately before and after a given layernorm (see the docstring for how to use it).
 * The `get_ln_fit` function takes `seq_pos` as an input. If this is an integer, then we are fitting only for that sequence position. If `seq_pos = None`, then we are fitting for all sequence positions (we aggregate the sequence and batch dimensions before performing our regression).
     * The reason for including this parameter is that sometimes we care about how the layernorm operates on a particular sequence position (e.g. for the final layernorm, we only care about the 0th sequence position), but later on we'll also consider the behaviour of layernorm across all sequence positions.
 * You should include a fit coefficient in your linear regression (this is the default for `LinearRegression`).
 
 ```python
-def LN_hook_names(layer: int, layernorm: Optional[int] = None) -> Tuple[str, str]:
+def LN_hook_names(layernorm: LayerNorm) -> Tuple[str, str]:
     '''
     Returns the names of the hooks immediately before and after a given layernorm.
-
-    LN_hook_names(layer, 1) gives the names for the layernorm before the attention heads in the given layer.
-    LN_hook_names(layer, 2) gives the names for the layernorm before the MLP in the given layer.
-    LN_hook_names(-1)       gives the names for the final layernorm (before the unembedding).
+    e.g. LN_hook_names(model.final_ln) returns ["blocks.2.hook_resid_post", "ln_final.hook_normalized"]
     '''
-    if layer == -1:
+    if layernorm.name == "ln_final":
         input_hook_name = utils.get_act_name("resid_post", 2)
         output_hook_name = "ln_final.hook_normalized"
     else:
-        assert layernorm in (1, 2)
-        input_hook_name = utils.get_act_name("resid_pre" if layernorm==1 else "resid_mid", layer)
-        output_hook_name = utils.get_act_name('normalized', layer, f'ln{layernorm}')
+        layer, ln = layernorm.name.split(".")[1:]
+        layer = int(layer)
+        input_hook_name = utils.get_act_name("resid_pre" if ln=="ln1" else "resid_mid", layer)
+        output_hook_name = utils.get_act_name('normalized', layer, ln)
     
     return input_hook_name, output_hook_name
 
 
 def get_ln_fit(
-    model: HookedTransformer, data: BracketsDataset, layer: int, layernorm: Optional[int] = None, seq_pos: Optional[int] = None
-) -> Tuple[LinearRegression, t.Tensor]:
+    model: HookedTransformer, data: BracketsDataset, layernorm: LayerNorm, seq_pos: Optional[int] = None
+) -> Tuple[LinearRegression, float]:
     '''
-    if seq_pos is None, find best fit for all sequence positions. Otherwise, fit only for given seq_pos.
+    if seq_pos is None, find best fit aggregated over all sequence positions. Otherwise, fit only for given seq_pos.
 
-    Returns: A tuple of a (fitted) sklearn LinearRegression object and a dimensionless tensor containing the r^2 of the fit (hint: wrap a value in torch.tensor() to make a dimensionless tensor)
+    Returns: A tuple of a (fitted) sklearn LinearRegression object and a dimensionless tensor containing the r^2 of 
+    the fit (hint: wrap a value in torch.tensor() to make a dimensionless tensor)
     '''
     pass
 
 
 if MAIN:
-    (final_ln_fit, r2) = get_ln_fit(model, data, model.norm, seq_pos=0)
-    print("r^2: ", r2)
-    w5d5_tests.test_final_ln_fit(model, data, get_ln_fit)
+    tests.test_get_ln_fit(get_ln_fit, model, data)
+
+    (final_ln_fit, r2) = get_ln_fit(model, data, layernorm=model.ln_final, seq_pos=0)
+    print(f"r^2 for LN_final, at sequence position 0: {r2:.4f}")
+
+    (final_ln_fit, r2) = get_ln_fit(model, data, layernorm=model.blocks[1].ln1, seq_pos=None)
+    print(f"r^2 for LN1, layer 1, over all sequence positions: {r2:.4f}")
 ```""")
 
     with st.expander("Help - I'm not sure how to fit the linear regression."):
         st.markdown(r"""
 If `inputs` and `outputs` are both tensors of shape `(samples, d_model)`, then `LinearRegression().fit(inputs, outputs)` returns the fit object which should be the first output of your function.
+
+You can get the Rsquared with the `.score` method of the fit object.
 """)
     with st.expander("Solution"):
         st.markdown(r"""
 ```python
 def get_ln_fit(
-    model: HookedTransformer, data: BracketsDataset, layer: int, layernorm: Optional[int] = None, seq_pos: Optional[int] = None
-) -> Tuple[LinearRegression, t.Tensor]:
+    model: HookedTransformer, data: BracketsDataset, layernorm: LayerNorm, seq_pos: Optional[int] = None
+) -> Tuple[LinearRegression, float]:
     '''
     if seq_pos is None, find best fit aggregated over all sequence positions. Otherwise, fit only for given seq_pos.
 
-    Returns: A tuple of a (fitted) sklearn LinearRegression object and a dimensionless tensor containing the r^2 of the fit (hint: wrap a value in torch.tensor() to make a dimensionless tensor)
+    Returns: A tuple of a (fitted) sklearn LinearRegression object and a dimensionless tensor containing the r^2 of 
+    the fit (hint: wrap a value in torch.tensor() to make a dimensionless tensor)
     '''
 
-    input_hook_name, output_hook_name = LN_hook_names(layer, layernorm)
+    input_hook_name, output_hook_name = LN_hook_names(layernorm)
 
     activations_dict = get_activations(model, data, [input_hook_name, output_hook_name])
     inputs = utils.to_numpy(activations_dict[input_hook_name])
@@ -829,7 +938,7 @@ def get_ln_fit(
     
     final_ln_fit = LinearRegression().fit(inputs, outputs)
 
-    r2 = t.tensor(final_ln_fit.score(inputs, outputs))
+    r2 = final_ln_fit.score(inputs, outputs)
 
     return (final_ln_fit, r2)
 ```""")
@@ -837,20 +946,19 @@ def get_ln_fit(
 
 Armed with our linear fit, we can now identify the direction in the residual stream before the final layer norm that most points in the direction of unbalanced evidence.
 
-
 ```python
 def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT["d_model"]:
     pass
 
 
 if MAIN:
-    w5d5_tests.test_pre_final_ln_dir(model, data, get_pre_final_ln_dir)
+    tests.test_pre_final_ln_dir(model, data, get_pre_final_ln_dir)
 ```""")
 
 
     st.markdown(r"""
 If you're still confused by any of this, the diagram below might help.""")
-    st_image("true_images/bracket-transformer-first-attr-soln.png", 1000)
+    st_image("bracket-transformer-first-attr-soln.png", 1000)
     st.markdown("")
     with st.expander("Solution"):
         st.markdown(r"""
@@ -859,7 +967,7 @@ def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT[
     
     post_final_ln_dir = get_post_final_ln_dir(model)
 
-    final_ln_fit = get_ln_fit(model, data, layer=-1, seq_pos=0)[0]
+    final_ln_fit = get_ln_fit(model, data, layernorm=model.ln_final, seq_pos=0)[0]
     final_ln_coefs = t.from_numpy(final_ln_fit.coef_).to(device)
 
     return final_ln_coefs.T @ post_final_ln_dir
@@ -869,7 +977,11 @@ def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT[
 
 ## Writing the residual stream as a sum of terms
 
-As we've seen in previous exercises, it's much more natural to think about the residual stream as a sum of terms, each one representing a different path through the model. Here, we have ten components which write to the residual stream: the direct path (i.e. the embeddings), and two attention heads and one MLP on each of the three layers. We can write the residual stream as a sum of these terms.
+As we've seen in previous exercises, it's much more natural to think about the residual stream as a sum of terms, each one representing a different path through the model. Here, we have ten components which write to the residual stream: the direct path (i.e. the embeddings), and two attention heads and one MLP on each of the three layers. We can write the residual stream as a sum of these terms.""")
+
+    st_image("attribution.png", 900)
+    st.markdown("")
+    st.markdown(r"""
 
 Once we do this, we can narrow in on the components who are making direct contributions to the classification, i.e. which are writing vectors to the residual stream which have a high dot produce with the `pre_final_ln_dir` for unbalanced brackets relative to balanced brackets.
 
@@ -881,22 +993,19 @@ In order to answer this question, we need the following tools:
 
 Use your `get_activations` function to create a tensor of shape `[num_components, dataset_size, seq_pos]`, where the number of components = 10.
 
-This is a termwise representation of the input to the final layer norm from each component (recall that we can see each head as writing something to the residual stream, which is eventually fed into the final layer norm). The order of the components in your function's output should be:
+This is a termwise representation of the input to the final layer norm from each component (recall that we can see each head as writing something to the residual stream, which is eventually fed into the final layer norm). The order of the components in your function's output should be the same as shown in the diagram above (i.e. in chronological order of how they're added to the residual stream).
 
-```
-embeddings  -> sum of token and positional embeddings (corresponding to the direct path through the model)
-0.0         -> output of the first head in layer 0
-0.1         -> output of the second head in layer 0
-MLP0        -> output of the MLP in layer 0
-1.0         -> output of the first head in layer 1
-1.1         -> output of the second head in layer 1
-MLP1        -> output of the MLP in layer 1
-2.0         -> output of the first head in layer 2
-2.1         -> output of the second head in layer 2
-MLP2        -> output of the MLP in layer 2
-```
+(The only term missing from the sum of these is the `W_O`-bias from each of the attention layers).""")
 
-(The only term missing from the sum of these is the `W_O`-bias from each of the attention layers).
+    with st.expander("Aside on why this bias term is missing."):
+        st.markdown(r"""
+Most other libraries store `W_O` as a 2D tensor of shape `[num_heads * d_head, d_model]`. In this case, the sum over heads is implicit in our calculations when we apply the matrix `W_O`. We then add `b_O`, which is a vector of length `d_model`.
+
+TransformerLens stores `W_O` as a 3D tensor of shape `[num_heads, d_head, d_model]` so that we can easily compute the output of each head separately. Since TransformerLens is designed to be compatible with other libraries, we need the bias to also be shape `d_model`, which means we have to sum over heads before we add the bias term. So none of the output terms for our individual heads will include the bias term. 
+
+In practice this doesn't matter here, since the bias term is the same for balanced and unbalanced brackets. When doing attribution, for each of our components, we only care about the component in the unbalanced direction of the vector they write to the residual stream **for balanced vs unbalanced sequences** - the bias is the same on all inputs.""")
+
+    st.markdown(r"""
 
 ```python
 def get_out_by_components(
@@ -907,6 +1016,9 @@ def get_out_by_components(
     The first dimension is  [embeddings, head 0.0, head 0.1, mlp 0, ..., mlp2]
     '''
     pass
+
+if MAIN:
+    tests.test_get_out_by_components(get_out_by_components, model, data)
 ```
 
 Now, you can test your function by confirming that input to the final layer norm is the sum of the output of each component and the output projection biases.
@@ -978,37 +1090,21 @@ For example, suppose that one of our components produced bimodal output like thi
     st.markdown(r"""
 This would be **strong evidence that this component is important for the model's output being unbalanced**, since it's pushing the unbalanced bracket inputs further in the unbalanced direction (i.e. the direction which ends up contributing to the inputs being classified as unbalanced) relative to the balanced inputs.
 
-In the `MAIN` block below, you should compute a `(10, batch)`-size tensor called `magnitudes`. The `[i, j]`th element of this tensors should be the dot product of the `i`th component's output with the unbalanced direction, for the `j`th sequence in your dataset. 
+In the `MAIN` block below, you should compute a `(10, batch)`-size tensor called `out_by_component_in_unbalanced_dir`. The `[i, j]`th element of this tensors should be the dot product of the `i`th component's output with the unbalanced direction, for the `j`th sequence in your dataset. 
 
 You should normalize it by subtracting the mean of the dot product of this component's output with the unbalanced direction on balanced samples - this will make sure the histogram corresponding to the balanced samples is centered at 0 (like in the figure above), which will make it easier to interpret. Remember, it's only the **difference between the dot product on unbalanced and balanced samples** that we care about (since adding a constant to both logits doesn't change the model's probabilistic output).
 
-The `hists_per_comp` function to plot these histograms has been written for you - all you need to do is calculate the `magnitudes` object and supply it to that function.
-
+We've given you a `hists_per_comp` function which will plot these histograms for you - all you need to do is calculate the `out_by_component_in_unbalanced_dir` object and supply it to that function.
 
 ```python
-def hists_per_comp(magnitudes: TT["component", "batch"], data, xaxis_range=(-1, 1)):
-    '''
-    Plots the contributions in the unbalanced direction, as supplied by the `magnitudes` tensor.
-    '''
-    titles = {
-        (1, 1): "embeddings",
-        (2, 1): "head 0.0", (2, 2): "head 0.1", (2, 3): "mlp 0",
-        (3, 1): "head 1.0", (3, 2): "head 1.1", (3, 3): "mlp 1",
-        (4, 1): "head 2.0", (4, 2): "head 2.1", (4, 3): "mlp 2"
-    }
-    n_layers = magnitudes.shape[0] // 3
-    fig = make_subplots(rows=n_layers+1, cols=3)
-    for ((row, col), title), mag in zip(titles.items(), magnitudes):
-        fig.add_trace(go.Histogram(x=mag[data.isbal], name="Balanced", marker_color="blue", opacity=0.5, legendgroup = '1', showlegend=title=="embeddings"), row=row, col=col)
-        fig.add_trace(go.Histogram(x=mag[~data.isbal], name="Unbalanced", marker_color="red", opacity=0.5, legendgroup = '2', showlegend=title=="embeddings"), row=row, col=col)
-        fig.update_xaxes(title_text=title, row=row, col=col, range=xaxis_range)
-    fig.update_layout(width=1200, height=250*(n_layers+1), barmode="overlay", legend=dict(yanchor="top", y=0.92, xanchor="left", x=0.4), title="Histograms of component significance")
-    fig.show()
-
 if MAIN:
-    "TODO: YOUR CODE HERE"
+    # YOUR CODE HERE - define the object `out_by_component_in_unbalanced_dir`
+    # remember to subtract the mean per component on balanced samples
+    out_by_component_in_unbalanced_dir = None
 
-    hists_per_comp(magnitudes, data, xaxis_range=[-10, 20])
+    tests.test_out_by_component_in_unbalanced_dir(out_by_component_in_unbalanced_dir, model, data)
+
+    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20], save_figure=True)
 ```""")
 
     with st.expander("Hint"):
@@ -1032,21 +1128,36 @@ if MAIN:
     # Get the unbalanced direction for tensors being fed into the final layernorm
     pre_final_ln_dir: TT["d_model"] = get_pre_final_ln_dir(model, data)
     # Get the size of the contributions for each component
-    magnitudes = einsum(
+    out_by_component_in_unbalanced_dir = einsum(
         "comp batch d_model, d_model -> comp batch",
         out_by_components_seq0, 
         pre_final_ln_dir
     )
     # Subtract the mean
-    magnitudes_mean_for_each_comp: TT["comp", 1] = magnitudes[:, data.isbal].mean(dim=1).unsqueeze(1)
-    magnitudes -= magnitudes_mean_for_each_comp
-    # Plot the histograms
-    hists_per_comp(magnitudes, data, xaxis_range=[-10, 20])
+    out_by_component_in_unbalanced_dir -= out_by_component_in_unbalanced_dir[:, data.isbal].mean(dim=1).unsqueeze(1)
+
+    tests.test_out_by_component_in_unbalanced_dir(out_by_component_in_unbalanced_dir, model, data)
+
+    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20], save_figure=True)
 ```
 """)
 
-    with st.expander("Click here to see the output you should be getting."):
-        st.plotly_chart(fig_dict["attribution_fig"])
+    st.markdown(r"""
+#### Your output
+
+When you've passed the tests and generated your histogram, you can press the button below to display your histogram on this page.
+""")
+    button1 = st.button("Show my output", key="button1")
+    if button1 or "got_hists_per_comp" in st.session_state:
+        if "hists_per_comp" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["hists_per_comp"])
+            st.session_state["got_hists_per_comp"] = True
+
+
+    # with st.expander("Click here to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["attribution_fig"])
 
     with st.expander("Which heads do you think are the most important, and can you guess why that might be?"):
         st.markdown(r"""
@@ -1066,47 +1177,58 @@ Define, so that the graphing works:
     * This is an `(N_SAMPLES,)` boolean vector that is true for sequences whose elevation (when reading from right to left) ever dips negative, i.e. there's an open paren that is never closed.
 * **`total_elevation_failure`**
     * This is an `(N_SAMPLES,)` boolean vector that is true for sequences whose total elevation is not exactly 0. In other words, for sentences with uneven numbers of open and close parens.
-* **`h20_magnitudes`**
+* **`h20_in_unbalanced_dir`**
     * This is an `(N_SAMPLES,)` float vector equal to head 2.0's contribution to the position-0 residual stream in the unbalanced direction, normalized by subtracting its average unbalancedness contribution to this stream over _balanced sequences_.
-* **`h21_magnitudes`**
+* **`h21_in_unbalanced_dir`**
     * Same as above but head 2.1
 
-For the first two of these, you will find it helpful to refer back to your `is_balanced_vectorized` code (although remember you're reading **right to left** here - this will affect your `negative_failure` object). You can get the last two from your `magnitudes` tensor.
+For the first two of these, you will find it helpful to refer back to your `is_balanced_vectorized` code (although remember you're reading **right to left** here - this will affect your `negative_failure` object). You can get the last two from your `out_by_component_in_unbalanced_dir` tensor.
 
 ```python
 if MAIN:
     negative_failure = None
     total_elevation_failure = None
-    h20_magnitudes = None
-    h21_magnitudes = None
+    h20_in_unbalanced_dir = None
+    h21_in_unbalanced_dir = None
 
-    failure_types = np.full(len(h20_magnitudes), "", dtype=np.dtype("U32"))
+    tests.test_total_elevation_and_negative_failures(data, total_elevation_failure, negative_failure)
+```
+
+Once you've passed the tests, you can run the code below to generate your plot.
+
+```python
+if MAIN:
     failure_types_dict = {
         "both failures": negative_failure & total_elevation_failure,
         "just neg failure": negative_failure & ~total_elevation_failure,
         "just total elevation failure": ~negative_failure & total_elevation_failure,
         "balanced": ~negative_failure & ~total_elevation_failure
     }
-    for name, mask in failure_types_dict.items():
-        failure_types = np.where(mask, name, failure_types)
-    failures_df = pd.DataFrame({
-        "Head 2.0 contribution": h20_magnitudes,
-        "Head 2.1 contribution": h21_magnitudes,
-        "Failure type": failure_types
-    })[data.starts_open.tolist()]
-    fig = px.scatter(
-        failures_df, 
-        x="Head 2.0 contribution", y="Head 2.1 contribution", color="Failure type", 
-        title="h20 vs h21 for different failure types", template="simple_white", height=600, width=800,
-        category_orders={"color": failure_types_dict.keys()}
-    ).update_traces(marker_size=4)
-    fig.show()
-```""")
+    plot_utils.plot_failure_types_scatter(
+        h20_in_unbalanced_dir,
+        h21_in_unbalanced_dir,
+        failure_types_dict,
+        data
+    ).show()
+```
 
+#### Your output
+
+You can press the button below to display your output on this page.
+""")
+    button2 = st.button("Show my output", key="button2")
+    if button2 or "got_failure_types_scatter" in st.session_state:
+        if "failure_types_scatter" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["failure_types_scatter"])
+            st.session_state["got_failure_types_scatter"] = True
+
+    st.markdown(r"")
     with st.expander("Solution"):
         st.markdown(r"""
 ```python
-def is_balanced_vectorized_return_both(tokens: TT["batch", "seq"]) -> TT["batch", t.bool]:
+def is_balanced_vectorized_return_both(tokens: TT["batch", "seq"]) -> Tuple[TT["batch", t.bool], TT["batch", t.bool]]:
     table = t.tensor([0, 0, 0, 1, -1])
     change = table[tokens].flip(-1)
     altitude = t.cumsum(change, -1)
@@ -1116,16 +1238,16 @@ def is_balanced_vectorized_return_both(tokens: TT["batch", "seq"]) -> TT["batch"
 
 if MAIN:
     total_elevation_failure, negative_failure = is_balanced_vectorized_return_both(data.toks)
-    h20_magnitudes = magnitudes[7]
-    h21_magnitudes = magnitudes[8]
+    h20_in_unbalanced_dir = out_by_component_in_unbalanced_dir[7]
+    h21_in_unbalanced_dir = out_by_component_in_unbalanced_dir[8]
 ```
 """)
     
-    with st.expander("Click to see the output you should be getting."):
-        st.plotly_chart(fig_dict["failure_types_fig"])
+    # with st.expander("Click to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["failure_types_fig"])
 
     st.markdown(r"""
-Look at the above graph and think about what the roles of the different heads are!""")
+Look at the graph and think about what the roles of the different heads are!""")
 
     with st.expander("Read after thinking for yourself"):
         st.markdown(r"""
@@ -1149,15 +1271,29 @@ In most of the rest of these exercises, we'll focus on the overall elevation cir
 ```python
 if MAIN:
     fig = px.scatter(
-        x=data.open_proportion, y=h20_magnitudes, color=failure_types, 
+        x=data.open_proportion, y=h20_in_unbalanced_dir, color=failure_types, 
         title="Head 2.0 contribution vs proportion of open brackets '('", template="simple_white", height=500, width=800,
         labels={"x": "Open-proportion", "y": "Head 2.0 contribution"}, category_orders={"color": failure_types_dict.keys()}
     ).update_traces(marker_size=4, opacity=0.5).update_layout(legend_title_text='Failure type')
     fig.show()
-```""")
+```
 
-    with st.expander("Click to see the output you should be getting."):
-        st.plotly_chart(fig_dict["failure_types_fig_2"])
+Once you've run this code, press the button below to display your output on this page.
+
+#### Your output
+""")
+
+    button3 = st.button("Show my output", key="button3")
+    if button3 or "got_failure_types_scatter_2" in st.session_state:
+        if "failure_types_scatter_20" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["failure_types_scatter_20"])
+            st.plotly_chart(fig_dict["failure_types_scatter_21"])
+            st.session_state["got_failure_types_scatter_2"] = True
+
+    # with st.expander("Click to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["failure_types_fig_2"])
 
     st.markdown(r"""
 Think about how this fits in with your understanding of what 2.0 is doing.
@@ -1185,11 +1321,14 @@ def section_3():
        <li><a class="contents-el" href="#identifying-meaningful-direction-before-this-head">Identifying meaningful direction before this head</a></li>
        <li><a class="contents-el" href="#breaking-down-an-mlps-contribution-by-neuron">Breaking down an MLP's contribution by neuron</a></li>
    </ul></li>
-   <li><a class="contents-el" href="#understanding-how-the-open-proportion-is-calculated---head-00">Understanding how the open-proportion is calculated - Head 0.0</a></li>
+   <li><a class="contents-el" href="#understanding-how-the-open-proportion-is-calculated-head-00">Understanding how the open-proportion is calculated - Head 0.0</a></li>
    <li><ul class="contents">
        <li><a class="contents-el" href="#00-attention-pattern">0.0 Attention Pattern</a></li>
        <li><a class="contents-el" href="#proposing-a-hypothesis">Proposing a hypothesis</a></li>
        <li><a class="contents-el" href="#the-00-ov-circuit">The 0.0 OV circuit</a></li>
+   </ul></li>
+   <li><a class="contents-el" href="#summary">Summary</a></li>
+    
 </ul>
 """, unsafe_allow_html=True)
 
@@ -1219,23 +1358,49 @@ def get_attn_probs(model: ParenTransformer, tokenizer: SimpleTokenizer, data: Da
     pass
 
 if MAIN:
-    attn_probs = get_attn_probs(model, tokenizer, data, 2, 0)
-    attn_probs_open = attn_probs[data.starts_open].mean(0)[[0]]
-    px.bar(
-        y=attn_probs_open.squeeze().numpy(), labels={"y": "Probability", "x": "Key Position"},
-        template="simple_white", height=500, width=600, title="Avg Attention Probabilities for '(' query from query 0"
-    ).update_layout(showlegend=False, hovermode='x unified').show()
+    tests.test_get_attn_probs(get_attn_probs, model, data)
 ```
 
-You should see an average attention of around 0.5 on position 1, and an average of about 0 for all other tokens. So `2.0` is just copying information from residual stream 1 to residual stream 0. In other words, `2.0` passes residual stream 1 through its `W_OV` circuit (after `LayerNorm`ing, of course), weighted by some amount which we'll pretend is constant. The plot thickens. Now we can ask, "What is the direction in residual stream 1 that, when passed through `2.0`'s `W_OV`, creates a vector in the unbalanced direction in residual stream 0?"
+Once you've passed the tests, you can plot your results:
+
+```python
+if MAIN:
+    attn_probs_20: TT["batch", "seqQ", "seqK"] = get_attn_probs(model, data, 2, 0)
+    attn_probs_20_open_query0 = attn_probs_20[data.starts_open].mean(0)[0]
+
+    fig = px.bar(
+        y=utils.to_numpy(attn_probs_20_open_query0), 
+        labels={"y": "Probability", "x": "Key Position"},
+        template="simple_white", height=500, width=600, 
+        title="Avg Attention Probabilities for query 0, first token '(', head 2.0"
+    ).update_layout(showlegend=False, hovermode='x unified')
+    plot_utils.save_fig(fig, "attn_probs_20")
+    fig.show()
+```
+
+#### Your output
+
+After you've run this code, click the button below to see your output.
+""")
+
+    button4 = st.button("Show my output", key="button4")
+    if button4 or "got_attn_probs_20" in st.session_state:
+        if "attn_probs_20" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["attn_probs_20"])
+            st.session_state["got_attn_probs_20"] = True
+
+    st.markdown(r"""
+You should see an average attention of around 0.5 on position 1, and an average of about 0 for all other tokens. So `2.0` is just moving information from residual stream 1 to residual stream 0. In other words, `2.0` passes residual stream 1 through its `W_OV` circuit (after `LayerNorm`ing, of course), weighted by some amount which we'll pretend is constant. Importantly, this means that **the necessary information for classification must already have been stored in sequence position 1 before this head**. The plot thickens!
 
 ### Identifying meaningful direction before this head
 
-Previously, we looked at the vector each component wrote to the residual stream at sequence position 0 (remember the diagram with ten dotted arrows, each one going directly from one of the components to the residual stream). Now that we've observed head `2.0` is mainly copying information from sequence position 1 to position 0, we want to understand how each of the 7 components **before** head `2.0` contributes to the unbalanced direction **via its path through head `2.0`**.
+If we make the simplification that the vector moved to sequence position 0 by head 2.0 is just `layernorm(x[1]) @ W_OV` (where `x[1]` is the vector in the residual stream before head 2.0, at sequence position 1), then we can do the same kind of logit attribution we did before. Rather than decomposing the input to the final layernorm (at sequence position 0) into the sum of ten components and measuring their contribution in the "pre final layernorm unbalanced direction", we can decompose the input to head 2.0 (at sequence position 1) into the sum of the seven components before head 2.0, and measure their contribution in the "pre head 2.0 unbalanced direction".
 
 Here is an annotated diagram to help better explain exactly what we're doing.""")
 
-    st_image("true_images/bracket_transformer-elevation-circuit-1.png", 1000)
+    st_image("bracket_transformer-elevation-circuit-1.png", 1000)
 
     st.markdown(r""" 
 Below, you'll be asked to calculate this `pre_20_dir`, which is the unbalanced direction for inputs into head 2.0 at sequence position 1 (based on the fact that vectors at this sequence position are copied to position 0 by head `2.0`, and then used in prediction).
@@ -1255,27 +1420,24 @@ def get_pre_20_dir(model, data) -> TT["d_model"]:
     Returns the direction propagated back through the OV matrix of 2.0 and then through the layernorm before the layer 2 attention heads.
     '''
     pass
-
-
-if MAIN:
-    w5d5_tests.test_get_pre_20_dir(model, data, get_pre_20_dir)
 ```""")
 
     with st.expander("Help - I can't remember what W_OV should be."):
             st.markdown(r"""
-    Recall that we're adopting the left-multiply convention. So if `x` is our vector in the residual stream (with length `d_model`), then `x @ W_V` is the vector of values (with length `d_head`), and `x @ W_V @ W_O` is the vector that gets moved from source to destination if `x` is attended to.
+Recall that we're adopting the left-multiply convention. So if `x` is our vector in the residual stream (with length `d_model`), then `x @ W_V` is the vector of values (with length `d_head`), and `x @ W_V @ W_O` is the vector that gets moved from source to destination if `x` is attended to.
 
-    So we have `W_OV = W_V @ W_O`, and the vector that gets moved from position 1 to position 0 by head `2.0` is `x @ W_OV`.""")
+So we have `W_OV = W_V @ W_O`, and the vector that gets moved from position 1 to position 0 by head `2.0` is `x @ W_OV` (in an idealised version of the head, with attention probability 1 from position 1 to position 0).""")
 
     st.markdown(r"""
-Now that you've got the `pre_20_dir`, you can calculate magnitudes for each of the components that came before
+Now that you've got the `pre_20_dir`, you can calculate magnitudes for each of the components that came before. You can refer back to the diagram above if you're confused.
 
 ```python
 if MAIN:
     # YOUR CODE HERE
-    # Define `magnitudes` (as before, but now in the `pre_20_dir` direction, for all components before head 2.0)
+    # Define `out_by_component_in_pre_20_unbalanced_dir` (for all components before head 2.0)
+    # Remember to subtract the mean for each component for balanced inputs
 
-    hists_per_comp(magnitudes, data, n_layers=2, xaxis_range=(-5, 12))
+    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, n_layers=2, xaxis_range=(-5, 12), save_figure=True)
 ```""")
 
     with st.expander("Solution"):
@@ -1283,18 +1445,31 @@ if MAIN:
 ```python
 if MAIN:
     pre_layer2_outputs = get_out_by_components(model, data)[:-3]
-    magnitudes = einsum(
+    out_by_component_in_pre_20_unbalanced_dir = einsum(
         "comp batch emb, emb -> comp batch",
         pre_layer2_outputs[:, :, 1, :],
         get_pre_20_dir(model, data)
     )
-    magnitudes_mean_for_each_comp: TT["comp", 1] = magnitudes[:, data.isbal].mean(-1, keepdim=True)
-    magnitudes -= magnitudes_mean_for_each_comp
-    hists_per_comp(magnitudes, data, xaxis_range=(-5, 12))
+    out_by_component_in_pre_20_unbalanced_dir -= out_by_component_in_pre_20_unbalanced_dir[:, data.isbal].mean(-1, keepdim=True)
+    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, n_layers=2, xaxis_range=(-5, 12), save_figure=True)
 ```""")
 
-    with st.expander("Click here to see the output you should be getting."):
-        st.plotly_chart(fig_dict["attribution_fig_2"])
+    st.markdown(r"""
+#### Your output
+
+When you've run the code above, click the button below to display your output in the page.
+""")
+
+    button5 = st.button("Show my output", key="button5")
+    if button5 or "got_hists_per_comp_20" in st.session_state:
+        if "hists_per_comp_20" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["hists_per_comp_20"])
+            st.session_state["got_hists_per_comp_20"] = True
+
+    # with st.expander("Click here to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["attribution_fig_2"])
 
     st.markdown(r"""
 What do you observe?""")
@@ -1307,9 +1482,9 @@ One obvious note - the embeddings graph shows an output of zero, in other words 
 
 More interestingly, we can see that `mlp0` and especially `mlp1` are very important. This makes sense -- one thing that mlps are especially capable of doing is turning more continuous features ('what proportion of characters in this input are open parens?') into sharp discontinuous features ('is that proportion exactly 0.5?').
 
-For example, the sum $\operatorname{ReLU}(x-0.5) + \operatorname{ReLU}(0.5-x)$ evaluates to the nonlinear function $2 \times |x-0.5|$, which is zero if and only if $x=0.5$. This is one way our model might be able to classify all bracket strings as unbalanced unless they had exactly 50% open parens.""")
+For example, the sum $\operatorname{ReLU}(x-0.5) + \operatorname{ReLU}(0.5-x)$ evaluates to the nonlinear function $|x-0.5|$, which is zero if and only if $x=0.5$. This is one way our model might be able to classify all bracket strings as unbalanced unless they had exactly 50% open parens.""")
 
-        st_image("true_images/relu2-light.png", 550)
+        st_image("relu2-light.png", 550)
 
         # st.markdown(r"*We can even add together more ReLUs to get even sharper discontinuities or more complex functions. For instance:*")
         # st_excalidraw("relu", 600)
@@ -1324,68 +1499,65 @@ Head `1.1` also has some importance, although we will not be able to dig into th
 In order to get a better look at what `mlp0` and `mlp1` are doing more thoughly, we can look at their output as a function of the overall open-proportion.
 
 ```python
-def mlp_attribution_scatter(magnitudes, data, failure_types):
-    for layer in range(2):
-        fig = px.scatter(
-            x=data.open_proportion[data.starts_open], y=magnitudes[3+layer*3, data.starts_open], 
-            color=failure_types[data.starts_open], category_orders={"color": failure_types_dict.keys()},
-            title=f"Amount MLP {layer} writes in unbalanced direction for Head 2.0", 
-            template="simple_white", height=500, width=800,
-            labels={"x": "Open-proportion", "y": "Head 2.0 contribution"}
-        ).update_traces(marker_size=4, opacity=0.5).update_layout(legend_title_text='Failure type')
-        fig.show()
-
 if MAIN:
-    mlp_attribution_scatter(magnitudes, data, failure_types)
+    plot_utils.mlp_attribution_scatter(out_by_component_in_pre_20_unbalanced_dir, data, failure_types_dict)
 ```
 
+#### Your output
+
+""")
+
+    button6 = st.button("Show my output", key="button6")
+    if button6 or "got_mlp_attribution" in st.session_state:
+        if "mlp_attribution_0" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["mlp_attribution_0"])
+            st.plotly_chart(fig_dict["mlp_attribution_1"])
+            st.session_state["got_mlp_attribution"] = True
+
+    st.markdown(r"""
 ### Breaking down an MLP's contribution by neuron
 
 We've already learned that an attention layer can be broken down as a sum of separate contributions from each head. It turns out that we can do something similar with MLPs, breaking them down as a sum of per-neuron contributions.
 
-Ignoring biases, let $MLP(\vec x) = f(\vec x^T W^{in})^T W^{out}$ for matrices $W^{in}, W^{out}$, and $f$ is our nonlinear activation function (in this case ReLU). Note that $f(\vec x^T W^{in})$ is what we refer to as the **neuron activations**, let $n$ be its length (the intermediate size of the MLP).
+Ignoring biases, let $MLP(\vec x) = f(\vec x^T W^{in}) W^{out}$ for matrices $W^{in}, W^{out}$, and $f$ is our nonlinear activation function (in this case ReLU). Note that $f(\vec x^T W^{in})$ is what we refer to as the **neuron activations**, let $n$ be its length (the intermediate size of the MLP, which is called `d_mlp` in the config).
 
 (Note - when I write $f(z)$ for a vector $z$, this means the vector with $f(z)_i = f(z_i)$, i.e. we're applying the activation function elementwise.)
 
-**Exercise: write $MLP$ as a sum of $n$ functions of $\vec x$**.
-""")
+So, how do we write an MLP as a sum of per-neuron contributions? 
 
-    with st.expander("Answer and discussion"):
+Firstly, remember that MLPs act exactly the same on each sequence position, so we can ignore the sequence dimension and treat the MLP as a map from vectors $\vec x$ of length `emb_dim` to vectors which also have length `emb_dim` (these output vectors are written directly into the residual stream).
 
-        st.markdown(r"""
-Firstly, remember that MLPs act exactly the same on each sequence position, so we can ignore the sequence dimension and treat the MLP as a map from vectors $\vec x$ of length `emb_dim` to vectors which also have length `emb_dim` (and which are written directly into the residual stream).
-
-One way to conceptualize the matrix-vector multiplication $\vec y^T V$ is as a weighted sum of the rows of $V$:
+One way to write the vector-matrix multiplication $\vec z^T W^{out}$ is as a weighted sum of the rows of $W^{out}$:
 
 $$
-V = \left[\begin{array}{c}
-V_{[0,:]} \\
+W^{out} = \left[\begin{array}{c}
+W^{out}_{[0,:]} \\
 \overline{\quad\quad\quad} \\
-V_{[1,:]} \\
+W^{out}_{[1,:]} \\
 \overline{\quad\quad\quad} \\
 \ldots \\
 \overline{\quad\quad\quad} \\
-V_{[n-1,:]}
-\end{array}\right], \quad  \vec y^T V = y_0 V_{[0, :]} + ... + y_{n-1} V_{[n-1, :]}
+W^{out}_{[n-1,:]}
+\end{array}\right], \quad  \vec z^T W^{out} = z_0 W^{out}_{[0, :]} + ... + z_{n-1} W^{out}_{[n-1, :]}
 $$
 
-Taking $y$ to be our **neuron activations** $f(\vec x^T W^{in})$, and $V$ to be our matrix $W^{out}$, we can write:
+So with $\vec z = f(\vec x^T W^{in})$, we can write:
 
 $$
 MLP(\vec x) = \sum_{i=0}^{n-1}f(\vec x^T W^{in})_i W^{out}_{[i,:]}
 $$
 
-where $f(\vec x^T W^{in})_i$ is a scalar, and $A_{[;,i]}$ is a vector.
+where $f(\vec x^T W^{in})_i$ is a scalar, and $W^{out}_{[;,i]}$ is a vector.
 
-But we can actually simplify further, as $f(\vec x^T W^{in})_i = f(\vec x^T W^{in}_{[:, i]})$; i.e. the dot product of $\vec x$ and the $i$-th column of $W_{in}$ (and not the rest of $W_{in}$!). This is because:
+We can actually simplify further. The $i$ th element of the row vector $\vec x^T W^{in}$ is $x^T W^{in}_{[:, i]}$, i.e. the dot product of $\vec x$ and the $i$-th **column** of $W_{in}$. This is because:
 
 $$
-V = \left[V_{[:,0]} \;\bigg|\; V_{[:,1]} \;\bigg|\; ... \;\bigg|\; V_{[:,n-1]}\right], \quad \vec y^T V = \left[\vec y^T V_{[:,0]} \;\bigg|\; \vec y^T V_{[:,1]} \;\bigg|\; ... \;\bigg|\; \vec y^T V_{[:,n-1]}\right]
+W^{in} = \left[W^{in}_{[:,0]} \;\bigg|\; W^{in}_{[:,1]} \;\bigg|\; ... \;\bigg|\; W^{in}_{[:,n-1]}\right], \quad \vec x^T W^{in} = \left(\vec x^T W^{in}_{[:,0]} \,, \; \vec x^T W^{in}_{[:,1]} \,, \; ... \; \vec x^T W^{in}_{[:,n-1]}\right)
 $$
 
-and because $f$ acts on each element of its input vector independently.
-
-Thus, we can write:
+Since the activation function $f$ is applied elementwise, this gives us:
 
 $$
 MLP(\vec x) = \sum_{i=0}^{n-1}f(\vec x^T W^{in}_{[:, i]}) W^{out}_{[i,:]}
@@ -1393,43 +1565,139 @@ $$
 or if we include biases on the Linear layers:
 
 $$
-MLP(\vec x) = b^{out} + \sum_{i=0}^{n-1}f(\vec x^T W^{in}_{[:, i]} + b^{in}_i) W^{out}_{[i,:]}
+MLP(\vec x) = \sum_{i=0}^{n-1}f(\vec x^T W^{in}_{[:, i]} + b^{in}_i) W^{out}_{[i,:]} + b^{out}
 $$
-
-This is a neat-enough equation that Buck jokes he's going to get it tattooed on his arm!
 
 Summary:
 """)
 
-        st.success(r"""
+    st.info(r"""
 We can write an MLP as a collection of neurons, where each one writes a vector to the residual stream independently of the others.
+ 
+We can view the $i$-th column of $W^{in}$ as being the **"in-direction"** of neuron $i$, as the activation of neuron $i$ depends on how high the dot product between $x$ and that row is. And then we can think of the $i$-th row of $W^{out}$ as the corresponding **"out-direction"** signifying neuron $i$'s special output vector, which it scales by its activation and then adds into the residual stream.
 
-We can view the $i$-th column of $W^{in}$ as being the **"in-direction"** of neuron $i$, as the activation of neuron $i$ depends on how high the dot product between $x$ and that row is. And then we can think of the $i$-th row of $W^{out}$ as the **"out-direction"** signifying neuron $i$'s special output vector, which it scales by its activation and then adds into the residual stream.""")
-
+""")
+    with st.expander("Aside - MLPs & memory management"):
         st.markdown(r"""
-Here are some examples of what this could look like (feel free to skip if you're satisfied with this section):
-
-* If $\vec x$ is orthogonal to the column $W^{in}_{[:, i]}$, i.e. $\vec x^T W^{in}_{[:, i]} = 0$, then the $i$-th neuron's output is independent of the input $\vec x$, i.e. it doesn't move any information through the MLP.
-    * If $\vec x$ is orthogonal to all the in-directions $W^{in}_i$, then all the activations are the same, and no information is moved through the MLP.
-* If $\vec x$ is not orthogonal to an input direction $W^{in}_{[:, i]}$, then this neuron will write some scalar multiple of $W^{out}_{[i, :]}$ to the residual stream.
-    * The scalar multiple of $W^{out}_{[i, :]}$ depends on the size of the component of $\vec x$ in the $W^{in}_{[:, i]}$-direction.
-
-Interestingly, there is some evidence that certain neurons in MLPs perform memory management. For instance, we might find that the $i$-th neuron satisfies $W^{in}_{[:, i]} \approx - W^{out}_{[i, :]} \approx \vec v$ for some unit vector $\vec v$, meaning it may be responsible for erasing the component of vector $\vec x$ in the direction $\vec v$ (exercise - can you show why this is the case?). This can free up space in the residual stream for other components to write to.
-
+Interestingly, there is some evidence that certain neurons in MLPs perform memory management. For instance, in an idealized case, we might find that the $i$-th neuron satisfies $W^{in}_{[:, i]} \approx - W^{out}_{[i, :]} \approx \vec v$ for some unit vector $\vec v$, meaning it may be responsible for erasing the positive component of vector $\vec x$ in the direction $\vec v$ (exercise - can you show why this is the case?). This can free up space in the residual stream for other components to write to.
 """)
 
     st.markdown(r"""
+The function `get_out_by_neuron` should return the given MLP's output per neuron. In other words, the output has shape `[batch, seq, neurons, d_model]`, where `out[b, s, i]` is the vector $f(\vec x^T W^{in}_{[:,i]} + b^{in}_i)W^{out}_{[i,:]}$ (and summing over `i` would give you the actual output of the MLP, ignoring $b^{out}$).
+
+When you have this output, you can use `get_out_by_neuron_in_20_dir`
+
 ```python
-def out_by_neuron(model, data, layer):
+def get_out_by_neuron(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "seq", "neurons", "d_model"]:
     '''
-    Return shape: [len(data), seq_len, neurons, out]
+    [b, s, i]th element is the vector f(x.T @ W_in[:, i]) @ W_out[i, :] which is written to 
+    the residual stream by the ith neuron (where x is the input to the MLP for the b-th 
+    element in the batch, and the s-th sequence position).
     '''
     pass
 
 @functools.cache
-def out_by_neuron_in_20_dir(model, data, layer):
+def get_out_by_neuron_in_20_dir(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "seq", "neurons"]:
+    '''
+    [b, s, i]th element is the contribution of the vector written by the ith neuron to the 
+    residual stream in the unbalanced direction (for the b-th element in the batch, and the 
+    s-th sequence position).
+    
+    In other words we need to take the vector produced by the `get_out_by_neuron` function, and 
+    project it onto the unbalanced direction for head 2.0.
+    '''
     pass
+```""")
+
+    with st.expander("Hint"):
+        st.markdown(r"""
+For the `get_out_by_neuron` function, define $f(\vec x^T W^{in}_{[:,i]} + b^{in}_i)$ and $W^{out}_{[i,:]}$ separately, then multiply them together. The former is the activation corresponding to the name `"post"`, and you can access it using your `get_activations` function. The latter are just the model weights, and you can access it using `model.W_out`.
+""")
+    with st.expander("Solution"):
+        st.markdown(r"""
+```python
+def get_out_by_neuron(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "seq", "neurons", "d_model"]:
+    '''
+    [b, s, i]th element is the vector f(x.T @ W_in[:, i]) @ W_out[i, :] which is written to 
+    the residual stream by the ith neuron (where x is the input to the MLP for the b-th 
+    element in the batch, and the s-th sequence position).
+    '''
+    # Get the W_out matrix for this MLP
+    W_out: TT["neurons", "d_model"] = model.W_out[layer]
+
+    # Get activations of the layer just after the activation function, i.e. this is f(x.T @ W_in)
+    f_x_W_in: TT["batch", "seq", "neurons"] = get_activations(model, data, utils.get_act_name('post', layer))
+
+    # Calculate the output by neuron (i.e. so summing over the `neurons` dimension gives the output of the MLP)
+    out = einsum(
+        "batch seq neurons, neurons d_model -> batch seq neurons d_model",
+        f_x_W_in, W_out
+    )
+    return out
+
+def get_out_by_neuron_in_20_dir(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "seq", "neurons"]:
+    '''
+    [b, s, i]th element is the contribution of the vector written by the ith neuron to the 
+    residual stream in the unbalanced direction (for the b-th element in the batch, and the 
+    s-th sequence position).
+    
+    In other words we need to take the vector produced by the `get_get_out_by_neuron` function, 
+    and project it onto the unbalanced direction for head 2.0.
+    '''
+
+    return einsum(
+        "batch seq neurons d_model, d_model -> batch seq neurons",
+        get_out_by_neuron(model, data, layer),
+        get_pre_20_dir(model, data)
+    )
 ```
+""")
+
+    st.markdown(r"""
+#### Saving memory (optional exercise)
+
+If the only thing we want from the MLPs are their contribution in the unbalanced direction, then we can actually do this without having to store the `out_by_neuron_in_20_dir` object. Try and find this method, and implement it below.
+
+```python
+def get_out_by_neuron_in_20_dir_less_memory(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "neurons"]:
+    pass
+
+if MAIN:
+    tests.test_get_out_by_neuron_in_20_dir_less_memory(get_out_by_neuron_in_20_dir_less_memory, model, data_test)
+```
+""")
+
+    with st.expander("Hint"):
+        st.markdown(r"""
+The key is to change the order of operations.
+
+First, project each of the output directions onto the pre-2.0 unbalanced direction in order to get their components (i.e. a vector of length `d_mlp`, where the `i`-th element is the component of the vector $W^{out}_{[i,:]}$ in the unbalanced direction). Then, scale these contributions by the activations $f(\vec x^T W^{in}_{[:,i]} + b^{in}_i)$.
+""")
+
+    # Then, multiply by the $f(\vec x^T W^{in}_{[:,i]} + b^{in}_i)$.
+    with st.expander("Solution"):
+        st.markdown(r"""
+```python
+def get_out_by_neuron_in_20_dir_less_memory(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "neurons"]:
+
+    W_out: TT["neurons", "d_model"] = model.W_out[layer]
+
+    f_x_W_in: TT["batch", "neurons"] = get_activations(model, data.toks, utils.get_act_name('post', layer))[:, 1, :]
+
+    pre_20_dir: TT["d_model"] = get_pre_20_dir(model, data)
+
+    # Multiply along the d_model dimension
+    W_out_in_20_dir: TT["neurons"] = W_out @ pre_20_dir
+    # Multiply elementwise, over neurons (we're broadcasting along the batch dim)
+    out_by_neuron_in_20_dir: TT["batch", "neurons"] = f_x_W_in * W_out_in_20_dir
+
+    return out_by_neuron_in_20_dir
+```
+""")
+
+    st.markdown(r"""
+
+#### Interpreting the neurons
 
 Now, try to identify several individual neurons that are especially important to `2.0`.
 
@@ -1439,68 +1707,54 @@ Use the `plot_neurons` function to get a sense of what an individual neuron does
 
 One note: now that we are deep in the internals of the network, our assumption that a single direction captures most of the meaningful things going on in this overall-elevation circuit is highly questionable. This is especially true for using our `2.0` direction to analyize the output of `mlp0`, as one of the main ways this mlp has influence is through more indirect paths (such as `mlp0 -> mlp1 -> 2.0`) which are not the ones we chose our direction to capture. Thus, it is good to be aware that the intuitions you get about what different layers or neurons are doing are likely to be incomplete.
 
+*Note - these plots will open in your browser, because the scatterplots are quite large and they run faster that way.*
+
 ```python
-def plot_neurons(model: HookedTransformer, data: BracketsDataset, failure_types: np.ndarray, layer: int):
-    # Get neuron significances for head 2.0, sequence position #1 output
-    neurons_in_d = out_by_neuron_in_20_dir(model, data, layer)[data.starts_open, 1, :].detach()
-
-    # Get data that can be turned into a dataframe (plotly express is sometimes easier to use with a dataframe)
-    # Plot a scatter plot of all the neuron contributions, color-coded according to failure type, with slider to view neurons
-    neuron_numbers = einops.repeat(t.arange(model.cfg.d_model), "n -> (s n)", s=data.starts_open.sum())
-    failure_types = einops.repeat(failure_types[data.starts_open], "s -> (s n)", n=model.cfg.d_model)
-    data_open_proportion = einops.repeat(data.open_proportion[data.starts_open], "s -> (s n)", n=model.cfg.d_model)
-    df = pd.DataFrame({
-        "Output in 2.0 direction": neurons_in_d.flatten(),
-        "Neuron number": neuron_numbers,
-        "Open-proportion": data_open_proportion,
-        "Failure type": failure_types
-    })
-    px.scatter(
-        df, 
-        x="Open-proportion", y="Output in 2.0 direction", color="Failure type", animation_frame="Neuron number",
-        title=f"Neuron contributions from layer {layer}", 
-        template="simple_white", height=500, width=800
-    ).update_traces(marker_size=3).update_layout(xaxis_range=[0, 1], yaxis_range=[-5, 5]).show(renderer="browser")
-
-    # Work out the importance (average difference in unbalanced contribution between balanced and inbalanced dirs) for each neuron
-    # Plot a bar chart of the per-neuron importances
-    neuron_importances = neurons_in_d[~data.isbal[data.starts_open]].mean(0) - neurons_in_d[data.isbal[data.starts_open]].mean(0)
-    px.bar(
-        x=t.arange(model.cfg.d_model), 
-        y=neuron_importances, 
-        title=f"Importance of neurons in layer {layer}", 
-        labels={"x": "Neuron number", "y": "Mean contribution in unbalanced dir"},
-        template="simple_white", height=400, width=600
-    ).update_layout(hovermode="x unified").show(renderer="browser")
-
 if MAIN:
     for layer in range(2):
-        plot_neurons(model, data, failure_types, layer)
+        # Get neuron significances for head 2.0, sequence position #1 output
+        neurons_in_unbalanced_dir = get_out_by_neuron_in_20_dir(model, data, layer)[data.starts_open, 1, :]
+        # Plot neurons' activations
+        plot_utils.plot_neurons(neurons_in_unbalanced_dir, model, data, failure_types_dict, layer)
 ```
+
+#### Your output
+
+Click the button below to see your output.
 """)
+
+    button7 = st.button("Show my output", key="button7")
+    if button7 or "got_neuron_contributions" in st.session_state:
+        if "neuron_contributions_0" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["neuron_contributions_0"])
+            st.plotly_chart(fig_dict["neuron_contributions_1"])
+            st.session_state["got_neuron_contributions"] = True
 
     with st.expander("Some observations:"):
         st.markdown(r"""
 The important neurons in layer 1 can be put into three broad categories:
 
-- Some neurons detect when the open-proprtion is greater than 1/2. As a few examples, look at neurons **`1.53`**, **`1.39`**, **`1.8`** in layer 1. There are some in layer 0 as well, such as **`0.33`** or **`0.43`**. Overall these seem more common in Layer 1.
+- Some neurons detect when the open-proportion is greater than 1/2. As a few examples, look at neurons **`1.53`**, **`1.39`**, **`1.8`** in layer 1. There are some in layer 0 as well, such as **`0.33`** or **`0.43`**. Overall these seem more common in Layer 1.
 
-- Some neurons detect when the open-proprtion is less than 1/2. For instance, neurons **`0.21`**, and **`0.7`**. These are much more rare in layer 1, but you can see some such as **`1.50`** and **`1.6`**.
+- Some neurons detect when the open-proportion is less than 1/2. For instance, neurons **`0.21`**, and **`0.7`**. These are much more rare in layer 1, but you can see some such as **`1.50`** and **`1.6`**.
 
 - The network could just use these two types of neurons, and compose them to measure if the open-proportion exactly equals 1/2 by adding them together. But we also see in layer 1 that there are many neurons that output this composed property. As a few examples, look at **`1.10`** and **`1.3`**. 
     - It's much harder for a single neuron in layer 0 to do this by themselves, given that ReLU is monotonic and it requires the output to be a non-monotonic function of the open-paren proportion. It is possible, however, to take advantage of the layernorm before **`mlp0`** to approximate this -- **`0.19`** and **`0.34`** are good examples of this.
 
+Note, there are some neurons which appear to work in the opposite direction (e.g. `0.0`). It's unclear exactly what the function of these neurons is (especially since we're only analysing one particular part of one of our model's circuits, so our intuitions about what a particular neuron does might be incomplete). However, what is clear and unambiguous from this plot is that our neurons seem to be detecting the open proportion of brackets, and responding differently if the proportion is strictly more / strictly less than 1/2. And we can see that a large number of these seem to have their main impact via being copied in head `2.0`.
+
 ---
 
-Below: plots of neurons **`1.53`** and **`0.21`**. You can observe the patterns described above.""")
+Below: plots of neurons **`0.21`** and **`1.53`**. You can observe the patterns described above.""")
         # cols = st.columns([1, 10, 1, 10, 1])
         # with cols[1]:
-        st_image("n53.png", 550)
-        st.markdown("")
         st_image("n21.png", 550)
         st.markdown("")
+        st_image("n53.png", 550)
+        st.markdown("")
         # with cols[-2]:
-
     st.markdown(r"""
 ## Understanding how the open-proportion is calculated - Head 0.0
 
@@ -1522,6 +1776,7 @@ def get_q_and_k_for_given_input(
     Returns the queries and keys (both of shape [seq, d_model]) for the given parns input, in the attention head `layer.head`.
     '''
     pass
+```
 """)
 
     with st.expander("Solution"):
@@ -1533,22 +1788,17 @@ def get_q_and_k_for_given_input(
     '''
     Returns the queries and keys (both of shape [seq, d_model]) for the given parns input, in the attention head `layer.head`.
     '''
-    # Create lists to store the queries and keys
-    q_inputs = []
-    k_inputs = []
 
-    # Run the model with hooks to store the queries and keys
-    model.run_with_hooks(
+    q_name = utils.get_act_name("q", layer)
+    k_name = utils.get_act_name("k", layer)
+
+    activations = get_activations(
+        model,
         tokenizer.tokenize(parens),
-        model.run_with_hooks,
-        fwd_hooks=[
-            (utils.get_act_name("q", layer), lambda q, hook: q_inputs.append(q[:, :, head, :])),
-            (utils.get_act_name("k", layer), lambda k, hook: k_inputs.append(k[:, :, head, :])),
-        ]
+        [q_name, k_name]
     )
-
-    # Return the queries and keys
-    return q_inputs[0][0], k_inputs[0][0]
+    
+    return activations[q_name][0, :, head, :], activations[k_name][0, :, head, :]
 ```
 """)
 
@@ -1580,43 +1830,39 @@ if MAIN:
         hook: HookPoint,
         head_idx: int = 0
     ) -> None:
-        px.imshow(
-            pattern[0, head_idx], 
-            title="Estimate for avg attn probabilities when query is from '('",
-            labels={"x": "Key tokens", "y": "Query tokens"},
-            height=1200, width=1200,
-            color_continuous_scale="RdBu_r", range_color=[0, pattern[0, head_idx].max().item()]
-        ).update_layout(
-            xaxis = dict(
-                tickmode = "array", ticktext = ["[start]", *["L+R/2" for i in range(40)], "[end]"],
-                tickvals = list(range(42)), tickangle = 45,
-            ),
-            yaxis = dict(
-                tickmode = "array", ticktext = ["[start]", *["L" for i in range(40)], "[end]"],
-                tickvals = list(range(42)), 
-            ),
-        ).show(renderer="browser")
+        avg_head_attn_pattern = pattern[:, head_idx].mean(0)
+        plot_utils.plot_attn_pattern(avg_head_attn_pattern)
     
     # Run our model on left parens, but patch in the average key values for left vs right parens
-    # This is to give us an idea of how the model behaves on average when the query is a left paren
+    # This is to give us a rough idea how the model behaves on average when the query is a left paren
     model.run_with_hooks(
         tokenizer.tokenize(all_left_parens),
-        model.run_with_hooks,
+        return_type=None,
         fwd_hooks=[
             (utils.get_act_name("k", 0), functools.partial(hook_fn_patch_qk, new_value=k00_avg)),
             (utils.get_act_name("pattern", 0), hook_fn_display_attn_patterns),
         ]
     )
-```""")
+```
 
-    with st.expander("Click here to see the output you should be getting."):
-        st.plotly_chart(fig_dict["true_images/attn_probs_red"], use_container_width=True)
+#### Your output""")
+
+    button8 = st.button("Show my output", key="button8")
+    if button8 or "got_attn_plot" in st.session_state:
+        if "attn_plot" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["attn_plot"])
+            st.session_state["got_attn_plot"] = True
+
+    # with st.expander("Click here to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["attn_probs_red"], use_container_width=True)
 
     with st.expander("Question - what are the noteworthy features of this plot?"):
         st.markdown(r"""
-The most noticeable feature is the diagonal pattern - each query token pays almost zero attention to all the tokens that come before it, but much greater attention to those that come after it. For most query token positions, this attention paid to tokens after itself is roughly uniform. However, there are a few patches (especially for later query positions) where the attention paid to tokens after itself is not uniform. We will see that these patches are important for generating adversarial examples.
+The most noteworthy feature is the diagonal pattern - most query tokens pay almost zero attention to all the tokens that come before it, but much greater attention to those that come after it. For most query token positions, this attention paid to tokens after itself is roughly uniform. However, there are a few patches (especially for later query positions) where the attention paid to tokens after itself is not uniform. We will see that these patches are important for generating adversarial examples.
 
-Incidentally, we can also observe roughly the same pattern when the query is a right paren (try running the last bit of code above, but using `all_right_parens` instead of `all_left_parens`), but the pattern is less pronounced.
+We can also observe roughly the same pattern when the query is a right paren (try running the last bit of code above, but using `all_right_parens` instead of `all_left_parens`), but the pattern is less pronounced.
 """)
 
     st.markdown(r"""
@@ -1624,7 +1870,7 @@ We are most interested in the attention pattern at query position 1, because thi
 
 (Note - we've chosen to focus on the scenario when the first paren is an open paren, because the model actually deals with bracket strings that open with a right paren slightly differently - these are obviously unbalanced, so a complicated mechanism is unnecessary.)
 
-Let's plot a bar chart of the attention probability paid by the the open-paren query at position 1 to all the other positions. Here, rather than making the query and key artificial, we're running the model on our entire dataset and patching in an artificial value for the query (all open parens). Both methods are reasonable in this case, since we're just looking for a general sense of how our query vector at position 1 behaves when it's an open paren.
+Let's plot a bar chart of the attention probability paid by the the open-paren query at position 1 to all the other positions. Here, rather than patching in both the key and query from artificial sequences, we're running the model on our entire dataset and patching in an artificial value for just the query (all open parens). Both methods are reasonable here, since we're just looking for a general sense of how our query vector at position 1 behaves when it's an open paren.
 
 ```python
 if MAIN:
@@ -1653,16 +1899,25 @@ if MAIN:
             (utils.get_act_name("pattern", 0), hook_fn_display_attn_patterns_for_single_query),
         ]
     )
-```""")
+```
 
-    with st.expander("Click here to see the output you should be getting."):
-        st.plotly_chart(fig_dict["true_images/attn_qpos1"], use_container_width=True)
+#### Your output
+""")
 
-    with st.expander("Question - what is the interpretation of this attention pattern? (i.e. what is the nature of the computation happening in this attention head, at this query position?)"):
+    button9 = st.button("Show my output", key="button9")
+    if button9 or "got_attn_probs_00" in st.session_state:
+        if "attn_probs_00" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["attn_probs_00"])
+            st.session_state["got_attn_probs_00"] = True
+
+    # with st.expander("Click here to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["attn_qpos1"], use_container_width=True)
+
+    with st.expander("Question - what is the interpretation of this attention pattern?"):
         st.markdown(r"""
-This shows that the attention pattern is almost exactly uniform over all tokens. This means the vector written to sequence position 1 will be approximately some scalar multiple of the vectors at each source position, mapped through the matrix $W_{OV}^{0.0}$.
-
-Note - you can also check this for `data_len_n = DataSet.with_length(data_tuples, n)` for values of `n` other than 40, and verify that this attention pattern still basically holds up.
+This shows that the attention pattern is almost exactly uniform over all tokens. This means the vector written to sequence position 1 will be approximately some scalar multiple of the vectors at each source position, transformerd via the matrix $W_{OV}^{0.0}$.
 """)
 
     st.markdown(r"""
@@ -1674,7 +1929,7 @@ Before we connect all the pieces together, let's list the facts that we know abo
 * Attention head `2.0` seems to be largely responsible for classifying brackets as unbalanced when they have non-zero net elevation (i.e. have a different number of left and right parens).
     * Attention head `2.0` attends strongly to the sequence position $i=1$, in other words it's pretty much just moving the residual stream vector from position 1 to position 0 (and applying matrix $W_{OV}$).
     * So there must be earlier components of the model which write to sequence position 1, in a way which influences the model to make correct classifications (via the path through head `2.0`).
-* There are several neurons in **`MLP0`** and **`MLP1`** which seem to calculate a nonlinear function of the open parens proportion - some of them are strongly activating when the proportion is strictly greater than $1/2$, others when it is strictly smaller than $1/2$.
+* There are several neurons in `MLP0` and `MLP1` which seem to calculate a nonlinear function of the open parens proportion - some of them are strongly activating when the proportion is strictly greater than $1/2$, others when it is strictly smaller than $1/2$.
 * If the query token in attention head `0.0` is an open paren, then it attends to all key positions **after** $i$ with roughly equal magnitude.
     * In particular, this holds for the sequence position $i=1$, which attends approximately uniformly to all sequence positions.
  
@@ -1689,11 +1944,11 @@ Based on all this, can you formulate a hypothesis for how the elevation circuit 
 
 1. **In the attention calculation for head `0.0`, the position-1 query token is doing some kind of aggregation over brackets. It writes to the residual stream information representing the difference between the number of left and right brackets - in other words, the net elevation.**
 
-Remember that one-layer attention heads can pretty much only do skip-trigrams, e.g. of the form `keep ... in -> mind`. They can't capture three-way interactions flexibly, in other words they can't compute functions like "whether the number of left and right brackets is equal". So aggregation over left and right brackets is pretty much all we can do.
+Remember that one-layer attention heads can pretty much only do skip-trigrams, e.g. of the form `keep ... in -> mind`. They can't capture three-way interactions flexibly, in other words they can't compute functions like "whether the number of left and right brackets is equal". (To make this clearer, consider how your model's behaviour would differ on the inputs `()`, `((` and `))` if it was just one-layer). So aggregation over left and right brackets is pretty much all we can do.
 
 2. **Now that sequence position 1 contains information about the elevation, the MLP reads this information, and some of its neurons perform nonlinear operations to give us a vector which conatains "boolean" information about whether the number of left and right brackets is equal.**
 
-Recall the example given earlier of $\operatorname{ReLU}(x-0.5) + \operatorname{ReLU}(0.5-x)$; we could guess that some of the neurons are taking each of these roles (in fact we saw it! - should make this clearer; add a diagram adding two relus).**
+Recall that MLPs are great at taking linear functions (like the difference between number of left and right brackets) and converting it to boolean information. We saw something like this was happening in our plots above, since most of the MLPs' neurons' behaviour was markedly different above or below the threshold of 50% left brackets.
 
 3. **Finally, now that the 1st sequence position in the residual stream stores boolean information about whether the net elevation is zero, this information is read by head `2.0`, and the output of this head is used to classify the sequence as balanced or unbalanced.**
 
@@ -1788,15 +2043,18 @@ if MAIN:
 ```
 """)
     st.markdown(r"""
+Note - we don't actually require $\boldsymbol{\color{orange}\vec v_L}$ and $\boldsymbol{\color{orange}\vec v_R}$ to have the same magnitude for this idea to work. This is because, if we have $\boldsymbol{\color{orange}\vec v_L} \approx -\alpha \boldsymbol{\color{orange}\vec v_R}$ for some $\alpha > 0$, then when projecting along the $\boldsymbol{\color{orange}\vec v_L}$ direction we will get $\|\boldsymbol{\color{orange}\vec v_L}\| (n_L - \alpha n_R) / n$. This always equals $\|\boldsymbol{\color{orange}\vec v_L}\| (1 - \alpha) / 2$ when the number of left and right brackets match, regardless of the sequence length. It doesn't matter that this value isn't zero; the MLPs' neurons can still learn to detect when the proportion is more or less than this value by adding a bias term.
+
+#### Cosine similarity of input directions (optional)
 
 Another way we can get evidence for this hypothesis - recall in our discussion of MLP neurons that $W^{in}_{[:,i]}$ (the $i$th column of matrix $W^{in}$, where $W^{in}$ is the first linear layer of the MLP) is a vector representing the "in-direction" of the neuron. If these neurons are indeed measuring open/closed proportions in the way we think, then we should expect to see the vectors $v_R$, $v_L$ have high dot product with these vectors.
 
 Investigate this by filling in the two functions below. `cos_sim_with_MLP_weights` returns the vector of cosine similarities between a vector and the columns of $W^{in}$ for a given layer, and `avg_squared_cos_sim` returns the average **squared cosine similarity** between a vector $v$ and a randomly chosen vector with the same size as $v$ (we can choose this vector in any sensible way, e.g. sampling it from the iid normal distribution then normalizing it). You should find that the average squared cosine similarity per neuron between $v_R$ and the in-directions for neurons in `MLP0` and `MLP1` is much higher than you would expect by chance.
 
 ```python
-def cos_sim_with_MLP_weights(model: HookedTransformer, v: TT["d_model"], layer: int) -> TT["d_hidden"]:
+def cos_sim_with_MLP_weights(model: HookedTransformer, v: TT["d_model"], layer: int) -> TT["d_mlp"]:
     '''
-    Returns a vector of length d_hidden, where the ith element is the
+    Returns a vector of length d_mlp, where the ith element is the
     cosine similarity between `v` and the ith in-direction of the MLP in layer `layer`.
 
     Recall that the in-direction of the MLPs are the columns of the W_in matrix.
@@ -1824,22 +2082,23 @@ if MAIN:
     
     cos_sim_rand = avg_squared_cos_sim(v_R)
     print(f"...random vectors of len = d_model:  {cos_sim_rand:.6f}")
+```
 """)
 
     with st.expander("Solution"):
         st.markdown(r"""
 ```python
-def cos_sim_with_MLP_weights(model: HookedTransformer, v: TT["d_model"], layer: int) -> TT["d_hidden"]:
+def cos_sim_with_MLP_weights(model: HookedTransformer, v: TT["d_model"], layer: int) -> TT["d_mlp"]:
     '''
-    Returns a vector of length d_hidden, where the ith element is the
+    Returns a vector of length d_mlp, where the ith element is the
     cosine similarity between v and the ith in-direction of the MLP in layer `layer`.
 
     Recall that the in-direction of the MLPs are the columns of the W_in matrix.
     '''
     v_unit = v / v.norm()
-    W_in_unit = model.blocks[layer].mlp.W_in / model.blocks[layer].mlp.W_in.norm(dim=0)
+    W_in_unit = model.W_in[layer] / model.W_in[layer].norm(dim=0)
 
-    return einsum("d_model, d_model d_hidden -> d_hidden", v_unit, W_in_unit)
+    return einsum("d_model, d_model d_mlp -> d_mlp", v_unit, W_in_unit)
 
 
 def avg_squared_cos_sim(v: TT["d_model"], n_samples: int = 1000) -> float:
@@ -1854,13 +2113,14 @@ def avg_squared_cos_sim(v: TT["d_model"], n_samples: int = 1000) -> float:
     v1 = v / v.norm()
 
     return (v1 * v2).pow(2).sum(1).mean().item()
+```
 """)
 
     st.markdown(r"""
 
 As a bonus, you can also compare the squared cosine similarities per neuron to your neuron contribution plots you made earlier (the ones with sliders). Do the neurons which have particularly high cosine similarity with $v_R$ correspond to the neurons which write to the unbalanced direction of head `2.0` in a big way whenever the proportion of open parens is not 0.5? (This would provide further evidence that the main source of information about total open proportion of brackets which is used in the net elevation circuit is provided by the multiples of $v_R$ and $v_L$ written to the residual stream by head `0.0`). You can go back to your old plots and check.
 
----
+## Summary
 
 Great! Let's stop and take stock of what we've learned about this circuit. Head 0.0 pays attention uniformly to the suffix following each token, tallying up the amount of open and close parens that it sees and writing that value to the residual stream. This means that it writes a vector representing the total elevation to residual stream 1. The MLPs in residual stream 1 then operate nonlinearly on this tally, writing vectors to the residual stream that distinguish between the cases of zero and non-zero total elevation. Head 2.0 copies this signal to residual stream 0, where it then goes through the classifier and leads to a classification as unbalanced. Our first-pass understanding of this behavior is complete.
 
@@ -1868,22 +2128,21 @@ An illustration of this circuit is given below. It's pretty complicated with a l
 
 Key: the thick black lines and orange dotted lines show the paths through our transformer constituting the elevation circuit. The orange dotted lines indicate the skip connections. Each of the important heads and MLP layers are coloured bold. The three important parts of our circuit (head `0.0`, the MLP layers, and head `2.0`) are all give annotations explaining what they're doing, and the evidence we found for this.
 """)
-    st_image("true_images/bracket-transformer-attribution.png", 1200)
+    st_image("bracket-transformer-attribution.png", 1200)
 def section_4():
+    st.sidebar.markdown("""
+## Table of Contents
+
+<ul class="contents">
+   <li><a class="contents-el" href="#dealing-with-early-closing-parens">Dealing with early closing parens</a></li>
+    <li><a class="contents-el" href="#detecting-anywhere-negative-failures">Detecting anywhere-negative failures</a></li>
+    <li><a class="contents-el" href="#adversarial-attacks">Adversarial Attacks</a></li>
+</ul>
+""", unsafe_allow_html=True)
     st.markdown(r"""
 # Bonus exercises
 
-## Dealing with early closing parens
-
-We mentioned that our model deals with early closing parens differently. One of our components in particular is responsible for classifying any sequence that starts with a closed paren as unbalnced - can you find the component that does this? """)
-
-    with st.expander("Hint"):
-        st.markdown(r"""
-It'll have to be one of the attention heads, since these are the only things which can move information from sequence position 1 to position 0. Which of your attention heads was previously observed to move information from position 1 to position 0?
-""")
-
-    st.markdown(r"""
-Can you prove that this component is responsible for this behavior?
+To finish with, we have some bonus exercises. The main bonus exercise we recommend you try is **adversarial attacks**. You'll need to read the first section of the **detecting anywhere-negative failures** bonus exercise to get an idea for how the other half of the classification circuit works, but once you understand this you can jump ahead to the adversarial attacks section.
 
 ## Detecting anywhere-negative failures
 
@@ -1892,11 +2151,11 @@ When we looked at our grid of attention patterns, we saw that not only did the f
 $$
 \begin{aligned}
 h(x)_i &\approx \frac{1}{n-i+1} \sum_{j=i}^n x_j^T L^T W_{OV}^{0.0} \\
-&= \frac{1}{n} \left( \sum_{i=1}^n {\color{red}pos}_i^T L^T W_{OV}^{0.0} + n_L^i \boldsymbol{\color{red}\vec v_L} + n_R^i \boldsymbol{\color{red}\vec v_R}\right)
+&= \frac{1}{n} \left( \sum_{i=1}^n {\color{orange}pos}_i^T L^T W_{OV}^{0.0} + n_L^{(i)} \boldsymbol{\color{orange}\vec v_L} + n_R^{(i)} \boldsymbol{\color{orange}\vec v_R}\right)
 \end{aligned}
 $$
 
-where $n_L^i$ and $n_R^i$ are the number of left and right brackets respectively in the substring $x_i \dots x_n$ (i.e. this matches our definition of $n_L$ and $n_R$ when $i=1$).
+where $n_L^{(i)}$ and $n_R^{(i)}$ are the number of left and right brackets respectively in the substring $x_i \dots x_n$ (i.e. this matches our definition of $n_L$ and $n_R$ when $i=1$).
 
 Given what we've seen so far (that sequence position 1 stores tally information for all the brackets in the sequence), we can guess that each sequence position stores a similar tally, and is used to determine whether the substring consisting of all brackets to the right of this one has any elevation failures (i.e. making sure the total number of ***right*** brackets is at least as great as the total number of ***left*** brackets - recall it's this way around because our model learned the equally valid right-to-left solution).
 
@@ -1911,7 +2170,7 @@ You could also look at the inputs to head 2.1, just like we did for head 2.0. Wh
 
     with st.expander("Spoiler"):
         st.markdown(r"""
-You should find that the MLPs are important inputs into head 2.1. This makes sense, because the MLPs' job is to convert tally information ($n_L^i - n_R^i$) into boolean information ($n_L^i > n_R^i$). This is a convenient form for our head 2.1 to read (since it's detecting any negative elevations).
+You should find that the MLPs are important inputs into head 2.1. This makes sense, because earlier we saw that the MLPs were converting tally information $(n_L - \alpha n_R)$ into the boolean information $(n_L = n_R)$ at sequence position 1. Since MLPs act the same on all sequence positions, it's reasonable to guess that they're storing the boolean information $(n_L^{(i)} > n_R^{(i)})$ at each sequence position $i$, which is what we need to detect anywhere-negative failures.
 """)
 
     st.markdown(r"""
@@ -1973,6 +2232,20 @@ if MAIN:
     probs = model(toks)[:, 0].softmax(-1)[:, 1]
     print("\n".join([f"{ex:{m}} -> {p:.4%} balanced confidence" for (ex, p) in zip(examples, probs)]))
 ```
+
+## Dealing with early closing parens
+
+We mentioned that our model deals with early closing parens differently. One of our components in particular is responsible for classifying any sequence that starts with a closed paren as unbalnced - can you find the component that does this? """)
+
+    with st.expander("Hint"):
+        st.markdown(r"""
+It'll have to be one of the attention heads, since these are the only things which can move information from sequence position 1 to position 0. Which of your attention heads was previously observed to move information from position 1 to position 0?
+
+What are the attention patterns of this head when the first paren is closed?
+""")
+
+    st.markdown(r"""
+Can you prove that this component is responsible for this behavior?
 """)
 
 func_list = [section_home, section_1, section_2, section_3, section_4]

@@ -1,7 +1,6 @@
 # %%
 
 import torch as t
-from torch.utils.data import Dataset
 from typing import Tuple, Union, List
 from torchtyping import TensorType as TT
 
@@ -12,6 +11,7 @@ MAIN = __name__ == "__main__"
 # %%
 
 class SimpleTokenizer:
+
     START_TOKEN = 0
     PAD_TOKEN = 1
     END_TOKEN = 2

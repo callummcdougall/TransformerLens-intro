@@ -32,7 +32,7 @@ def read_from_html(filename):
 
 NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "logit_diff_from_patching", "line", "attn_induction_score","distil_plot", "ov_copying", "scatter_evals"]
 
-NAMES.extend(["true_images/repeated_tokens", "true_images/induction_scores", "true_images/logit_attribution", "true_images/rep_logit_attribution", "true_images/logit_diff_rep", "true_images/norms_of_query_components", "true_images/norms_of_key_components", "true_images/attn_scores_for_component", "true_images/attn_scores_std_devs", "true_images/q_comp_scores", "true_images/k_comp_scores", "true_images/v_comp_scores"])
+NAMES.extend(["repeated_tokens", "induction_scores", "logit_attribution", "rep_logit_attribution", "logit_diff_rep", "norms_of_query_components", "norms_of_key_components", "attn_scores_for_component", "attn_scores_std_devs", "q_comp_scores", "k_comp_scores", "v_comp_scores"])
 
 def complete_fig_dict(fig_dict):
     for name in NAMES:
@@ -46,7 +46,7 @@ fig_dict = complete_fig_dict(fig_dict_old)
 if len(fig_dict) > len(fig_dict_old):
     st.session_state["fig_dict"] = fig_dict
 
-with open("images/true_images/layer0_head_attn_patterns.html") as f:
+with open("images/layer0_head_attn_patterns.html") as f:
     layer0_head_attn_patterns = f.read()
 
 def section_home():
@@ -68,10 +68,10 @@ Most of the sections are constructed in the following way:
 1. A particular feature of TransformerLens is introduced. 
 2. You are given an exercise, in which you have to apply the feature. 
 
-The running theme of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams which walk through the induction mechanism step by step.""")
+The running theme of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.""")
 
     st.markdown("")
-    st_image("true_images/kcomp_diagram.png", 900)
+    st_image("kcomp_diagram.png", 900)
     st.markdown("")
     st.markdown(r"""
 
@@ -85,25 +85,9 @@ The running theme of the exercises is **induction circuits**. Induction circuits
     st.markdown(r"""
 ## Setup
 
-This section is just for doing basic setup and installations.
+If you haven't done initial setup, then you should navigate to the **Home** page from the left hand sidebar, and follow the instructions there.
 
-Firstly, for these exercises you are strongly recommended to operate in a virtual environment. If you don't know what that is, you can read about it [here](https://docs.python.org/3/tutorial/venv.html).
-
-Next, you'll need to install TransformerLens and the visualisation library circuitsvis (you may have already installed transformerlens if you did the previous exercises):
-
-```python
-pip install git+https://github.com/neelnanda-io/TransformerLens.git@new-demo
-pip install circuitsvis
-```
-
-Testing that circuitsvis works:
-
-```python
-import circuitsvis as cv
-cv.examples.hello("Bob")
-```
-
-Lastly, here are the remaining imports and useful functions. Some of them, you might have to install, e.g. via `pip install einops`.
+Once you have, you can run the following code at the top of your file before starting:
 
 ```python
 import plotly.io as pio
@@ -137,6 +121,8 @@ from IPython.display import HTML, display
 import transformer_lens
 from transformer_lens.hook_points import HookedRootModule, HookPoint
 from transformer_lens import utils, HookedTransformer, HookedTransformerConfig, FactoredMatrix, ActivationCache
+
+import circuitsvis as cv
 
 def imshow(tensor, renderer=None, xaxis="", yaxis="", caxis="", **kwargs):
     px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
@@ -189,7 +175,7 @@ We've included the learning objectives for each section, so you can get a sense 
     * Understand the importance of both these approaches for interpretability.
 """)
     st.info(r"""
-## 4️⃣ Reverse-engineering induction heads
+## 4️⃣ Reverse-engineering induction circuits
 
 * Understand the difference between investigating a circuit by looking at activtion patterns, and reverse-engineering a circuit by looking directly at the weights.
 * Use the factored matrix class to inspect the QK and OV circuits within an induction circuit.
@@ -226,6 +212,10 @@ def section_intro():
     <li><a class="contents-el" href="#visualising-attention-heads">Visualising Attention Heads</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    st.markdown(r"""
+# TransformerLens: Introduction""")
+    st.markdown(r"")
+
 #    <li><ul class="contents">
 #        <li><a class="contents-el" href="#activation-hook-names">Activation + Hook Names</a></li>
 #        <li><a class="contents-el" href="#folding-layernorm-for-the-curious">Folding LayerNorm (For the Curious)</a></li>
@@ -605,7 +595,7 @@ Then the file should pop up in your explorer on the left of VSCode. Right click 
     st.info(r"""
 Note - this graphic was produced by the function `cv.attention.attention_heads`. You can also produce a slightly different graphic with `cv.attention.attention_pattern` (same arguments `tokens` and `attention`), which presents basically the same information in a slightly different way, shown below:
 """)
-    with open("images/true_images/layer0_head_attn_patterns_2.html") as f:
+    with open("images/layer0_head_attn_patterns_2.html") as f:
         text = f.read()
     st.components.v1.html(text, height=600)
 
@@ -625,7 +615,10 @@ def section_finding_induction_heads():
    <li><ul class="contents">
        <li><a class="contents-el" href="#looking-for-induction-attention-patterns">Looking for Induction Attention Patterns</a></li>
 </ul>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)    
+    st.markdown(r"""
+# Finding Induction Heads""")
+    st.markdown(r"")
 
     st.info(r"""
 ## Learning objectives
@@ -804,7 +797,7 @@ tensor([[0, 1, 2],
 tensor([0, 4, 8])
 
 >>> arr.diagonal(-1)
-tensor([1, 5])
+tensor([3, 7])
 ```
 
 Remember that you should be using `cache["pattern", layer]` to get all the attention probabilities for a given layer, and then indexing on the 0th dimension to get the correct head.
@@ -885,11 +878,9 @@ There's a few particularly striking things about induction heads:
 """)
         # st.markdown("")
     st.markdown(r"""
-Again, you are strongly recommended to read the [corresponding section of the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. In brief, however, the induction circuit consists of a previous token head in layer 0 and an induction head in layer 1, where the induction head learns to attend to the token immediately *after* copies of the current token via K-Composition with the previous token head. This diagram may be of assistance:
+Again, you are strongly recommended to read the [corresponding section of the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing (or [this LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated)). In brief, however, the induction circuit consists of a previous token head in layer 0 and an induction head in layer 1, where the induction head learns to attend to the token immediately *after* copies of the current token via K-Composition with the previous token head.
 """)
-    st.error("TODO - link to post instead, when I've published it")
-    st_image("true_images/induction-heads-just-k.png", 1200)
-    st.markdown("#### Exercise - why couldn't an induction head form in a 1L model?")
+    st.markdown("#### Question - why couldn't an induction head form in a 1L model?")
     with st.expander("Solution"):
         st.markdown(r"""
 Because this would require a head which attends a key position based on the *value of the token before it*. Attention scores are just a function of the key token and the query token, and are not a function of other tokens.
@@ -961,7 +952,7 @@ if MAIN:
         with st.expander("Hint"):
             pass
         with st.expander("Click here to see the output you should be getting:"):
-            st.plotly_chart(fig_dict["true_images/repeated_tokens"], use_container_width=False)
+            st.plotly_chart(fig_dict["repeated_tokens"], use_container_width=False)
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
@@ -1003,7 +994,7 @@ You should see that heads 4 and 10 are strongly induction-y, head 6 is very weak
 
 For instance, here is `cv.attention.attention_patterns` for head 4. We can see how the `unfamiliar` token attends strongly to the `celebration` token, which follows the first occurrence of `unfamiliar`. 
 """)
-        st_image("true_images/attn_rep_pattern.png", 800)
+        st_image("attn_rep_pattern.png", 800)
         st.markdown("")
         st.markdown("")
         st.markdown(r"""
@@ -1082,7 +1073,9 @@ def section_hooks():
 </ul>
 """, unsafe_allow_html=True)
 
-
+    st.markdown(r"""
+# Reverse-engineering induction circuits""")
+    st.markdown(r"")
     st.info(r"""
 ## Learning Objectives
 
@@ -1112,7 +1105,7 @@ An example hook function for changing the attention patterns at a particular lay
 ```python
 def hook_function(
     attn_pattern: TT["batch", "heads", "seq_len", "seq_len"],
-    hook_point: HookPoint
+    hook: HookPoint
 ) -> TT["batch", "heads", "seq_len", "seq_len"]:
 
     # modify attn_pattern inplace
@@ -1201,7 +1194,7 @@ A useful trick is to define a hook function with more arguments than it needs, a
 ```python
 def hook_all_attention_patterns(
     attn_pattern: TT["batch", "heads", "seq_len", "seq_len"],
-    hook_point: HookPoint,
+    hook: HookPoint,
     head_idx: int
 ) -> TT["batch", "heads", "seq_len", "seq_len"]:
     # modify attn_pattern inplace, at head_idx
@@ -1316,7 +1309,7 @@ def induction_score_hook(
 ```
 """)
         with st.expander("Click to see what your result should look like (although the numbers will be slightly different due to randomness):"):
-            st.plotly_chart(fig_dict["true_images/induction_scores"], use_container_width=True)
+            st.plotly_chart(fig_dict["induction_scores"], use_container_width=True)
     st.markdown("")
 
     with st.columns(1)[0]:
@@ -1434,7 +1427,7 @@ if MAIN:
         logit_attr = logit_attribution(embed, l1_results, l2_results, model.W_U, tokens[0])
         # Uses fancy indexing to get a len(tokens[0])-1 length tensor, where the kth entry is the predicted logit for the correct k+1th token
         correct_token_logits = logits[0, t.arange(len(tokens[0]) - 1), tokens[0, 1:]]
-        t.testing.assert_close(logit_attr.sum(1), correct_token_logits, atol=1e-4, rtol=0)
+        t.testing.assert_close(logit_attr.sum(1), correct_token_logits, atol=5e-4, rtol=0)
 ```
 
 If you're stuck, you can look at the solution below.""")
@@ -1478,7 +1471,7 @@ if MAIN:
 ```""")
 
     with st.expander("Click here to see the output you should be getting."):
-        st.plotly_chart(fig_dict["true_images/logit_attribution"], use_container_width=True)
+        st.plotly_chart(fig_dict["logit_attribution"], use_container_width=True)
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1557,7 +1550,7 @@ second_half_logit_attr = logit_attribution(embed[seq_len:], l1_results[seq_len:]
             st.markdown(r"""
 We only show the second plot (since as discussed, the first plot is meaningless).
 """)
-            st.plotly_chart(fig_dict["true_images/rep_logit_attribution"], use_container_width=True)
+            st.plotly_chart(fig_dict["rep_logit_attribution"], use_container_width=True)
 
         st.markdown(r"""What is the interpretation of this plot, in the context of our induction head circuit?""")
         with st.expander("Answer"):
@@ -1685,7 +1678,7 @@ if MAIN:
 """)
 
         with st.expander("Click here to see the output you should be getting."):
-            st.plotly_chart(fig_dict["true_images/logit_diff_rep"], use_container_width=True)
+            st.plotly_chart(fig_dict["logit_diff_rep"], use_container_width=True)
         
         st.markdown("What is your interpretation of these results?")
         with st.expander("Interpretation:"):
@@ -1894,6 +1887,7 @@ def section_other_features():
 """, unsafe_allow_html=True)
 
     st.markdown(r"""
+# TransformerLens: Other Features
 
 ## Available Models
 
@@ -2362,6 +2356,9 @@ def section_reverse_engineering():
     </ul></li>
 </ul>
 """, unsafe_allow_html=True)
+    st.markdown(r"""
+# Reverse-engineering induction circuits""")
+    st.markdown(r"")
     st.info(r"""
 ## Learning Objectives
 
@@ -2412,26 +2409,60 @@ Lastly, I'll refer to special matrix products as follows:
 
 * $W_{OV}^{h} := W_V^{h}W_O^{h}$ is the **OV circuit** for head $h$, and $W_E W_{OV}^h W_U$ is the **full OV circuit**. 
 * $W_{QK}^h := W_Q^h {W_K^{hT}}$ is the **QK circuit** for head $h$, and $W_E W_{QK}^h W_E^T$ is the **full QK circuit**. 
+
+Note that the order of these matrices are slightly different from the **Mathematical Frameworks** paper - this is a consequence of the way TransformerLens stores its weight matrices.
 """)
     st.markdown("")
 
-    st.info(r"""
-A reminder of the interpretations of these matrices:
+    st.markdown(r"""
 
-* $W_{OV}^{h}$ has size $(d_\text{model}, d_\text{model})$, it is a linear map describing **what information gets moved from source to destination, in the residual stream.**
-    * If $x_j$ is the embedding vector at position $j$, then $x_j^T W_{OV}^{h}$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to $x_j$.
-* $W_E W_{OV}^h W_U$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a linear map describing **what information gets moved from source to destination, in a start-to-end sense.**
-    * If $A$ is the one-hot encoding for token `A`, then $A^T W_E W_{OV}^h W_U$ is the vector of logits output by head $h$ at any token which pays attention to `A`.
-* $W_{QK}^{h}$ has size $(d_\text{model}, d_\text{model})$, it is a bilinear form describing **where information gets moved to & from in the residual stream.**
-    * $x_i^T W_{QK}^h x_j$ is the attention score paid by token $i$ to token $j$.
-* $W_E W_{QK}^h W_E^T$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a bilinear form describing **which tokens information moves between.**
-    * $A^T W_E W_{QK}^h W_E^T B$ is the attention score paid by token `A` to token `B`.
+#### Question - what is the interpretation of each of the following four matrices?
 
+In your answers, you should describe the type of input it takes, and what the outputs represent.
+
+#### $W_{OV}^{h}$
+""")
+
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_{OV}^{h}$ has size $(d_\text{model}, d_\text{model})$, it is a linear map describing **what information gets moved from source to destination, in the residual stream.**
+
+In other words, if $x_j$ is the embedding vector at position $j$, then $x_j^T W_{OV}^{h}$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to $x_j$.
+""")
+    st.markdown(r"""
+#### $W_E W_{OV}^h W_U$
+""")
+
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_E W_{OV}^h W_U$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a linear map describing **what information gets moved from source to destination, in a start-to-end sense.**
+
+If $A$ is the one-hot encoding for token `A`, then $A^T W_E W_{OV}^h W_U$ is the vector of logits output by head $h$ at any token which pays attention to `A`.
+""")
+
+    st.markdown(r"""
+#### $W_{QK}^{h}$
+""")
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_{QK}^{h}$ has size $(d_\text{model}, d_\text{model})$, it is a bilinear form describing **where information is moved to and from** in the residual stream (i.e. which residual stream vectors attend to which others).
+
+$x_i^T W_{QK}^h x_j$ is the attention score paid by token $i$ to token $j$.
+""")
+    st.markdown(r"""
+#### $W_E W_{QK}^h W_E^T$
+""")
+
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_E W_{QK}^h W_E^T$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a bilinear form describing **where information is moved to and from**, among words in our vocabulary (i.e. which tokens pay attention to which others).
+
+If $A$ and $B$ are one-hot encodings for tokens `A` and `B`, then $A^T W_E W_{QK}^h W_E^T B$ is the attention score paid by token `A` to token `B`.
 """)
 
     st.markdown(r"""
 
-Note that the order of these matrices are slightly different from the **Mathematical Frameworks** paper - this is a consequence of the way TransformerLens stores its weight matrices.
+
 
 Before we start, there's a problem that we might run into when calculating all these matrices. Some of them are massive, and might not fit on our GPU. For instance, both full circuit matrices have shape $(d_\text{vocab}, d_\text{vocab})$, which in our case means $50278\times 50278 \approx 2.5\times 10^{9}$ elements. If you're doing these exercises in Colab or using a powerful GPU then you might manage, but anything short of that will probably result in a `RuntimeError: CUDA error: out of memory` error. How can we get around this problem?
 
@@ -2439,7 +2470,7 @@ Before we start, there's a problem that we might run into when calculating all t
 
 In transformer interpretability, we often need to analyse low rank factorized matrices - a matrix $M = AB$, where M is `[large, large]`, but A is `[large, small]` and B is `[small, large]`. This is a common structure in transformers. 
 
-For instance, we can factorise the OV circuit above as $W_{OV}^h = W_V^h W_O^h$, where $W_V^h$ has shape `[768, 64]` and $W_O^h$ has shape `[64, 768]`. Even better - the full OV circuit can be written as $(W_E W_V^h) (W_O^h W_U)$, where these two matrices have shape `[50278, 64]` and `[64, 50278]` respectively. 
+For instance, we can factorise the OV circuit above as $W_{OV}^h = W_V^h W_O^h$, where $W_V^h$ has shape `[768, 64]` and $W_O^h$ has shape `[64, 768]`. Even more extreme - the full OV circuit can be written as $(W_E W_V^h) (W_O^h W_U)$, where these two matrices have shape `[50278, 64]` and `[64, 50278]` respectively. 
 
 The `FactoredMatrix` class is a convenient way to work with these. It implements efficient algorithms for various operations on these, such as computing the trace, eigenvalues, Frobenius norm, singular value decomposition, and products with other matrices. It can (approximately) act as a drop-in replacement for the original matrix.
 
@@ -2596,81 +2627,106 @@ t.testing.assert_close(AB_unfactored, AB)
 ```
 """)
 
-    st.error("TODO - add this section back in at the end.")
-    with st.expander("Medium Example: Eigenvalue Copying Scores"):
-        st.markdown(r"""
-### Medium Example: Eigenvalue Copying Scores
+#     st.error("TODO - add this section back in at the end.")
+#     with st.expander("Medium Example: Eigenvalue Copying Scores"):
+#         st.markdown(r"""
+# ### Medium Example: Eigenvalue Copying Scores
 
-(This is a more involved example of how to use the factored matrix class, skip it if you aren't following)
+# (This is a more involved example of how to use the factored matrix class, skip it if you aren't following)
 
-For a more involved example, let's look at the eigenvalue copying score from [A Mathematical Framework](https://transformer-circuits.pub/2021/framework/index.html) of the OV circuit for various heads. The OV Circuit for a head (the factorised matrix $W_OV = W_V W_O$) is a linear map that determines what information is moved from the source position to the destination position. Because this is low rank, it can be thought of as *reading in* some low rank subspace of the source residual stream and *writing to* some low rank subspace of the destination residual stream (with maybe some processing happening in the middle).
+# For a more involved example, let's look at the eigenvalue copying score from [A Mathematical Framework](https://transformer-circuits.pub/2021/framework/index.html) of the OV circuit for various heads. The OV Circuit for a head (the factorised matrix $W_OV = W_V W_O$) is a linear map that determines what information is moved from the source position to the destination position. Because this is low rank, it can be thought of as *reading in* some low rank subspace of the source residual stream and *writing to* some low rank subspace of the destination residual stream (with maybe some processing happening in the middle).
 
-A common operation for this will just be to *copy*, ie to have the same reading and writing subspace, and to do minimal processing in the middle. Empirically, this tends to coincide with the OV Circuit having (approximately) positive real eigenvalues. I mostly assert this as an empirical fact, but intuitively, operations that involve mapping eigenvectors to different directions (eg rotations) tend to have complex eigenvalues. And operations that preserve eigenvector direction but negate it tend to have negative real eigenvalues. And "what happens to the eigenvectors" is a decent proxy for what happens to an arbitrary vector.
+# A common operation for this will just be to *copy*, ie to have the same reading and writing subspace, and to do minimal processing in the middle. Empirically, this tends to coincide with the OV Circuit having (approximately) positive real eigenvalues. I mostly assert this as an empirical fact, but intuitively, operations that involve mapping eigenvectors to different directions (eg rotations) tend to have complex eigenvalues. And operations that preserve eigenvector direction but negate it tend to have negative real eigenvalues. And "what happens to the eigenvectors" is a decent proxy for what happens to an arbitrary vector.
 
-We can get a score for "how positive real the OV circuit eigenvalues are" with $\frac{\sum \lambda_i}{\sum |\lambda_i|}$, where $\lambda_i$ are the eigenvalues of the OV circuit. This is a bit of a hack, but it seems to work well in practice.
+# We can get a score for "how positive real the OV circuit eigenvalues are" with $\frac{\sum \lambda_i}{\sum |\lambda_i|}$, where $\lambda_i$ are the eigenvalues of the OV circuit. This is a bit of a hack, but it seems to work well in practice.
 
-Let's use FactoredMatrix to compute this for every head in the model! We use the helper `model.OV` to get the concatenated OV circuits for all heads across all layers in the model. This has the shape `[n_layers, n_heads, d_model, d_model]`, where `n_layers` and `n_heads` are batch dimensions and the final two dimensions are factorised as `[n_layers, n_heads, d_model, d_head]` and `[n_layers, n_heads, d_head, d_model]` matrices.
+# Let's use FactoredMatrix to compute this for every head in the model! We use the helper `model.OV` to get the concatenated OV circuits for all heads across all layers in the model. This has the shape `[n_layers, n_heads, d_model, d_model]`, where `n_layers` and `n_heads` are batch dimensions and the final two dimensions are factorised as `[n_layers, n_heads, d_model, d_head]` and `[n_layers, n_heads, d_head, d_model]` matrices.
 
-We can then get the eigenvalues for this, where there are separate eigenvalues for each element of the batch (a `[n_layers, n_heads, d_head]` tensor of complex numbers), and calculate the copying score.
+# We can then get the eigenvalues for this, where there are separate eigenvalues for each element of the batch (a `[n_layers, n_heads, d_head]` tensor of complex numbers), and calculate the copying score.
 
-```python
-OV_circuit_all_heads = model.OV
-print(OV_circuit_all_heads)
+# ```python
+# OV_circuit_all_heads = model.OV
+# print(OV_circuit_all_heads)
 
-OV_circuit_all_heads_eigenvalues = OV_circuit_all_heads.eigenvalues 
-print(OV_circuit_all_heads_eigenvalues.shape)
-print(OV_circuit_all_heads_eigenvalues.dtype)
+# OV_circuit_all_heads_eigenvalues = OV_circuit_all_heads.eigenvalues 
+# print(OV_circuit_all_heads_eigenvalues.shape)
+# print(OV_circuit_all_heads_eigenvalues.dtype)
 
-OV_copying_score = OV_circuit_all_heads_eigenvalues.sum(dim=-1).real / OV_circuit_all_heads_eigenvalues.abs().sum(dim=-1)
-imshow(utils.to_numpy(OV_copying_score), xaxis="Head", yaxis="Layer", title="OV Copying Score for each head in GPT-2 Small", zmax=1.0, zmin=-1.0)
-```""")
+# OV_copying_score = OV_circuit_all_heads_eigenvalues.sum(dim=-1).real / OV_circuit_all_heads_eigenvalues.abs().sum(dim=-1)
+# imshow(utils.to_numpy(OV_copying_score), xaxis="Head", yaxis="Layer", title="OV Copying Score for each head in GPT-2 Small", zmax=1.0, zmin=-1.0)
+# ```""")
 
-        st.plotly_chart(fig_dict["ov_copying"], use_container_width=True)
-        st.markdown(r"""
+#         st.plotly_chart(fig_dict["ov_copying"], use_container_width=True)
+#         st.markdown(r"""
 
-Head 11 in Layer 11 (L11H11) has a high copying score, and if we plot the eigenvalues they look approximately as expected.
+# Head 11 in Layer 11 (L11H11) has a high copying score, and if we plot the eigenvalues they look approximately as expected.
 
-```python
-scatter(x=OV_circuit_all_heads_eigenvalues[-1, -1, :].real, y=OV_circuit_all_heads_eigenvalues[-1, -1, :].imag, title="Eigenvalues of Head L11H11 of GPT-2 Small", xaxis="Real", yaxis="Imaginary")
-```""")
+# ```python
+# scatter(x=OV_circuit_all_heads_eigenvalues[-1, -1, :].real, y=OV_circuit_all_heads_eigenvalues[-1, -1, :].imag, title="Eigenvalues of Head L11H11 of GPT-2 Small", xaxis="Real", yaxis="Imaginary")
+# ```""")
 
-        st.plotly_chart(fig_dict["scatter_evals"], use_container_width=True)
-        st.markdown(r"""
+#         st.plotly_chart(fig_dict["scatter_evals"], use_container_width=True)
+#         st.markdown(r"""
 
-We can even look at the full OV circuit, from the input tokens to output tokens: $W_E W_V W_O W_U$. This is a `[d_vocab, d_vocab]==[50257, 50257]` matrix, so absolutely enormous, even for a single head. But with the FactoredMatrix class, we can compute the full eigenvalue copying score of every head in a few seconds.""")
+# We can even look at the full OV circuit, from the input tokens to output tokens: $W_E W_V W_O W_U$. This is a `[d_vocab, d_vocab]==[50257, 50257]` matrix, so absolutely enormous, even for a single head. But with the FactoredMatrix class, we can compute the full eigenvalue copying score of every head in a few seconds.""")
 
-        st.error("This code gives a CUDA error - it will be fixed shortly.")
-        st.markdown(r"""
+#         st.error("This code gives a CUDA error - it will be fixed shortly.")
+#         st.markdown(r"""
 
-```python
-full_OV_circuit = model.embed.W_E @ OV_circuit_all_heads @ model.unembed.W_U
-print(full_OV_circuit)
+# ```python
+# full_OV_circuit = model.embed.W_E @ OV_circuit_all_heads @ model.unembed.W_U
+# print(full_OV_circuit)
 
-full_OV_circuit_eigenvalues = full_OV_circuit.eigenvalues
-print(full_OV_circuit_eigenvalues.shape)
-print(full_OV_circuit_eigenvalues.dtype)
+# full_OV_circuit_eigenvalues = full_OV_circuit.eigenvalues
+# print(full_OV_circuit_eigenvalues.shape)
+# print(full_OV_circuit_eigenvalues.dtype)
 
-full_OV_copying_score = full_OV_circuit_eigenvalues.sum(dim=-1).real / full_OV_circuit_eigenvalues.abs().sum(dim=-1)
-imshow(utils.to_numpy(full_OV_copying_score), xaxis="Head", yaxis="Layer", title="OV Copying Score for each head in GPT-2 Small", zmax=1.0, zmin=-1.0)
-```
+# full_OV_copying_score = full_OV_circuit_eigenvalues.sum(dim=-1).real / full_OV_circuit_eigenvalues.abs().sum(dim=-1)
+# imshow(utils.to_numpy(full_OV_copying_score), xaxis="Head", yaxis="Layer", title="OV Copying Score for each head in GPT-2 Small", zmax=1.0, zmin=-1.0)
+# ```
 
-Interestingly, these are highly (but not perfectly!) correlated. I'm not sure what to read from this, or what's up with the weird outlier heads!
+# Interestingly, these are highly (but not perfectly!) correlated. I'm not sure what to read from this, or what's up with the weird outlier heads!
 
-```python
-scatter(x=full_OV_copying_score.flatten(), y=OV_copying_score.flatten(), hover_name=[f"L{layer}H{head}" for layer in range(12) for head in range(12)], title="OV Copying Score for each head in GPT-2 Small", xaxis="Full OV Copying Score", yaxis="OV Copying Score")
-```
+# ```python
+# scatter(x=full_OV_copying_score.flatten(), y=OV_copying_score.flatten(), hover_name=[f"L{layer}H{head}" for layer in range(12) for head in range(12)], title="OV Copying Score for each head in GPT-2 Small", xaxis="Full OV Copying Score", yaxis="OV Copying Score")
+# ```
 
-```python
-print(f"Token 256 - the most common pair of ASCII characters: |{model.to_string(256)}|")
-# Squeeze means to remove dimensions of length 1. 
-# Here, that removes the dummy batch dimension so it's a rank 1 tensor and returns a string
-# Rank 2 tensors map to a list of strings
-print(f"De-Tokenizing the example tokens: {model.to_string(example_text_tokens.squeeze())}")
-```""")
+# ```python
+# print(f"Token 256 - the most common pair of ASCII characters: |{model.to_string(256)}|")
+# # Squeeze means to remove dimensions of length 1. 
+# # Here, that removes the dummy batch dimension so it's a rank 1 tensor and returns a string
+# # Rank 2 tensors map to a list of strings
+# print(f"De-Tokenizing the example tokens: {model.to_string(example_text_tokens.squeeze())}")
+# ```""")
 
     st.markdown(r"""
 
 ## Reverse-engineering circuits
+
+Within our induction circuit, we have four individual circuits: the OV and QK circuits in our previous token head, and the OV and QK circuits in our attention head. They are all shown in the diagram below (each of the boxes with dashed borders explains a different one of the four). 
+""")
+
+    st_image("kcomp_diagram.png", 900)
+    st.markdown("")
+
+    st.markdown(r"""
+The eagle-eyed among you may have noticed that the contents page only has three subsections: the OV copying circuit, the QK prev-token circuit, and K-composition. Why three sections, but four circuits?
+
+The reason is because we can't actually analyse the layer-0 OV circuit or the layer-1 QK circuit in isolation. The OV circuit writes information to a subspace (named the "prev token subspace" below) which is then used by the QK circuit to form the attention patterns in the induction head. So we have to analyse the circuit formed by composing these two heads.
+
+As an analogy, pretend each of the attention heads is a person reading coded messages from the airwaves, and sending coded messages forwards to people further down the line. We might not be able to crack the code that Alice and Bob are using to communicate with each other, but as long as we can (1) show that they are communicating with each other more than with anyone else, and (2) deduce how they function as a single unit (i.e. how our coded message changes when it passes through Alice *and* Bob), then we can consider their joint function as having been fully reverse-engineered.
+
+Here is a summary of how each of the three sections will proceed:
+
+* **OV copying circuit**
+    * We show that $W_{OV}$ in layer 1 is indeed mapping token embeddings to their unembeddings (i.e. sending the embedding of token `T` to a vector which will be decoded as `T` by the unembedding matrix with high probability).
+* **QK prev-token circuit**
+    * We show that $W_{QK}$ in layer 0 is indeed making tokens attend backwards by one position.
+* **K-composition**
+    * We show that the layer-0 OV circuit and layer-1 QK circuit are composing together to form the characteristic induction patterns we observed in the previous section (and that all other inputs into the layer-1 QK circuit are not important for determining the attention pattern), when we feed the model repeating sequences.
+    * Now that composition has been established, we evaluate the end-to-end circuit formed by composing these two, and show that it is performing the role of "make token attend back to the token *after* a previous instance of itself."
+
+After this, we'll have a look at composition scores, which are a more mathematically justified way of showing that two attention heads are composing (without having to look at their behaviour on any particular class of inputs, since it is a property of the actual model weights).
 
 ### OV copying circuit
 
@@ -3090,8 +3146,8 @@ def decompose_k(decomposed_qk_input: t.Tensor, ind_head_index: int) -> t.Tensor:
             st.markdown(r"""
 You should see that the most important query components are the token and positional embeddings. The most important key components are those from $y_9$, which is $x_7$, i.e. from head `0.7`.
 """)
-            st.plotly_chart(fig_dict["true_images/norms_of_query_components"], use_container_width=True)
-            st.plotly_chart(fig_dict["true_images/norms_of_key_components"], use_container_width=True)
+            st.plotly_chart(fig_dict["norms_of_query_components"], use_container_width=True)
+            st.plotly_chart(fig_dict["norms_of_key_components"], use_container_width=True)
 
         with st.expander("A technical note on the positional embeddings - optional, feel free to skip this."):
             st.markdown(r"""
@@ -3126,12 +3182,12 @@ Because the decomposition trick *only* works for things that are linear - softma
             st.markdown(r"""
 Remember that each of our components writes to the residual stream separately. So after layer 1, we have:
 """)
-            st_image("true_images/components.png", 550)
+            st_image("components.png", 550)
             # st_excalidraw("components", 550)
             st.markdown("")
             st.markdown(r"""
 We're particularly interested in the attention scores computed in head `1.4`, and how they depend on the inputs into that head. We've already decomposed the residual stream value $x$ into its terms $e$, $pe$, and $x^ 0$ through $x^{11}$ (which we've labelled $y_0, ..., y_{13}$ for simplicity), and we've done the same for key and query terms. We can picture these terms being passed into head `1.4` as:""")
-            st_image("true_images/components-2.png", 680)
+            st_image("components-2.png", 680)
             # st_excalidraw("components-2", 800)
             st.markdown("")
             st.markdown(r"""
@@ -3170,8 +3226,8 @@ if MAIN:
 ```""")
 
         with st.expander("Click here to see the output you should be getting"):
-            st.plotly_chart(fig_dict["true_images/attn_scores_for_component"], use_container_width=True)
-            st.plotly_chart(fig_dict["true_images/attn_scores_std_devs"], use_container_width=True)
+            st.plotly_chart(fig_dict["attn_scores_for_component"], use_container_width=True)
+            st.plotly_chart(fig_dict["attn_scores_std_devs"], use_container_width=True)
 
         with st.expander("Question - what is the interpretation of these plots?"):
             st.markdown(r"""
@@ -3301,7 +3357,7 @@ The key idea of compositional scores is that the residual stream is a large spac
 
 We represent the **output space** with $W_{OV}=W_V W_O$. Call matrices like this $W_A$.
 
-We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W_{QK}^T=W_K  W_Q^T$ (for K-Composition) or $W_{OV}=W_V W_O$ (for V-Composition, of the later head). Call matrices like these $W_B$ (we've used this notation so that $B$ refers to a later head, and $A$ to an earlier head).""")
+We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W_{QK}^T=W_K  W_Q^T$ (for K-Composition) or $W_{OV}=W_V W_O$ (for V-Composition, of the later head). Call matrices like these $W_B$ (we've used this notation so that $W_B$ refers to a later head, and $W_A$ to an earlier head).""")
 
     with st.expander("Help - I don't understand what motivates these definitions."):
         st.markdown(r"""
@@ -3353,7 +3409,7 @@ so again, by examining the right hand side expression, we see that the output of
 
     st.markdown(r"""
 
-How do we formalise overlap? This is basically an open question, but a surprisingly good metric is $\frac{|W_AW_B|}{|W_B||W_A|}$ where $|W|=\sum_{i,j}W_{i,j}^2$ is the Frobenius norm, the sum of squared elements. """)
+How do we formalise overlap? This is basically an open question, but a surprisingly good metric is $\frac{|W_AW_B|}{|W_B||W_A|}$ where $|W|=\sum_{i,j}W_{i,j}^2$ is the Frobenius norm, the sum of squared elements. (If you're dying of curiosity as to what makes this a good metric, you can jump to the section immediately after the exercises below.)""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -3529,9 +3585,9 @@ if MAIN:
 ```""")
         with st.expander("Click to see the output you should be getting"):
             st.markdown(r"The plots for Q, K and V composition respectively:")
-            st.plotly_chart(fig_dict["true_images/q_comp_scores"], use_container_width=True)
-            st.plotly_chart(fig_dict["true_images/k_comp_scores"], use_container_width=True)
-            st.plotly_chart(fig_dict["true_images/v_comp_scores"], use_container_width=True)
+            st.plotly_chart(fig_dict["q_comp_scores"], use_container_width=True)
+            st.plotly_chart(fig_dict["k_comp_scores"], use_container_width=True)
+            st.plotly_chart(fig_dict["v_comp_scores"], use_container_width=True)
         with st.expander("Some interesting things to observe:"):
             st.markdown(r"""
 The most obvious thing that jumps out (when considered in the context of all the analysis we've done so far) is the K-composition scores. `0.7` (the prev token head) is strongly composing with `1.4` and `1.10` (the two attention heads). This is what we expect, and is a good indication that our composition scores are working as intended.
@@ -3825,7 +3881,7 @@ func_page_list = [
     (section_intro, "1️⃣ TransformerLens: Introduction"), 
     (section_finding_induction_heads, "2️⃣ Finding induction heads"), 
     (section_hooks, "3️⃣ TransformerLens: Hooks"), 
-    (section_reverse_engineering, "4️⃣ Reverse-engineering induction heads"),
+    (section_reverse_engineering, "4️⃣ Reverse-engineering induction circuits"),
     (section_other_features, "5️⃣ TransformerLens: Other Features"), 
 ]
 

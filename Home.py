@@ -74,22 +74,30 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 def page():
-    st_image("tl_logo.png", width=500)
+    st_image("magnifying-glass.png", width=350)
+    st.title("Mechanistic Interpretability & TransformerLens")
 
     st.markdown(r"""
 
 This page contains a collation of resources and exercises on interpretability. The focus is on [`TransformerLens`](https://github.com/neelnanda-io/TransformerLens), a library maintained by Neel Nanda.
 
-All the demos, exercises and solutions can be found in the [TransformerLens-intro](https://github.com/callummcdougall/TransformerLens-intro) GitHub repo.
+All the demos, exercises and solutions can be found in the 
 
-You have two choices for how to access the material.
+### How you should use this material
 
-* First, you can use Colab.
-    * This is probably the easiest option to get up and running, but it has some limitations. 
-* Second, you can clone [the repo](https://github.com/callummcdougall/TransformerLens-intro) and do the exercises / demos in your own IDE such as VSCode. 
-    * The exercises and solutions can all be found in the `exercises` folder. For each of the pages, you should create a python file `answers.py` and write your answers there.
-    * You will also be able to use `utils.py` to help you with some of the exercises.
-    * The main disadvantage of this option is that your GPU might not be powerful enough to run some of the heavier code in these pages. However, most of the code we'll be running won't require a GPU, and you can always switch over to Colab when you need to.
+The best way to use this material is to clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro), and run it on your local machine. The vast majority of the exercises will not require a particularly good GPU, and where there are exceptions we will give some advice for how to get the most out of the exercises regardless.
+
+Full instructions for running the exercises in this way:
+
+* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
+* Open in your choice of IDE (we recommend VSCode).
+* Make & activate a virtual environment
+    * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
+* Install requirements.
+    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in your repo).
+    * Then install the rest of the requirements e.g. with `pip install requirements.txt`.
+
+Alternatively, you can open the pages in Colab. This means GPU support is guaranteed, but you won't be able to use your chosen IDE, and there are certain features of these exercises which might not work as well.
 
 ## About TransformerLens
 
@@ -102,8 +110,6 @@ From Neel's [TransformerLens repo's README](https://github.com/neelnanda-io/Tran
 ## Glossary
 
 Neel recently released a [Mechanistic Interpretability Glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J), which I highly recommend you check out. It's a great resource for understanding the terminology and concepts that are used in the following pages. 
-
-You can also download an Anki deck that was created to complement the glossary (TODO - link)
 
 ## Prerequisites
 
@@ -178,17 +184,19 @@ There are three main pages in this notebook.
 * **Interpretability on an algorithmic model** takes you through the application of TransformerLens features to an algorithmic task - interpreting a model trained to classify bracket strings as balanced or unbalanced. This is a great way to get a feel for interpretability, since we can compare the solution our model finds to the algorithmic solution.
 * Finally, **Interpretability in the wild** takes you on a tour through some of the results of the recent paper [Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 small](https://arxiv.org/abs/2211.00593). This is to date the largest circuit that has been discovered in a language model.
 
-Each page is split into several sub-pages. Each subpage starts with a list of learning objectives, which looks like this:""")
+Each page is split into several sub-pages. Each subpage starts with a list of learning objectives. For example, here's the learning objectives for the first subpage of the TransformerLens & induction circuits page:""")
 
     st.info(r"""
 ## Learning objectives
 
 * Load and run a `HookedTransformer` model.
 * Understand the basic architecture of these models.
-* Use the model's tokenizer to convert text to tokens, and vice versa.""")
+* Use the model's tokenizer to convert text to tokens, and vice versa.
+* Know how to cache activations, and to access activations from the cache.
+* Use `circuitsvis` to visualise attention heads.""")
 
     st.markdown(r"""
-Additionally, each subpage will have exercises for you to complete. These are denoted by a box like this:""")
+Additionally, each subpage will have exercises for you to complete. These are denoted by a purple box. For example, here's a short exercise from the first subpage of the TransformerLens & induction circuits page:""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -220,8 +228,6 @@ t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
 
     st.markdown(r"""
 Some of these exercises will be very directed, and will just require you to fill in a few lines of code. Others will be more challenging. All the exercises have solutions available to view, so you can use them if you get stuck.
-
-Just like for the glossary, each page has a downloadable Anki deck at the end.
 """)
 
 if is_local or check_password():

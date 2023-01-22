@@ -32,7 +32,7 @@ def read_from_html(filename):
 
 NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "logit_diff_from_patching", "line", "attn_induction_score","distil_plot", "ov_copying", "scatter_evals"]
 
-NAMES.extend(["true_images/repeated_tokens", "true_images/induction_scores", "true_images/logit_attribution", "true_images/rep_logit_attribution", "true_images/logit_diff_rep", "true_images/norms_of_query_components", "true_images/norms_of_key_components", "true_images/attn_scores_for_component", "true_images/attn_scores_std_devs", "true_images/q_comp_scores", "true_images/k_comp_scores", "true_images/v_comp_scores"])
+NAMES.extend(["repeated_tokens", "induction_scores", "logit_attribution", "rep_logit_attribution", "logit_diff_rep", "norms_of_query_components", "norms_of_key_components", "attn_scores_for_component", "attn_scores_std_devs", "q_comp_scores", "k_comp_scores", "v_comp_scores"])
 
 def complete_fig_dict(fig_dict):
     for name in NAMES:
@@ -46,7 +46,7 @@ fig_dict = complete_fig_dict(fig_dict_old)
 if len(fig_dict) > len(fig_dict_old):
     st.session_state["fig_dict"] = fig_dict
 
-with open("images/true_images/layer0_head_attn_patterns.html") as f:
+with open("images/layer0_head_attn_patterns.html") as f:
     layer0_head_attn_patterns = f.read()
 
 
@@ -129,33 +129,33 @@ Here are the learning objectives for each section of the tutorial. At the end of
 * Run a training loop on a very small dataset, and verify that your model's loss is going down
 """)
 
-    st.markdown(r"""
-## Setup
+#     st.markdown(r"""
+# ## Setup
 
-If you're using the Colab rather than the Streamlit page, then you can follow the instructions in the Colab (from the "Instructions" section onwards). If you're using your own IDE, then you'll need to install the following packages:
+# If you're using the Colab rather than the Streamlit page, then you can follow the instructions in the Colab (from the "Instructions" section onwards). If you're using your own IDE, then you'll need to install the following packages:
 
-```python
-%pip install git+https://github.com/neelnanda-io/TransformerLens.git@new-demo
-%pip install git+https://github.com/neelnanda-io/PySvelte.git
-%pip install fancy_einsum
-%pip install einops
-```
+# ```python
+# %pip install git+https://github.com/neelnanda-io/TransformerLens.git@new-demo
+# %pip install git+https://github.com/neelnanda-io/PySvelte.git
+# %pip install fancy_einsum
+# %pip install einops
+# ```
 
-and then run the following:
+# and then run the following:
 
-```python
-import einops
-from fancy_einsum import einsum
-from dataclasses import dataclass
-import torch
-import torch.nn as nn
-import numpy as np
-import math
-from transformer_lens import utils, HookedTransformer
-import tqdm.auto as tqdm
-```
+# ```python
+# import einops
+# from fancy_einsum import einsum
+# from dataclasses import dataclass
+# import torch
+# import torch.nn as nn
+# import numpy as np
+# import math
+# from transformer_lens import utils, HookedTransformer
+# import tqdm.auto as tqdm
+# ```
 
-""")
+# """)
     
 def section_intro():
     st.sidebar.markdown("""
@@ -447,7 +447,7 @@ def section_code():
 The following is a diagram from the Mathematical Frameworks paper. It shows the high-level architecture of the transformer, as a sequence of attention heads (denoted $h_1, h_2, ...$) and MLPs (denoted $m$). 
 """)
     st.markdown(r"")
-    st_image("true_images/transformer_overview.png", 800)
+    st_image("transformer_overview.png", 800)
     st.markdown(r"")
     st.markdown(r"""
 
