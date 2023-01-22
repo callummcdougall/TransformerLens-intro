@@ -96,6 +96,10 @@ Full instructions for running the exercises in this way:
 * Install requirements.
     * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in your repo).
     * Then install the rest of the requirements e.g. with `pip install requirements.txt`.
+* Navigate to the directory, and run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
+    * This should open up a local copy of the page you're reading right now!
+
+You can go through each batch of exercises (i.e. each section at the top of the left-hand sidebar) by going into the appropriate directory in the repo, and creating a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks). For each exercise, you'll be given import instructions which should go at the top of the file. These imports will incude local imports (e.g. you will have `tests.py` which contain test functions, to validate that your solutions are correct, and `solutions.py` which contain the solutions to all exercises - although the solutions will also be viewable in dropdowns in the Streamlit page). The exercises will also occasionally have you generate output that gets displayed in your Streamlit page.
 
 Alternatively, you can open the pages in Colab. This means GPU support is guaranteed, but you won't be able to use your chosen IDE, and there are certain features of these exercises which might not work as well.
 
