@@ -35,3 +35,4 @@ circuitsvis
 torchtyping
 typeguard
 transformer_lens
+streamlit
