@@ -2712,7 +2712,8 @@ Now we return to why we have *two* induction heads. If both have the same attent
 
         with st.expander("Question - why might the model want to split the circuit across two heads?"):
             st.markdown(r"""
-Because $W_V W_O$ is a rank 64 matrix. The sum of two is a rank 128 matrix. This can be a significantly better approximation to the desired 50K x 50K matrix!""")
+Because $W_V W_O$ is a rank 64 matrix. The sum of two is a rank 128 matrix. This can be a significantly better approximation to the desired 50K x 50K matrix!
+""")
 
         st.markdown(r"""
 ```python
@@ -2722,11 +2723,6 @@ if MAIN:
     'YOUR CODE HERE - compute top-1 accuracy for the effective OV circuit'
 ```
 """)
-
-#         with st.expander("Hint"):
-#             st.markdown(r"""
-# The easiest way is to define stacked `W_O` and `W_V` matrices (as in the diagram in the dropdown above), then calculate accuracy in the same way you did with the previous circuits.
-# """)
         with st.expander("Solution (and expected output)"):
             st.markdown(r"""
 ```python
@@ -2765,7 +2761,6 @@ Once we calculate it, we can then mask it and apply a softmax, and should get a 
 The full QK circuit $W_\text{pos} W_{QK}^{0.7} W_\text{pos}^T$ has shape `[n_ctx, n_ctx]`. After masking and scaling, the $(i, j)$th element of the matrix is the **attention score** paid by the token with position $i$ to the token with position $j$ (ignoring token encoding). We expect this to be very large when $j = i - 1$, because this is a **previous head token**.
 
 After applying softmax over keys (i.e. over $j$), the $(i, j)$th element is the **attention probability** token $i$ pays to $j$, in a sequence of length 2048 (again ignoring token encodings). We expect this to be close to 1 when $j = i - 1$, and others to be close to zero.
-
 """)
         st_image("kcomp_diagram_described-QK.png", 900)
         st.markdown("")
@@ -2813,7 +2808,6 @@ if MAIN:
                 st.session_state["got_pos_by_pos_pattern"] = True
 
     st.markdown(r"""
-
 ### K-composition circuit
 
 We now dig into the hard part of the circuit - demonstrating the K-Composition between the previous token head and the induction head.
@@ -2836,7 +2830,6 @@ For ease of notation, I'll refer to the 14 inputs as $(y_0, y_1, ..., y_{13})$ r
 $$
 x W^h_Q = \sum_{i=0}^{13} y_i W^h_Q
 $$
-
 """)
 
     with st.columns(1)[0]:
@@ -2845,7 +2838,8 @@ $$
 
 We can now analyse the relative importance of these 14 terms! A very crude measure is to take the norm of each term (by component and position).
 
-Note that this is a pretty dodgy metric - q and k are not inherently interpretable! But it can be a good and easy-to-compute proxy.""")
+Note that this is a pretty dodgy metric - q and k are not inherently interpretable! But it can be a good and easy-to-compute proxy.
+""")
 
         with st.expander("Question - why are Q and K not inherently interpretable? Why might the norm be a good metric in spite of this?"):
             st.markdown(r"""
@@ -2976,7 +2970,8 @@ The result of this is that the positional embedding isn't added to the residual 
     st.markdown(r"""
 This tells us which heads are probably important, but we can do better than that. Rather than looking at the query and key components separately, we can see how they combine together - i.e. take the decomposed attention scores.
 
-This is a bilinear function of q and k, and so we will end up with a `decomposed_scores` tensor with shape `[query_component, key_component, query_pos, key_pos]`, where summing along BOTH of the first axes will give us the original attention scores (pre-mask).""")
+This is a bilinear function of q and k, and so we will end up with a `decomposed_scores` tensor with shape `[query_component, key_component, query_pos, key_pos]`, where summing along BOTH of the first axes will give us the original attention scores (pre-mask).
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -2986,7 +2981,6 @@ Implement the function giving the decomposed scores (remember to scale by `sqrt(
 """)
         with st.expander("Question - why do I focus on the attention scores, not the attention pattern? (i.e. pre softmax not post softmax)"):
             st.markdown(r"""
-
 Because the decomposition trick *only* works for things that are linear - softmax isn't linear and so we can no longer consider each component independently.
 """)
         with st.expander("Help - I'm confused about what we're doing / why we're doing it."):
