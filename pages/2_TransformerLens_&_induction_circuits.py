@@ -2458,12 +2458,7 @@ The dropdown below contains a diagram explaining how the three sections relate t
 
 After this, we'll have a look at composition scores, which are a more mathematically justified way of showing that two attention heads are composing (without having to look at their behaviour on any particular class of inputs, since it is a property of the actual model weights).
 
-### OV copying circuit""")
-
-    
-    st.markdown("")
-
-    st.markdown(r"""
+### OV copying circuit
 
 Let's start with an easy parts of the circuit - the copying OV circuit of `1.4` and `1.10`. Let's start with head 4. The only interpretable (read: **privileged basis**) things here are the input tokens and output logits, so we want to study the matrix:
 
@@ -2471,7 +2466,7 @@ $$
 W_E W_{OV}^{1.4} W_U
 $$ 
 
- (and same for `1.10`). This is the $(d_\text{vocab}, d_\text{vocab})$-shape matrix that combines with the attention pattern to get us from input to output.
+(and same for `1.10`). This is the $(d_\text{vocab}, d_\text{vocab})$-shape matrix that combines with the attention pattern to get us from input to output.
 
 We want to calculate this matrix, and inspect it. We should find that its diagonal values are very high, and its non-diagonal values are much lower.
 
