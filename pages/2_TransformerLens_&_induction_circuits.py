@@ -101,14 +101,6 @@ The running theme of the exercises is **induction circuits**. Induction circuits
     st.markdown("")
     st_image("kcomp_diagram.png", 900)
     st.markdown("")
-    st.markdown(r"""
-
-""")
-
-#     st.info(r"""
-# Today's material is transcribed directly from . If you prefer to go through the original Colab, you can find it [here](https://colab.research.google.com/github/neelnanda-io/TransformerLens/blob/new-demo/New_Demo.ipynb#scrollTo=cfdePPmEkR8y) (or alternatively you can pull it from Colab into a VSCode notebook).
-
-# .""")
 
     st.markdown(r"""
 ## Setup
@@ -233,7 +225,8 @@ def section_intro():
 </ul>
 """, unsafe_allow_html=True)
     st.markdown(r"""
-# TransformerLens: Introduction""")
+# TransformerLens: Introduction
+""")
     st.markdown(r"")
 
 #    <li><ul class="contents">
@@ -315,11 +308,11 @@ Models can be run on a single string or a tensor of tokens (shape: `[batch, posi
 if MAIN:
     model_description_text = '''## Loading Models
 
-HookedTransformer comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. 
+HookedTransformer comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. See my explainer for documentation of all supported models, and this table for hyper-parameters and the name used to load them. Each model is loaded into the consistent HookedTransformer architecture, designed to be clean, consistent and interpretability-friendly. 
 
-For this demo notebook we'll look at GPT-2 Small, an 80M parameter model. To try the model out, let's find the loss on this paragraph!'''
+For this demo notebook we'll look at GPT-2 Small, an 80M parameter model. To try the model the model out, let's find the loss on this paragraph!'''
 
-    loss = gpt2_small(model_description_text, return_type="loss")
+    loss = model(model_description_text, return_type="loss")
     print("Model loss:", loss)
 ```
 
@@ -330,7 +323,8 @@ HookedTransformer is a somewhat adapted GPT-2 architecture, but is computational
 * The weights `W_K`, `W_Q`, `W_V` mapping the residual stream to queries, keys and values are 3 separate matrices, rather than big concatenated one.
 * The weight matrices `W_K`, `W_Q`, `W_V`, `W_O` and activations have separate `head_index` and `d_head` axes, rather than flattening them into one big axis.
     * The activations all have shape `[batch, position, head_index, d_head]`.
-    * `W_K`, `W_Q`, `W_V` have shape `[head_index, d_model, d_head]` and `W_O` has shape `[head_index, d_head, d_model]`""")
+    * `W_K`, `W_Q`, `W_V` have shape `[head_index, d_model, d_head]` and `W_O` has shape `[head_index, d_head, d_model]`
+""")
 
     st.info(r"""
 * **Important - we generally follow the convention that weight matrices multiply on the right rather than the left.** In other words, they have shape `[input, output]`, and we have `new_activation = old_activation @ weights + bias`.
@@ -447,8 +441,6 @@ gpt2_small.to_string([50256, 70, 457, 17]))  # --> '<|endoftext|>gpt2'
 
     with st.expander("Aside - <|endoftext|> (optional - don't worry about fully understanding this)"):
         st.markdown(r"""
-Neel Nanda's explanation:
-
 A weirdness you may have noticed in the above is that `to_tokens` and `to_str_tokens` added a weird `<|endoftext|>` to the start of each prompt. TransformerLens does this by default, and it can easily trip up new users. Notably, **this includes `model.forward`** (which is what's implicitly used when you do eg `model("Hello World")`). This is called a **Beginning of Sequence (BOS)** token, and it's a special token used to mark the beginning of the sequence. Confusingly, in GPT-2, the End of Sequence (EOS), Beginning of Sequence (BOS) and Padding (PAD) tokens are all the same, `<|endoftext|>` with index `50256`.
 
 You can disable this behaviour by setting the flag `prepend_bos=False` in `to_tokens`, `to_str_tokens`, `model.forward` and any other function that converts strings to multi-token tensors.
@@ -500,7 +492,8 @@ Correct words: ['\n', '\n', 'former', ' with', ' models', '.', ' can', ' of', 'o
 So the model got 22 out of 85 words correct. Not bad!""")
 
         st.markdown(r"""
-    **Induction heads** are a special kind of attention head which we'll examine a lot more in coming exercises. They allow a model to perform in-context learning of a specific form: generalising from one observation that token `B` follows token `A`, to predict that token `B` will follow `A` in future occurrences of `A`, even if these two tokens had never appeared together in the model's training data. **Can you see evidence of any induction heads at work?**""")
+**Induction heads** are a special kind of attention head which we'll examine a lot more in coming exercises. They allow a model to perform in-context learning of a specific form: generalising from one observation that token `B` follows token `A`, to predict that token `B` will follow `A` in future occurrences of `A`, even if these two tokens had never appeared together in the model's training data. **Can you see evidence of any induction heads at work?**
+""")
 
         with st.expander("Evidence of induction heads"):
             st.markdown(r"""
@@ -511,12 +504,11 @@ if MAIN:
     print(gpt2_small.to_str_tokens("HookedTransformer", prepend_bos=False))     # --> ['H', 'ooked', 'Trans', 'former']
 ```
 """)
-
     st.markdown(r"""
-
 ## Caching all Activations
 
-The first basic operation when doing mechanistic interpretability is to break open the black box of the model and look at all of the internal activations of a model. This can be done with `logits, cache = model.run_with_cache(tokens)`. Let's try this out, on the first sentence from the GPT-2 paper.""")
+The first basic operation when doing mechanistic interpretability is to break open the black box of the model and look at all of the internal activations of a model. This can be done with `logits, cache = model.run_with_cache(tokens)`. Let's try this out, on the first sentence from the GPT-2 paper.
+""")
 
     with st.expander("Aside - a note on remove_batch_dim"):
         st.markdown(r"""
@@ -562,11 +554,10 @@ You can use the diagram from the **Transformer Architecture** section to help yo
 *If you're already comfortable implementing things like attention calculations (e.g. having gone through Neel's transformer walkthrough) you can skip this exercise. However, it might serve as a useful refresher.*
 """)
         st.markdown(r"""
-
-Verify that `hook_q`, `hook_k` and `hook_pattern` are related to each other in the way implied by the diagram. Do this by computing `layer0_pattern_from_cache` (the attention pattern taken directly from the cache, for layer 0) and `layer0_pattern_from_q_and_k` (the attention pattern calculated from `hook_q` and `hook_k`, for layer 0). Remember that attention pattern is the probabilities, so you'll need to scale and softmax appropriately.""")
+Verify that `hook_q`, `hook_k` and `hook_pattern` are related to each other in the way implied by the diagram. Do this by computing `layer0_pattern_from_cache` (the attention pattern taken directly from the cache, for layer 0) and `layer0_pattern_from_q_and_k` (the attention pattern calculated from `hook_q` and `hook_k`, for layer 0). Remember that attention pattern is the probabilities, so you'll need to scale and softmax appropriately.
+""")
 
         st.markdown(r"""
-
 ```python
 if MAIN:
     layer0_pattern_from_cache = None    # You should replace this!
@@ -616,9 +607,6 @@ Let's visualize the attention pattern of all the heads in layer 0, using [Alan C
     * Sequence length must match that inferred from `attention`.
     * This is used to label the grid.
     * We get this by using the `model.to_str_tokens` method.
-""")
-
-    st.markdown(r"""
 
 This visualization is interactive! Try hovering over a token or head, and click to lock. The grid on the top left and for each head is the attention pattern as a destination position by source position grid. It's lower triangular because GPT-2 has **causal attention**, attention can only look backwards, so information can only move forwards in the network.
 
@@ -722,7 +710,6 @@ if MAIN:
 In the last section, we defined a tokenizer explicitly, and passed it into our model. But here, we just pass a tokenizer name. The model automatically creates a tokenizer for us (under the hood, it calls `AutoTokenizer.from_pretrained(tokenizer_name)`).
 """)
     st.markdown(r"""
-
 You should download your model weights from [this Google Drive link](https://drive.google.com/drive/folders/1LRkK3tqNuZ6Y_UwgQKxML3980DtM0KUe), and save them under `WEIGHT_PATH` as given below.
 
 ```python
@@ -773,10 +760,9 @@ This is for a model with just attention layers, and no MLPs, LayerNorms, or bias
 
 #### Exercise - visualise attention patterns""")
         st.error(r"""
-*This exercise shouild be very quick - you can reuse code from the previous section. You should look at the solution if you're still stuck after 5-10 minutes.*""")
-
+*This exercise shouild be very quick - you can reuse code from the previous section. You should look at the solution if you're still stuck after 5-10 minutes.*
+""")
         st.markdown(r"""
-
 Visualise the attention patterns for both layers of your model, on the following prompt:
 
 ```python
@@ -827,12 +813,7 @@ The `prev_token_heads` and `current_token_heads` are perhaps unsurprising, becau
 
 The `first_token_heads` are a bit more surprising. The basic intuition here is that the first token in a sequence is often used as a resting or null position for heads that only sometimes activate (since our attention probabilities always have to add up to 1).
 """)
-#         st.info(r"""
-# Terminology note - we refer to particular attention heads using the syntax `layer.head`, e.g. `0.7` refers to the 7th head in the 0th layer. The other syntax you'll sometimes see is `L0H7`.
-# """)
-
     st.markdown(r"""
-
 ### Summarising attention patterns
 
 Now that we've observed our three basic attention patterns, it's time to make detectors for those patterns!
@@ -851,7 +832,8 @@ You should fill in the functions below, which act as detectors for particular ty
 
 Tasks like this are useful, because we need to be able to take our observations / intuitions about what a model is doing, and translate these into quantitative measures. As the exercises proceed, we'll be creating some much more interesting tools and detectors!
 
-Note - there's no objectively correct answer for which heads are doing which tasks, and which detectors can spot them. You should just try and come up with something plausible-seeming, which identifies the kind of behaviour you're looking for.""")
+Note - there's no objectively correct answer for which heads are doing which tasks, and which detectors can spot them. You should just try and come up with something plausible-seeming, which identifies the kind of behaviour you're looking for.
+""")
 
         with st.expander("Hint"):
             st.markdown(r"""
@@ -945,7 +927,7 @@ There's a few particularly striking things about induction heads:
     * Phase changes are particularly interesting (and depressing) from an alignment perspective, because the prospect of a sharp left turn, or emergent capabilities like deception or situational awareness seems like worlds where alignment may be harder, and we get caught by surprise without warning shots or simpler but analogous models to test our techniques on.
 * They are responsible for a significant loss decrease - so much so that there's a visible bump in the loss curve when they develop (this change in loss can be pretty comparable to the increase in loss from major increases in model size, though this is hard to make an apples-to-apples comparison)
 * They seem to be responsible for the vast majority of in-context learning - the ability to use far back tokens in the context to predict the next token. This is a significant way in which transformers outperform older architectures like RNNs or LSTMs, and induction heads seem to be a big part of this.
-* The same core circuit seems to be used in a bunch of more sophisticated settings, such as translation or few-shot learning - there are heads that seem clearly responsible for those *and* which double as induction heads
+* The same core circuit seems to be used in a bunch of more sophisticated settings, such as translation or few-shot learning - there are heads that seem clearly responsible for those *and* which double as induction heads.
 """)
         # st.markdown("")
     st.markdown(r"""
@@ -958,7 +940,8 @@ Because this would require a head which attends a key position based on the *val
 
 (The attention pattern *does* in fact include effects from other tokens because of softmax - if another key token has a high attention score, softmax inhibits this pair. But this inhibition is symmetric across positions, so can't systematically favour the token *next* to the relevant one.)
 
-Note that a key detail is that the value of adjacent tokens are (approximately) unrelated - if the model wanted to attend based on relative *position* this is easy.""")
+Note that a key detail is that the value of adjacent tokens are (approximately) unrelated - if the model wanted to attend based on relative *position* this is easy.
+""")
 
     st.markdown(r"""
 ## Checking for the induction capability
@@ -972,16 +955,15 @@ Note - we're using small sequences (and just one sequence), since the results ar
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - plot per-token loss on repeated sequence""")
-
+#### Exercise - plot per-token loss on repeated sequence
+""")
         st.error(r"""
 *Neither of these functions are conceputally important, so after you've tried for ~10 minutes you should read the solutions. As long as you understand what the functions are doing, this is sufficient.*
 """)
         st.markdown(r"""
-You should fill in the function below (where it says `pass`). We've given you the first line of the function, where the prefix is defined (we need a prefix token, since the model was always trained to have one). See the next section for a deeper dive into tokenisation.""")
-
+You should fill in the function below (where it says `pass`). We've given you the first line of the function, where the prefix is defined (we need a prefix token, since the model was always trained to have one). See the next section for a deeper dive into tokenisation.
+""")
         st.markdown(r"""
-
 ```python
 def generate_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> t.Tensor:
     '''
@@ -1112,7 +1094,8 @@ For instance, here is `cv.attention.attention_patterns` for head 4. We can see h
         st.markdown("")
         st.markdown("")
         st.markdown(r"""
-(Note - this is a good example of why `attention_patterns` is often a more helpful visualisation than `attention_heads` - it's easier to see precisely which token attends to which, whereas this information takes slightly longer to parse when you're looking at the grid.)""")
+(Note - this is a good example of why `attention_patterns` is often a more helpful visualisation than `attention_heads` - it's easier to see precisely which token attends to which, whereas this information takes slightly longer to parse when you're looking at the grid.)
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1120,14 +1103,12 @@ For instance, here is `cv.attention.attention_patterns` for head 4. We can see h
         st.error(r"""
 *This exercise should be similar to the earlier detector exercises. It shouldn't take more than 5-10 minutes, if you understand the previous exercises.*
 """)
-
         st.markdown(r"""
 Now, you should make an induction pattern score function, which looks for the average attention paid to the offset diagonal. Do this in the same style as our earlier head scorers.
 
-Remember, the offset in your diagonal should be `- (seq_len - 1)` (where `seq_len` is the length of the random tokens which you repeat twice), because the second instance of random token `T` will attend to the token **after** the first instance of `T`.""")
-
+Remember, the offset in your diagonal should be `- (seq_len - 1)` (where `seq_len` is the length of the random tokens which you repeat twice), because the second instance of random token `T` will attend to the token **after** the first instance of `T`.
+""")
         st.markdown(r"""
-
 ```python
 def induction_attn_detector(cache: ActivationCache) -> List[str]:
     '''
@@ -1142,7 +1123,8 @@ if MAIN:
     print("Induction heads = ", ", ".join(induction_attn_detector(rep_cache)))
 ```
 
-If this function works as expected, then you should see output that matches your observations from `circuitsvis` (i.e. the heads which you observed to be induction heads are being classified as induction heads by your function here).""")
+If this function works as expected, then you should see output that matches your observations from `circuitsvis` (i.e. the heads which you observed to be induction heads are being classified as induction heads by your function here).
+""")
 
         with st.expander("Example solution"):
             st.markdown(r"""
@@ -1189,7 +1171,7 @@ def section_hooks():
 """, unsafe_allow_html=True)
 
     st.markdown(r"""
-# Reverse-engineering induction circuits""")
+# TransformerLens: Hooks""")
     st.markdown(r"")
     st.info(r"""
 ## Learning Objectives
@@ -1249,7 +1231,8 @@ Let's break this code down.
     * The hook name is a string that specifies which activation we want to hook. 
     * The hook function gets run with the corresponding activation as its first argument.
 
-### A few extra notes on hooks, before we start using them""")
+### A few extra notes on hooks, before we start using them
+""")
 
     st.markdown(r"""
 
@@ -1325,7 +1308,8 @@ for head_idx in range(12):
         st.markdown(r"""
 [PyTorch hooks](https://blog.paperspace.com/pytorch-hooks-gradient-clipping-debugging/) are a great and underrated, yet incredibly janky, feature. They can act on a layer, and edit the input or output of that layer, or the gradient when applying autodiff. The key difference is that **Hook points** act on *activations* not layers. This means that you can intervene within a layer on each activation, and don't need to care about the precise layer structure of the transformer. And it's immediately clear exactly how the hook's effect is applied. This adjustment was shamelessly inspired by [Garcon's use of ProbePoints](https://transformer-circuits.pub/2021/garcon/index.html).
 
-They also come with a range of other quality of life improvements. PyTorch's hooks are global state, which can be a massive pain if you accidentally leave a hook on a model. TransformerLens hooks are also global state, but `run_with_hooks` tries tries to create an abstraction where these are local state by removing all hooks at the end of the function (and they come with a helpful `model.reset_hooks()` method to remove all hooks).""")
+They also come with a range of other quality of life improvements. PyTorch's hooks are global state, which can be a massive pain if you accidentally leave a hook on a model. TransformerLens hooks are also global state, but `run_with_hooks` tries tries to create an abstraction where these are local state by removing all hooks at the end of the function (and they come with a helpful `model.reset_hooks()` method to remove all hooks).
+""")
 
     st.markdown(r"""
 ## Hooks: Accessing Activations
@@ -1337,7 +1321,8 @@ Why might we want to do this? It turns out to be useful for things like:
 * Extracting activations for a specific task
 * Doing some long-running calculation across many inputs, e.g. finding the text that most activates a specific neuron
 
-Note that, in theory, this could all be done using the `run_with_cache` function we used in the previous section, combined with post-processing of the cache result. But using hooks can be more intuitive and memory efficient.""")
+Note that, in theory, this could all be done using the `run_with_cache` function we used in the previous section, combined with post-processing of the cache result. But using hooks can be more intuitive and memory efficient.
+""")
 
     with st.columns(1)[0]:
 
@@ -1345,7 +1330,7 @@ Note that, in theory, this could all be done using the `run_with_cache` function
 #### Exercise - calculate induction scores using hooks
 """)
         st.error(r"""
-Since this will be your first time using heads, if you're still confused after trying for 10 minutes you should look at the solutions. There is also a hint we've provided for you in a dropdown below the code, and you should try using this hint before reading the solution. This exercise is pretty conceptually important, so you should make sure you understand the solutions before moving on.
+*Since this will be your first time using heads, if you're still confused after trying for 10 minutes you should look at the solutions. There is also a hint we've provided for you in a dropdown below the code, and you should try using this hint before reading the solution. This exercise is pretty conceptually important, so you should make sure you understand the solutions before moving on.*
 """)
 
         st.markdown(r"""
@@ -1358,9 +1343,9 @@ Your function should do the following:
 * Calculate the induction score for the attention pattern `pattern`, using the same methodology as you used in the previous section when you wrote your induction head detectors.
     * Note that this time, the batch dimension is greater than 1, so you should compute the average attention score over the batch dimension.
     * Also note that you are computing the induction score for all heads at once, rather than one at a time. You might find the arguments `dim1` and `dim2` of the `torch.diagonal` function useful.
-* Write this score to the tensor `induction_score_store`, which is a global variable that we've provided for you. The `[i, j]`th element of this tensor should be the induction score for the `j`th head in the `i`th layer.""")
+* Write this score to the tensor `induction_score_store`, which is a global variable that we've provided for you. The `[i, j]`th element of this tensor should be the induction score for the `j`th head in the `i`th layer.
+""")
         st.markdown(r"""
-
 ```python
 if MAIN:
     seq_len = 50
@@ -1554,7 +1539,8 @@ A few important notes for this exercise:
 
     with st.expander("Aside - centering W_U"):
         st.markdown(r"""
-While we won't worry about this for this exercise, logit attribution is often more meaningful if we first center `W_U` - ie, ensure the mean of each row writing to the output logits is zero. Log softmax is invariant when we add a constant to all the logits, so we want to control for a head that just increases all logits by the same amount. We won't do this here for ease of testing.""")
+While we won't worry about this for this exercise, logit attribution is often more meaningful if we first center `W_U` - ie, ensure the mean of each row writing to the output logits is zero. Log softmax is invariant when we add a constant to all the logits, so we want to control for a head that just increases all logits by the same amount. We won't do this here for ease of testing.
+""")
 
     with st.expander("Question - why don't we do this to the log probs instead?"):
         st.markdown(r"""
@@ -1562,7 +1548,8 @@ Because log probs aren't linear, they go through `log_softmax`, a non-linear fun
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - build logit attribution tool""")
+#### Exercise - build logit attribution tool
+""")
         st.error(r"""
 *This exercise is not particuarly conceptually important, it's just some slightly messy einsums. You should look at the solutions if you're still stuck after 10 minutes.*
 """)
@@ -1623,7 +1610,6 @@ def logit_attribution(embed, l1_results, l2_results, W_U, tokens) -> t.Tensor:
 ```
 """)
     st.markdown(r"""
-
 Once you've got the tests working, you can visualise the logit attributions for each path through the model.
 
 ```python
@@ -1688,23 +1674,25 @@ See later for a discussion of all the ~infuriating~ fun quirks of tokenization!
 Another feature of the plot - the heads in the second layer seem to have much higher contributions than the heads in the first layer. Why do you think this might be?""")
         with st.expander("Hint"):
             st.markdown(r"""
-Think about what this graph actually represents, in terms of paths through the transformer.""")
+Think about what this graph actually represents, in terms of paths through the transformer.
+""")
         with st.expander("Solution"):
             st.markdown(r"""
-This is because of a point we discussed earlier - this plot doesn't pick up on things like a head's effect in composition with another head. So the attribution for layer-0 heads won't involve any composition, whereas the attributions for layer-1 heads will involve not only the single-head paths through those attention heads, but also the 2-layer compositional paths through heads in layer 0 and layer 1.""")
-
+This is because of a point we discussed earlier - this plot doesn't pick up on things like a head's effect in composition with another head. So the attribution for layer-0 heads won't involve any composition, whereas the attributions for layer-1 heads will involve not only the single-head paths through those attention heads, but also the 2-layer compositional paths through heads in layer 0 and layer 1.
+""")
     st.markdown("")
-
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - logit attribution for the induction heads""")
+#### Exercise - logit attribution for the induction heads
+""")
         st.error(r"""
 *This exercise just involves calling the `logit_attribution` function on the appropriate tensors. It's important to understand how the solutions work (and what the output means), but you shouldn't spend too much time on these functions.*
 """)
         st.markdown(r"""
 Perform logit attribution for your attention-only model `model`, on the `rep_cache`. What do you expect to see?
 
-Remember, you'll need to split the sequence in two, with one overlapping token (since predicting the next token involves removing the final token with no label) - your `logit_attr` should both have shape `[seq_len, 2*n_heads + 1]` (ie `[50, 25]` here).""")
+Remember, you'll need to split the sequence in two, with one overlapping token (since predicting the next token involves removing the final token with no label) - your `logit_attr` should both have shape `[seq_len, 2*n_heads + 1]` (ie `[50, 25]` here).
+""")
 
         with st.expander("Note - the first plot will be pretty meaningless. Can you see why?"):
             st.markdown(r"""
@@ -1758,12 +1746,6 @@ Click below to see your output, when you've run the code above. We only show the
                 st.plotly_chart(fig_dict["rep_logit_attribution"])
                 st.session_state["got_rep_logit_attribution"] = True
 
-#         with st.expander("Click here to see the output you should be getting."):
-#             st.markdown(r"""
-# We only show the second plot (since as discussed, the first plot is meaningless).
-# """)
-#             st.plotly_chart(fig_dict["rep_logit_attribution"], use_container_width=True)
-
         st.markdown(r"""What is the interpretation of this plot, in the context of our induction head circuit?""")
         with st.expander("Answer"):
             st.markdown(r"""
@@ -1771,7 +1753,8 @@ Previously, we observed that heads `1.4` and `1.10` seemed to be acting as induc
 
 This plot gives further evidence that this is the case, since these two heads have a large logit attribution score **on sequences in which the only way to get accurate predictions is to use the induction mechanism**.
 
-This also agrees with our attention scores result, in showing tht `1.10` is a stronger induction head than `1.4`.""")
+This also agrees with our attention scores result, in showing tht `1.10` is a stronger induction head than `1.4`.
+""")
 
     st.markdown(r"""
 
@@ -1816,7 +1799,8 @@ Now that we've built some tools to decompose our model's output, it's time to st
 
 Let's start with a simple example: **ablation**. An ablation is a simple causal intervention on a model - we pick some part of it and set it to zero. This is a crude proxy for how much that part matters. Further, if we have some story about how a specific circuit in the model enables some capability, showing that ablating *other* parts does nothing can be strong evidence of this.
 
-As mentioned in [the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=fh-HJyz1CgUVrXuoiban6bYx), there are many ways to do ablation. We'll focus on the simplest: zero-ablation (even though it's somewhat unprincipled).""")
+As mentioned in [the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=fh-HJyz1CgUVrXuoiban6bYx), there are many ways to do ablation. We'll focus on the simplest: zero-ablation (even though it's somewhat unprincipled).
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1826,7 +1810,8 @@ As mentioned in [the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=
 *This exercise is conceptually important, but very short. Once you understand what the code is meant to do, you should be able to complete it in less than 5 minutes.*
 """)
         st.markdown(r"""
-The code below provides a template for performing zero-ablation on the value vectors at a particular head (i.e. the vectors we get when applying the weight matrices `W_V` to the residual stream). If you're confused about what different activations mean, you can refer back to the diagram:""")
+The code below provides a template for performing zero-ablation on the value vectors at a particular head (i.e. the vectors we get when applying the weight matrices `W_V` to the residual stream). If you're confused about what different activations mean, you can refer back to the diagram:
+""")
 
         with st.expander("Attention-only diagram"):
             st.write("""<figure style="max-width:620px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNrNVsFu2zAM_RVBh7UDYnQLdnKyHIasOfQwFCu2Q10EikXHhmVJkWQ3Sd1_H-U4dR2kQLFDEx0kUibtR_pR1BONFQca0qVhOiV300gSHLZc7DYiOraaSWLdRsD3i0RJF9hsC-Hwm15fTO4MkzZRpgDzQ6g4J5fMOUmUFJvP4yvvOYno7pV-xIJZO4WEQKHdhjxm3KXhF70epJAtU-fF0RFrDxEnoUxogKNFZ2PAZnyuDdxH9EUe86zaI14ow8EETulwqNfEKpFxshAszkcFM8tMNo-aYMZX6DcZN19rvbuPdpF_HXrjSwurAeHzAq0Fxuq9MNaHIAim9-QhDMMmxiCY1IzzusWmrOuwd9J7090k9xMUVo_6y7G9dyz_Nx_5sX5UfXXVV_O-6iOZ21hhXvoPrvuqRkMwsr8566vbvoqvLMWrNIPkR_jif8zf-Z-6QuJUH0cYmQLjnjd-7dNmdkCbx6YmgBNWLYlKSMVECaSC2Clj6y3i3p4eN0GkBBP5q96lfVeGKJwA2mEpemy1LQuiKjDEW9m64Z0qPc69eOrT4k1y3tYrhLk6C3JeH5CTK0e0UbyMHWFCyWXrNSA2ZgIIk5wUzOb1q0Lf53ynfUhYbUQY3W0z3_SiQnaoxBVsXbfHDCJspTNAF8zeZMZNnSPU_DyYcayhde2u68uonLLUDmFiW6ADiheXgmUcL0BPfjuiLoUCIhqiyCFhvpNgn3tG01Jz5uAnz_D8pWHChIUBZaVTvzcypqEzJeyNphnDfl60Vs__ANh9IJM" /></figure>""", unsafe_allow_html=True)
@@ -1943,150 +1928,13 @@ This is a good illustration of the kind of result which we can get from ablation
 
 Try ablating *every* head apart from the previous token head and the two induction heads. What does this do to performance?
 
-What if you mean ablate it, rather than zero ablating it?""")
+What if you mean ablate it, rather than zero ablating it?
+""")
 
     st.markdown(r"""
 In later sections (IOI coming soon!), we'll use hooks to implement some more advanced causal interventions, such as **activation patching** and **causal tracing**. 
 """)
 
-#     st.markdown(r"""
-
-# ### Activation Patching on the Indirect Object Identification Task
-
-# For a somewhat more involved example, let's use hooks to apply **activation patching** on the **Indirect Object Identification** (IOI) task. 
-
-# The IOI task is the task of identifying that a sentence like "After John and Mary went to the store, Mary gave a bottle of milk to" with " John" rather than " Mary" (ie, finding the indirect object), and Redwood Research have [an excellent paper studying the underlying circuit in GPT-2 Small](https://arxiv.org/abs/2211.00593).
-
-# **Activation patching** is a technique from [Kevin Meng and David Bau's excellent ROME paper](https://rome.baulab.info/). The goal is to identify which model activations are important for completing a task. We do this by setting up a **clean prompt** and a **corrupted prompt** and a **metric** for performance on the task. We then pick a specific model activation, run the model on the corrupted prompt, but then *intervene* on that activation and patch in its value when run on the clean prompt. We then apply the metric, and see how much this patch has recovered the clean performance. 
-# (See [a more detailed explanation of activation patching here](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/main/Exploratory_Analysis_Demo.ipynb#scrollTo=5nUXG6zqmd0f))
-
-# We're returning to our `gpt2_small` for this example.
-
-# ```python
-# if MAIN:
-#     clean_prompt = "After John and Mary went to the store, Mary gave a bottle of milk to"
-#     corrupted_prompt = "After John and Mary went to the store, John gave a bottle of milk to"
-
-#     clean_tokens = gpt2_small.to_tokens(clean_prompt)
-#     corrupted_tokens = gpt2_small.to_tokens(corrupted_prompt)
-
-# def logits_to_logit_diff(logits, correct_answer=" John", incorrect_answer=" Mary"):
-#     # model.to_single_token maps a string value of a single token to the token index for that token
-#     # If the string is not a single token, it raises an error.
-#     correct_index = gpt2_small.to_single_token(correct_answer)
-#     incorrect_index = gpt2_small.to_single_token(incorrect_answer)
-#     return logits[0, -1, correct_index] - logits[0, -1, incorrect_index]
-# ```
-
-# **Explain in your own words what the function `logits_to_logit_diff` does.** How do you expect the output of this function to differ if the `logits` are from the clean prompt vs the corrupted prompt?
-# """)
-
-#     with st.expander("Explanation"):
-#         st.markdown(r"""
-# `logits[0, -1]` represents the logit output for the final token in the prompt, i.e. the model's prediction for what token comes after `to`. For the clean prompt, the correct answer is `" John"` and the incorrect answer is `" Mary"`.
-
-# So this function is taking the logit difference (equivalent to the log likelihood ratio) between `" John"` and `" Mary"`. **This is our metric for the model's performance on the task.**
-
-# If the logits are from the clean prompt, we expect the output to be positive, since the model should think that `" John"` is more likely than `" Mary"`. If the logits are from the corrupted prompt, we expect the output to be negative.
-# """)
-
-#     st.markdown(r"""
-# Now run the code below, and verify that your hypothesis is correct.
-
-# ```python
-# if MAIN:
-#     # We run on the clean prompt with the cache so we store activations to patch in later.
-#     clean_logits, clean_cache = gpt2_small.run_with_cache(clean_tokens, remove_batch_dim=True)
-#     clean_logit_diff = logits_to_logit_diff(clean_logits)
-#     print(f"Clean logit difference: {clean_logit_diff.item():.3f}")
-
-#     # We don't need to cache on the corrupted prompt.
-#     corrupted_logits = gpt2_small(corrupted_tokens)
-#     corrupted_logit_diff = logits_to_logit_diff(corrupted_logits)
-#     print(f"Corrupted logit difference: {corrupted_logit_diff.item():.3f}")
-# ```
-# """)
-
-#     st.markdown(r"""
-
-# We now setup the hook function to do **activation patching**. Here, we'll patch in the residual stream at the start of a specific layer and at a specific position. This will let us see how much the model is using the residual stream at that layer and position to represent the key information for the task. 
-
-# A few notes to help explain the code below:
-
-# * Our patching works by running the model on the **corrupted prompt**, but then replacing the activations at the specified layer and position with the activations from the **clean prompt**.
-# * The function `residual_stream_patching_hook` acts on the residual stream at the **start** of the layer, which is why we've called it `resid_pre`. The residual stream at the end of the layer is called `resid_post`.
-# * We use `hook.name` to access the activation name, so we know which activation we're patching in from the clean cache.
-# * `clean_resid_pre` has no batch dimension (because we specified `remove_batch_dim=True` when creating our cache), but `resid_pre` does (because by default activations in a model do have a batch dimension).
-# * Like before, when we actually run our model with hooks, we use `functools.partial` to construct a hook function to act on a specfic position.
-# * At the end, we store the result in the tensor `ioi_patching_result`. We've normalized the result, so that:
-#     * If the patching has no effect, then the result is zero (since the patched logit diff is just the same as the corrupted logit diff).
-#     * If the patching has "full effect" (i.e. making the output the same as it would have been on the clean prompt), then the result is 1.
-#     * Note that this doesn't actually guarantee that the results will always be in the range `[0, 1]`, but in this case it's very likely, because any patching will "move us from the corrupted logit output towards the clean logit output".
-# """)
-#     st.markdown("")
-#     st.markdown(r"""
-# ```python
-# def residual_stream_patching_hook(
-#     resid_pre: TT["batch", "pos", "d_model"],
-#     hook: HookPoint,
-#     position: int,
-# ) -> TT["batch", "pos", "d_model"]:
-#     clean_resid_pre = clean_cache[hook.name]
-#     resid_pre[:, position, :] = clean_resid_pre[position, :]
-#     return resid_pre
-
-# num_positions = len(clean_tokens[0])
-# ioi_patching_result = t.zeros((gpt2_small.cfg.n_layers, num_positions), device=gpt2_small.cfg.device)
-
-# for layer in tqdm(range(gpt2_small.cfg.n_layers)):
-#     for position in range(num_positions):
-#         temp_hook_fn = functools.partial(residual_stream_patching_hook, position=position)
-#         # Run the model with the patching hook
-#         patched_logits = gpt2_small.run_with_hooks(corrupted_tokens, fwd_hooks=[
-#             (utils.get_act_name("resid_pre", layer), temp_hook_fn)
-#         ])
-#         # Calculate the logit difference
-#         patched_logit_diff = logits_to_logit_diff(patched_logits).detach()
-#         # Store the normalized result
-#         ioi_patching_result[layer, position] = (patched_logit_diff - corrupted_logit_diff)/(clean_logit_diff - corrupted_logit_diff)
-# ```
-
-# We can now visualize the results, and see that this computation is extremely localised within the model. Initially, the second subject (Mary) token is all that matters (naturally, as it's the only different token), and all relevant information remains here until heads in layer 7 and 8 move this to the final token where it's used to predict the indirect object.
-
-# (Note - the heads are in layer 7 and 8, not 8 and 9, because we patched in the residual stream at the *start* of each layer).
-
-# ```python
-# # Add the index to the end of the label, because plotly doesn't like duplicate labels
-# token_labels = [f"{token}_{index}" for index, token in enumerate(gpt2_small.to_str_tokens(clean_tokens))]
-# imshow(ioi_patching_result, x=token_labels, xaxis="Position", yaxis="Layer", title="Normalized Logit Difference After Patching Residual Stream on the IOI Task")
-# ```
-# """)
-
-#     st.plotly_chart(fig_dict["logit_diff_from_patching"], use_container_width=False)
-
-#     with st.expander("Help - I'm still confused about this diagram."):
-#         st.markdown(r"""
-# The interpretation of the $n$th **row** of the heatmap is as follows:
-
-# > *If we run the **corrupted prompt** through the model (i.e. the one where `Mary` is the correct answer), but intervene by replacing the residual stream **before** the start of the $n$th layer with the values produced by the **clean prompt** (where `John` is the correct answer), then how far does this move the output towards predicting `John` instead?*
-# >
-# > *(where a value of 0 in the heatmap indicates no movement of the output towards `John`, and a value of 1 indicates we now predict `John` as strongly as we would have on the clean prompt)*
-
-# So the fact that the first row is zero everywhere except for the `Mary` token is trivial, because intervening at this point is just equivalent to feeding the clean prompt into the model instead.
-
-# Similarly, we expect that near the end the rows will be zero everywhere except for the `to` token, because the `to` token holds the information which will eventually result in a prediction of either John or Mary. So there must come a point where this token holds all the information it needs to make this prediction, and no other tokens will affect it.
-
-# The more interesting parts are the middle rows. They tells us that:
-
-# 1. **The computation is very localised.**
-#     * In other words, basically only one sequence position holds the "John vs Mary" information at any one time. 
-#     * The exception is in the middle rows, where it takes two layers for most of the information to be transferred from the `Mary` token to the `to` token.
-# 2. **The information path is very direct.**
-#     * The "John vs Mary" information moves from the `Mary` token to the `to` token without any detours.
-#     * In principle, we could imagine a situation where the information path is less direct, e.g. the majority of the information passes from `Mary` to `gave`, and then from `gave` to `to`. But that's not what's happening here.
-
-# One other note - all the values to the left of Mary are zero, whereas the values to the right aren't (although most of them are very close to zero). This is because we're using causal attention, which means information can only flow forwards. So the residual streams for the clean and corrupted prompt can only differ on or after the first token which is different between the two prompts.
-# """)
     
 def section_reverse_engineering():
     st.sidebar.markdown("""
@@ -2166,7 +2014,8 @@ You can use the dropdown below to check your understanding.
 
 To emphasise - the sophisticated hard part is computing the *attention* pattern of the induction head - this takes careful composition. The previous token and copying parts are fairly easy. This is a good illustrative example of how the QK circuits and OV circuits act semi-independently, and are often best thought of somewhat separately. And that computing the attention patterns can involve real and sophisticated computation!
 
-Below is a diagram of the induction circuit, with the heads indicated in the weight matrices.""")
+Below is a diagram of the induction circuit, with the heads indicated in the weight matrices.
+""")
         st_image("kcomp_diagram_described_3.png", 1000)
         st.markdown("")
 
