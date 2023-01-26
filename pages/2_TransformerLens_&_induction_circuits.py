@@ -3234,7 +3234,7 @@ We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W
         st.markdown(r"""
 Recall that we can view each head as having three input wires (keys, queries and values), and one output wire (the outputs). The different forms of composition come from the fact that keys, queries and values can all be supplied from the output of a different head.
 
-Here is an illustration which shows the three different cases, and should also explain why we use this terminology.
+Here is an illustration which shows the three different cases, and should also explain why we use this terminology. You might have to open this image in a new tab to see it clearly.
 """)
         st_image("composition.png", 1400)
         st.markdown("")
