@@ -30,9 +30,7 @@ def read_from_html(filename):
         fig = pio.from_json(json.dumps(plotly_json))
     return fig
 
-NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "logit_diff_from_patching", "line", "attn_induction_score","distil_plot", "ov_copying", "scatter_evals"]
-
-NAMES.extend(["repeated_tokens", "induction_scores", "logit_attribution", "rep_logit_attribution", "logit_diff_rep", "norms_of_query_components", "norms_of_key_components", "attn_scores_for_component", "attn_scores_std_devs", "q_comp_scores", "k_comp_scores", "v_comp_scores"])
+NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "logit_diff_from_patching", "line", "attn_induction_score","distil_plot"]
 
 def complete_fig_dict(fig_dict):
     for name in NAMES:
@@ -45,6 +43,35 @@ fig_dict_old = st.session_state["fig_dict"]
 fig_dict = complete_fig_dict(fig_dict_old)
 if len(fig_dict) > len(fig_dict_old):
     st.session_state["fig_dict"] = fig_dict
+
+WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
+def update_fig_dict(fig_dict):
+    changed = False
+    for name in [
+        "repeated_tokens",
+        "induction_scores", 
+        "logit_attribution", 
+        "rep_logit_attribution",
+        "ablation_scores",
+        "OV_circuit_sample", 
+        "norms_of_query_components", 
+        "norms_of_key_components",
+        "attn_scores_per_component", 
+        "attn_scores_std_devs",
+        "q_comp_scores", 
+        "k_comp_scores", 
+        "v_comp_scores",
+        "pos_by_pos_pattern",
+
+    ]:
+        if os.path.exists(WIP + "/" + name + ".html"):
+            fig_dict[name] = read_from_html("written_images/" + name)
+            changed = True
+    if changed:
+        st.session_state["fig_dict"] = fig_dict
+    return fig_dict
+
+fig_dict = update_fig_dict(fig_dict)
 
 with open("images/layer0_head_attn_patterns.html") as f:
     layer0_head_attn_patterns = f.read()
@@ -68,7 +95,8 @@ Most of the sections are constructed in the following way:
 1. A particular feature of TransformerLens is introduced. 
 2. You are given an exercise, in which you have to apply the feature. 
 
-The running theme of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.""")
+The running theme of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.
+""")
 
     st.markdown("")
     st_image("kcomp_diagram.png", 900)
@@ -121,6 +149,8 @@ from IPython.display import HTML, display
 import transformer_lens
 from transformer_lens.hook_points import HookedRootModule, HookPoint
 from transformer_lens import utils, HookedTransformer, HookedTransformerConfig, FactoredMatrix, ActivationCache
+
+import plot_utils
 
 import circuitsvis as cv
 
@@ -180,16 +210,6 @@ We've included the learning objectives for each section, so you can get a sense 
 * Understand the difference between investigating a circuit by looking at activtion patterns, and reverse-engineering a circuit by looking directly at the weights.
 * Use the factored matrix class to inspect the QK and OV circuits within an induction circuit.
 * Perform further exploration of induction circuits: composition scores, and targeted ablations.
-""")
-    st.info(r"""
-## 5️⃣ TransformerLens: Other Features
-
-* Learn about the different models available in the TransformerLens library.
-* Read about some transformer implementation details, such as folding layernorm.
-* Understand exactly how tokenization works, including subtle details such as the beginning of sequence (BOS) token.
-* Use transformers to generate text.
-* Build your own custom transformer, with its own hook points.
-* Load models at pre-trained checkpoints, and study these models to identify the induction head phase transition.
 """)
 
 def section_intro():
@@ -284,8 +304,6 @@ cfg.n_ctx == 2048
     st.markdown(r"""
 ### Running your model
 
-To try the model the model out, let's find the loss on this text!
-
 Models can be run on a single string or a tensor of tokens (shape: `[batch, position]`, all integers). The possible return types are: 
 
 * `"logits"` (shape `[batch, position, d_vocab]`, floats), 
@@ -294,14 +312,15 @@ Models can be run on a single string or a tensor of tokens (shape: `[batch, posi
 * `None` (run the model, but don't calculate the logits - this is faster when we only want to use intermediate activations)
 
 ```python
-model_description_text = '''## Loading Models
+if MAIN:
+    model_description_text = '''## Loading Models
 
 HookedTransformer comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. 
 
-For this demo notebook we'll look at GPT-2 Small, an 80M parameter model. To try the model the model out, let's find the loss on this paragraph!'''
+For this demo notebook we'll look at GPT-2 Small, an 80M parameter model. To try the model out, let's find the loss on this paragraph!'''
 
-loss = gpt2_small(model_description_text, return_type="loss")
-print("Model loss:", loss)
+    loss = gpt2_small(model_description_text, return_type="loss")
+    print("Model loss:", loss)
 ```
 
 ## Transformer architecture
@@ -309,7 +328,7 @@ print("Model loss:", loss)
 HookedTransformer is a somewhat adapted GPT-2 architecture, but is computationally identical. The most significant changes are to the internal structure of the attention heads:
 
 * The weights `W_K`, `W_Q`, `W_V` mapping the residual stream to queries, keys and values are 3 separate matrices, rather than big concatenated one.
-* The weight matrices `W_K`, `W_Q`, `W_V`, `W_O` and activations have separate head_index and d_head axes, rather than flattening them into one big axis.
+* The weight matrices `W_K`, `W_Q`, `W_V`, `W_O` and activations have separate `head_index` and `d_head` axes, rather than flattening them into one big axis.
     * The activations all have shape `[batch, position, head_index, d_head]`.
     * `W_K`, `W_Q`, `W_V` have shape `[head_index, d_model, d_head]` and `W_O` has shape `[head_index, d_head, d_model]`""")
 
@@ -407,6 +426,8 @@ A few shortctus to make your lives easier when using these models:
 * You can index weights like `W_Q` directly from the model via e.g. `model.blocks[0].attn.W_Q` (which gives you the `[nheads, d_model, d_head]` query weights for all heads in layer 0).
     * But an easier way is just to index with `model.W_Q`, which gives you the `[nlayers, nheads, d_model, d_head]` tensor containing **every** query weight in the model.
 * Similarly, there exist shortcuts `model.W_E`, `model.W_U` and `model.W_pos` for the embeddings, unembeddings and positional embeddings respectively.
+* With models containing MLP layers, you also have `model.W_in` and `model.W_out` for the linear layers.
+* The same is true for all biases (e.g. `model.b_Q` for all query biases).
 
 ## Tokenization
 
@@ -420,11 +441,21 @@ Examples of use:
 
 ```python
 gpt2_small.to_str_tokens("gpt2")             # --> ['<|endoftext|>', 'g', 'pt', '2']
-gpt2_small.to_tokens("gpt2")                 # --> tensor([[50256,    70,   457,    17]], device='cuda:0')
-gpt2_small.to_string([50256, 70, 457, 17])   # --> '<|endoftext|>gpt2'
-```
+gpt2_small.to_tokens("gpt2")                 # --> tensor([[50256, 70, 457, 17]], device='cuda:0')
+gpt2_small.to_string([50256, 70, 457, 17]))  # --> '<|endoftext|>gpt2'
+```""")
 
-Later sections will go into more detail on how to use the tokenizer, but for now this will suffice.
+    with st.expander("Aside - <|endoftext|> (optional - don't worry about fully understanding this)"):
+        st.markdown(r"""
+Neel Nanda's explanation:
+
+A weirdness you may have noticed in the above is that `to_tokens` and `to_str_tokens` added a weird `<|endoftext|>` to the start of each prompt. TransformerLens does this by default, and it can easily trip up new users. Notably, **this includes `model.forward`** (which is what's implicitly used when you do eg `model("Hello World")`). This is called a **Beginning of Sequence (BOS)** token, and it's a special token used to mark the beginning of the sequence. Confusingly, in GPT-2, the End of Sequence (EOS), Beginning of Sequence (BOS) and Padding (PAD) tokens are all the same, `<|endoftext|>` with index `50256`.
+
+You can disable this behaviour by setting the flag `prepend_bos=False` in `to_tokens`, `to_str_tokens`, `model.forward` and any other function that converts strings to multi-token tensors.
+
+`prepend_bos` is a bit of a hack, and I've gone back and forth on what the correct default here is. The reason I do this is that transformers tend to treat the first token weirdly - this doesn't really matter in training (where all inputs are >1000 tokens), but this can be a big issue when investigating short prompts! The reason for this is that attention patterns are a probability distribution and so need to add up to one, so to simulate being "off" they normally look at the first token. Giving them a BOS token lets the heads rest by looking at that, preserving the information in the first "real" token.
+
+Further, *some* models are trained to need a BOS token (OPT and my interpretability-friendly models are, GPT-2 and GPT-Neo are not). But despite GPT-2 not being trained with this, empirically it seems to make interpretability easier.
 """)
 
     with st.columns(1)[0]:
@@ -433,6 +464,10 @@ Later sections will go into more detail on how to use the tokenizer, but for now
 
 Consider the `model_description_text` you fed into your model above. How many words did your model guess correctly? Which words were correct? 
 
+```python
+if MAIN:
+    # YOUR CODE HERE - calculate how many words the model predicted correctly
+```
 """)
 
         with st.expander("Hint"):
@@ -440,6 +475,8 @@ Consider the `model_description_text` you fed into your model above. How many wo
 Use `return_type="logits"` to get the model's predictions, then take argmax across the vocab dimension. Then, compare these predictions with the actual tokens, derived from the `model_description_text`.
 
 Remember, you should be comparing the `[:-1]`th elements of this tensor of predictions with the `[1:]`th elements of the input tokens (because your model's output represents a probability distribution over the *next* token, not the current one).
+
+Also, remember to handle the batch dimension (since `logits`, and the output of `to_tokens`, will both have batch dimensions by default).
 """)
         with st.expander("Solution"):
             st.markdown(r"""
@@ -456,19 +493,23 @@ print(f"Correct words: {gpt2_small.to_str_tokens(prediction[prediction == true_t
 The output from this code is:
 
 ```
-Model accuracy: 21/87
-Correct words: ['\n', '\n', 'former', ' with', ' models', '.', ' can', ' of', 'ooked', 'Trans', 'former', '_', 'NAME', '`.', '\n', ' at', 'PT', '-', ',', "'s", ' the']
+Model accuracy: 22/85
+Correct words: ['\n', '\n', 'former', ' with', ' models', '.', ' can', ' of', 'ooked', 'Trans', 'former', '_', 'NAME', '`.', '\n', ' at', 'PT', '-', ',', ',', "'s", ' the']
 ```
 
-So the model got 21 out of 87 words correct. Not bad!""")
+So the model got 22 out of 85 words correct. Not bad!""")
 
-    st.markdown(r"""
-**Induction heads** are a special kind of attention head which we'll examine a lot more in coming exercises. They allow a model to perform in-context learning of a specific form: generalising from one observation that token `B` follows token `A`, to predict that token `B` will follow `A` in future occurrences of `A`, even if these two tokens had never appeared together in the model's training data. **Can you see evidence of any induction heads at work?**""")
-
-    with st.expander("Evidence of induction heads"):
         st.markdown(r"""
+    **Induction heads** are a special kind of attention head which we'll examine a lot more in coming exercises. They allow a model to perform in-context learning of a specific form: generalising from one observation that token `B` follows token `A`, to predict that token `B` will follow `A` in future occurrences of `A`, even if these two tokens had never appeared together in the model's training data. **Can you see evidence of any induction heads at work?**""")
 
-The evidence for induction heads comes from the fact that the model successfully predicted `'ooked', 'Trans', 'former'` following the token `'H'`. This is because it's the second time that `HookedTransformer` had appeared in this text string, and the model predicted it the second time but not the first. (The model did predict `former` the first time, but we can reasonably assume that `Transformer` so this prediction wouldn't require the induction capability, unlike `HookedTransformer`.)
+        with st.expander("Evidence of induction heads"):
+            st.markdown(r"""
+The evidence for induction heads comes from the fact that the model successfully predicted `'ooked', 'Trans', 'former'` following the token `'H'`. This is because it's the second time that `HookedTransformer` had appeared in this text string, and the model predicted it the second time but not the first. (The model did predict `former` the first time, but we can reasonably assume that `Transformer` is a word this model had already been exposed to during training, so this prediction wouldn't require the induction capability, unlike `HookedTransformer`.)
+
+```python
+if MAIN:
+    print(gpt2_small.to_str_tokens("HookedTransformer", prepend_bos=False))     # --> ['H', 'ooked', 'Trans', 'former']
+```
 """)
 
     st.markdown(r"""
@@ -477,17 +518,20 @@ The evidence for induction heads comes from the fact that the model successfully
 
 The first basic operation when doing mechanistic interpretability is to break open the black box of the model and look at all of the internal activations of a model. This can be done with `logits, cache = model.run_with_cache(tokens)`. Let's try this out, on the first sentence from the GPT-2 paper.""")
 
-    with st.expander("A note on `remove_batch_dim`"):
+    with st.expander("Aside - a note on remove_batch_dim"):
         st.markdown(r"""
-Every activation inside the model begins with a batch dimension. Here, because we only entered a single batch dimension, that dimension is always length 1 and kinda annoying, so passing in the `remove_batch_dim=True` keyword removes it. `gpt2_cache_no_batch_dim = gpt2_cache.remove_batch_dim()` would have achieved the same effect.
+Every activation inside the model begins with a batch dimension. Here, because we only entered a single batch dimension, that dimension is always length 1 and kinda annoying, so passing in the `remove_batch_dim=True` keyword removes it. 
+
+`gpt2_cache_no_batch_dim = gpt2_cache.remove_batch_dim()` would have achieved the same effect.
 """)
 
     st.markdown(r"""
 ```python
-gpt2_text = "Natural language processing tasks, such as question answering, machine translation, reading comprehension, and summarization, are typically approached with supervised learning on taskspecific datasets."
-gpt2_tokens = gpt2_small.to_tokens(gpt2_text)
-print(gpt2_tokens.device)
-gpt2_logits, gpt2_cache = gpt2_small.run_with_cache(gpt2_tokens, remove_batch_dim=True)
+if MAIN:
+    gpt2_text = "Natural language processing tasks, such as question answering, machine translation, reading comprehension, and summarization, are typically approached with supervised learning on taskspecific datasets."
+    gpt2_tokens = gpt2_small.to_tokens(gpt2_text)
+    print(gpt2_tokens.device)
+    gpt2_logits, gpt2_cache = gpt2_small.run_with_cache(gpt2_tokens, remove_batch_dim=True)
 ```
 
 If you inspect the `gpt2_cache` object, you should see that it contains a very large number of keys, each one corresponding to a different activation in the model. You can access the keys by indexing the cache directly, or by a more convenient indexing shorthand. For instance, the code:
@@ -503,7 +547,7 @@ gpt2_cache["blocks.0.attn.hook_pattern"]
 ```
 """)
 
-    with st.expander("Aside:"):
+    with st.expander("Aside: utils.get_act_name"):
         st.markdown(r"""
 The reason these are the same is that, under the hood, the first example actually indexes by `utils.get_act_name("pattern", 0)`, which evaluates to `"blocks.0.attn.hook_pattern"`.
 
@@ -513,34 +557,46 @@ You can use the diagram from the **Transformer Architecture** section to help yo
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - verify activations
-
-Verify that `hook_q`, `hook_k` and `hook_pattern` are related to each other in the way implied by the diagram. Do this by computing `layer0_pattern_from_cache` (the attention pattern taken directly from the cache, for layer 0) and `layer0_pattern_from_q_and_k` (the attention pattern calculated from `hook_q` and `hook_k`, for layer 0). Remember that attention pattern is the probabilities, so you'll need to scale and softmax appropriately.""")
-
-        st.info(r"""
-Note - if you're already comfortable implementing things like attention calculations (e.g. having gone through Neel's transformer walkthrough) you can skip this exercise. However, it might serve as a useful refresher.
+#### Exercise - verify activations""")
+        st.error(r"""
+*If you're already comfortable implementing things like attention calculations (e.g. having gone through Neel's transformer walkthrough) you can skip this exercise. However, it might serve as a useful refresher.*
 """)
         st.markdown(r"""
 
-```python
-layer0_pattern_from_cache = None    # You should replace this!
-layer0_pattern_from_q_and_k = None  # You should replace this!
+Verify that `hook_q`, `hook_k` and `hook_pattern` are related to each other in the way implied by the diagram. Do this by computing `layer0_pattern_from_cache` (the attention pattern taken directly from the cache, for layer 0) and `layer0_pattern_from_q_and_k` (the attention pattern calculated from `hook_q` and `hook_k`, for layer 0). Remember that attention pattern is the probabilities, so you'll need to scale and softmax appropriately.""")
 
-t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
+        st.markdown(r"""
+
+```python
+if MAIN:
+    layer0_pattern_from_cache = None    # You should replace this!
+    layer0_pattern_from_q_and_k = None  # You should replace this!
+
+    t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
 ```
+""")
+        with st.expander("Hint"):
+            st.markdown(r"""
+You'll need to use three different cache indexes in all:
+
+* `gpt2_cache["pattern", 0]` to get the attention patterns, which have shape `[seqQ, seqK]`
+* `gpt2_cache["q", 0]` to get the query vectors, which have shape `[seqQ, nhead, headsize]`
+* `gpt2_cache["k", 0]` to get the key vectors, which have shape `[seqK, nhead, headsize]`
 """)
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
-layer0_pattern_from_cache = gpt2_cache["pattern", 0]
+if MAIN:
+    layer0_pattern_from_cache = gpt2_cache["pattern", 0]
 
-seq, nhead, headsize = gpt2_cache["q", 0].shape
-layer0_attn_scores = einsum("seqQ n h, seqK n h -> n seqQ seqK", gpt2_cache["q", 0], gpt2_cache["k", 0])
-mask = t.tril(t.ones((seq, seq), device=device, dtype=bool))
-layer0_attn_scores = t.where(mask, layer0_attn_scores, -1e9)
-layer0_pattern_from_q_and_k = (layer0_attn_scores / headsize**0.5).softmax(-1)
+    q, k = gpt2_cache["q", 0], gpt2_cache["k", 0]
+    seq, nhead, headsize = q.shape
+    layer0_attn_scores = einsum("seqQ n h, seqK n h -> n seqQ seqK", q, k)
+    mask = t.triu(t.ones((seq, seq), device=device, dtype=bool), diagonal=1)
+    layer0_attn_scores.masked_fill_(mask, -1e9)
+    layer0_pattern_from_q_and_k = (layer0_attn_scores / headsize**0.5).softmax(-1)
 
-t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
+    t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
 ```
 """)
     st.markdown(r"""
@@ -567,16 +623,28 @@ Let's visualize the attention pattern of all the heads in layer 0, using [Alan C
 This visualization is interactive! Try hovering over a token or head, and click to lock. The grid on the top left and for each head is the attention pattern as a destination position by source position grid. It's lower triangular because GPT-2 has **causal attention**, attention can only look backwards, so information can only move forwards in the network.
 
 ```python
-print(type(gpt2_cache))
-attention_pattern = gpt2_cache["pattern", 0, "attn"]
-print(attention_pattern.shape)
-gpt2_str_tokens = model.to_str_tokens(gpt2_text)
+if MAIN:
+    print(type(gpt2_cache))
+    attention_pattern = gpt2_cache["pattern", 0, "attn"]
+    print(attention_pattern.shape)
+    gpt2_str_tokens = model.to_str_tokens(gpt2_text)
 
-print("Layer 0 Head Attention Patterns:")
-cv.attention.attention_heads(tokens=gpt2_str_tokens, attention=attention_pattern)
-```""")
+    print("Layer 0 Head Attention Patterns:")
+    display(cv.attention.attention_patterns(tokens=gpt2_str_tokens, attention=attention_pattern))
+```
+
+Hover over heads to see the attention patterns; click on a head to lock it. Hover over each token to see which other tokens it attends to (or which othher tokens attend to it - you can see this by changing the dropdown to `Destination <- Source`).
+""")
+    # with open("images/cv_attn.html") as f:
+    #     text = f.read()
+    # st.components.v1.html(text, height=400)
+    st.components.v1.html(layer0_head_attn_patterns, height=450)
+    # st.markdown(layer0_head_attn_patterns, unsafe_allow_html=True)
+
     st.info(r"""
-Note - this library is currently under development, and still might have a few bugs. In particular, the attention diagrams sometimes shrink when you hover over them, depending on the IDE you're using. One solution is to write the diagrams to an HTML file instead:
+Note - this graphic was produced by the function `cv.attention.attention_patterns`. You can also produce a slightly different graphic with `cv.attention.attention_heads` (same arguments `tokens` and `attention`), which presents basically the same information but in a slightly different way (larger grids, rather than smaller grids with text you can hover over).
+
+This latter visualisation sometimes doesn't render correctly in the VSCode interactive window, so you might want to display it in your browser instead. You can do this as follows:
 
 ```python
 html = cv.attention.attention_heads(tokens=gpt2_str_tokens, attention=attention_pattern)
@@ -586,19 +654,6 @@ with open("layer0_attn_patterns.html", "w") as f:
 
 Then the file should pop up in your explorer on the left of VSCode. Right click on it and select "Open in Default Browser" to view it in your browser.
 """)
-    # with open("images/cv_attn.html") as f:
-    #     text = f.read()
-    # st.components.v1.html(text, height=400)
-    st.components.v1.html(layer0_head_attn_patterns, height=1200)
-    # st.markdown(layer0_head_attn_patterns, unsafe_allow_html=True)
-
-    st.info(r"""
-Note - this graphic was produced by the function `cv.attention.attention_heads`. You can also produce a slightly different graphic with `cv.attention.attention_pattern` (same arguments `tokens` and `attention`), which presents basically the same information in a slightly different way, shown below:
-""")
-    with open("images/layer0_head_attn_patterns_2.html") as f:
-        text = f.read()
-    st.components.v1.html(text, height=600)
-
 
 def section_finding_induction_heads():
     st.sidebar.markdown("""
@@ -640,25 +695,27 @@ Here we introduce a toy 2L attention-only transformer trained specifically for t
 - It has no MLP layers, no LayerNorms, and no biases.
 - There are separate embed and unembed matrices (i.e. the weights are not tied).
 
-As mentioned previously, we are now defining our model with a `HookedTransformerConfig` object:
+We are now defining our model with a `HookedTransformerConfig` object:
 
 ```python
-cfg = HookedTransformerConfig(
-    d_model=768,
-    d_head=64,
-    n_heads=12,
-    n_layers=2,
-    n_ctx=2048,
-    d_vocab=50278,
-    attention_dir="causal", # defaults to "bidirectional"
-    attn_only=True, # defaults to False
-    tokenizer_name="EleutherAI/gpt-neox-20b", 
-    seed=398,
-    use_attn_result=True,
-    normalization_type=None, # defaults to "LN", i.e. layernorm with weights & biases
-    positional_embedding_type="shortformer"
-)
-```""")
+if MAIN:
+    cfg = HookedTransformerConfig(
+        d_model=768,
+        d_head=64,
+        n_heads=12,
+        n_layers=2,
+        n_ctx=2048,
+        d_vocab=50278,
+        attention_dir="causal", # defaults to "bidirectional"
+        attn_only=True, # defaults to False
+        tokenizer_name="EleutherAI/gpt-neox-20b", 
+        seed=398,
+        use_attn_result=True,
+        normalization_type=None, # defaults to "LN", i.e. layernorm with weights & biases
+        positional_embedding_type="shortformer"
+    )
+```
+""")
 
     with st.expander("An aside about tokenizers"):
         st.markdown(r"""
@@ -669,9 +726,9 @@ In the last section, we defined a tokenizer explicitly, and passed it into our m
 You should download your model weights from [this Google Drive link](https://drive.google.com/drive/folders/1LRkK3tqNuZ6Y_UwgQKxML3980DtM0KUe), and save them under `WEIGHT_PATH` as given below.
 
 ```python
-WEIGHT_PATH = "attn_only_2L_half.pth"
-
 if MAIN:
+    WEIGHT_PATH = "attn_only_2L_half.pth"
+
     model = HookedTransformer(cfg)
     raw_weights = model.state_dict()
     pretrained_weights = t.load(WEIGHT_PATH, map_location=device)
@@ -714,7 +771,11 @@ This is for a model with just attention layers, and no MLPs, LayerNorms, or bias
     with st.columns(1)[0]:
         st.markdown(r"""
 
-#### Exercise - visualise attention patterns
+#### Exercise - visualise attention patterns""")
+        st.error(r"""
+*This exercise shouild be very quick - you can reuse code from the previous section. You should look at the solution if you're still stuck after 5-10 minutes.*""")
+
+        st.markdown(r"""
 
 Visualise the attention patterns for both layers of your model, on the following prompt:
 
@@ -730,24 +791,30 @@ Inspect the attention patterns. What do you notice about the attention heads?
 
 You should spot three relatively distinctive basic patterns, which occur in multiple heads. What are these patterns, and can you guess why they might be present?
 """)
-        st.info(r"""Reminder: rather than plotting inline, you can do the following, and then open in your browser from the left-hand file explorer menu of VSCode:
+        with st.expander("Aside - what to do if your plots won't show up"):
+            st.markdown(r"""
+A common mistake is to fail to pass the tokens in as arguments. If you do this, your attention patterns won't render.
+
+If this isn't the problem, then it might be an issue with the Circuitsvis library.Rather than plotting inline, you can do the following, and then open in your browser from the left-hand file explorer menu of VSCode:
 
 ```python
 html = cv.attention.attention_heads(tokens=str_tokens, attention=attention_pattern)
 with open("attn_patterns.html", "w") as f:
     f.write(str(html))
-```""")
+```
+""")
+
 
         with st.expander("Solution"):
             st.markdown(r"""
 We visualise attention patterns with the following code:
 
 ```python
-for layer in range(model.cfg.n_layers):
-    attention_pattern = cache["pattern", layer]
-    html = cv.attention.attention_heads(tokens=str_tokens, attention=attention_pattern)
-    with open(f"layer_{layer}_attention.html", "w") as f:
-        f.write(str(html))
+if MAIN:
+    str_tokens = model.to_str_tokens(text)
+    for layer in range(model.cfg.n_layers):
+        attention_pattern = cache["pattern", layer]
+        display(cv.attention.attention_patterns(tokens=str_tokens, attention=attention_pattern))
 ```
 
 We notice that there are three basic patterns which repeat quite frequently:
@@ -758,11 +825,11 @@ We notice that there are three basic patterns which repeat quite frequently:
 
 The `prev_token_heads` and `current_token_heads` are perhaps unsurprising, because words that are close together in a sequence probably have a lot more mutual information (i.e. we could get quite far using bigram or trigram prediction). 
 
-The `first_token_heads` are a bit more surprising. The basic intuition here is that the first token in a sequence is often used as a resting or null position for heads that only sometimes activate.
+The `first_token_heads` are a bit more surprising. The basic intuition here is that the first token in a sequence is often used as a resting or null position for heads that only sometimes activate (since our attention probabilities always have to add up to 1).
 """)
-        st.info(r"""
-Terminology note - we refer to particular attention heads using the syntax `layer.head`, e.g. `0.7` refers to the 7th head in the 0th layer. The other syntax you'll sometimes see is `L0H7`.
-""")
+#         st.info(r"""
+# Terminology note - we refer to particular attention heads using the syntax `layer.head`, e.g. `0.7` refers to the 7th head in the 0th layer. The other syntax you'll sometimes see is `L0H7`.
+# """)
 
     st.markdown(r"""
 
@@ -774,13 +841,17 @@ Now that we've observed our three basic attention patterns, it's time to make de
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - write your own detectors
+""")
+        st.error(r"""
+*These exercises shouldn't be too challenging, if you understand attention patterns. Use the hint if you're stuck on things like how to correctly index your tensors, or how to access the activation patterns from the cache. You shouldn't spend more than 10-15 minutes on these exercises.*
+""")
+        st.markdown(r"""
 
 You should fill in the functions below, which act as detectors for particular types of heads. Validate your detectors by comparing these results to the visual attention patterns above - summary statistics on their own can be dodgy, but are much more reliable if you can validate it by directly playing with the data.
 
 Tasks like this are useful, because we need to be able to take our observations / intuitions about what a model is doing, and translate these into quantitative measures. As the exercises proceed, we'll be creating some much more interesting tools and detectors!
 
-Note - there's no objectively correct answer for which heads are doing which tasks, and which detectors can spot them. You should just try and come up with something plausible-seeming, which identifies the kind of behaviour you're looking for.
-""")
+Note - there's no objectively correct answer for which heads are doing which tasks, and which detectors can spot them. You should just try and come up with something plausible-seeming, which identifies the kind of behaviour you're looking for.""")
 
         with st.expander("Hint"):
             st.markdown(r"""
@@ -802,7 +873,7 @@ tensor([3, 7])
 
 Remember that you should be using `cache["pattern", layer]` to get all the attention probabilities for a given layer, and then indexing on the 0th dimension to get the correct head.
 """)
-        with st.expander("Example solution for current_attn_detector (read if you're stuck)"):
+        with st.expander("Example solution for current_attn_detector"):
             st.markdown(r"""
 ```python
 def current_attn_detector(cache: ActivationCache) -> List[str]:
@@ -901,39 +972,53 @@ Note - we're using small sequences (and just one sequence), since the results ar
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - plot per-token loss on repeated sequence
+#### Exercise - plot per-token loss on repeated sequence""")
 
-You should fill in the function below (where it says `pass`). We've given you the first line of the function, where the prefix is defined (we need a prefix token, since the model was always trained to have one). See the next section for a deeper dive into tokenisation.
+        st.error(r"""
+*Neither of these functions are conceputally important, so after you've tried for ~10 minutes you should read the solutions. As long as you understand what the functions are doing, this is sufficient.*
+""")
+        st.markdown(r"""
+You should fill in the function below (where it says `pass`). We've given you the first line of the function, where the prefix is defined (we need a prefix token, since the model was always trained to have one). See the next section for a deeper dive into tokenisation.""")
+
+        st.markdown(r"""
 
 ```python
-def run_and_cache_model_repeated_tokens(
-    model: HookedTransformer, 
-    seq_len: int, 
-    batch: int = 1
-) -> tuple[t.Tensor, t.Tensor, ActivationCache]:
+def generate_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> t.Tensor:
+    '''
+    Generates a sequence of repeated random tokens
+
+    Outputs are:
+        rep_tokens: [batch, 1+2*seq_len]
+    '''
+    prefix = t.ones((batch, 1), dtype=t.int64) * model.tokenizer.bos_token_id
+    pass
+
+
+def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> tuple[t.Tensor, t.Tensor, ActivationCache]:
     '''
     Generates a sequence of repeated random tokens, and runs the model on it, returning logits, tokens and cache
 
+    Should use the `generate_repeated_tokens` function above
+
     Outputs are:
-    rep_logits: [batch, 1+2*seq_len, d_vocab]
-    rep_tokens: [batch, 1+2*seq_len]
-    rep_cache: The cache of the model run on rep_tokens
+        rep_tokens: [batch, 1+2*seq_len]
+        rep_logits: [batch, 1+2*seq_len, d_vocab]
+        rep_cache: The cache of the model run on rep_tokens (should remove batch dim if batch==1)
     '''
-    prefix = t.ones((batch, 1), dtype=t.int64) * model.tokenizer.bos_token_id
-    rep_tokens_half = t.randint(0, model.cfg.d_vocab, (batch, seq_len), dtype=t.int64)
-    rep_tokens = t.cat([prefix, rep_tokens_half, rep_tokens_half], dim=1).to(device)
-    rep_logits, rep_cache = model.run_with_cache(rep_tokens, remove_batch_dim=True)
-    return rep_logits, rep_tokens, rep_cache
+    pass
+
 
 def per_token_losses(logits, tokens):
     log_probs = F.log_softmax(logits, dim=-1)
     pred_log_probs = t.gather(log_probs[:, :-1], -1, tokens[:, 1:, None])[..., 0]
     return -pred_log_probs[0]
 
+
 if MAIN:
     seq_len = 50
     batch = 1
-    (rep_logits, rep_tokens, rep_cache) = run_and_cache_model_repeated_tokens(model, seq_len, batch)
+    (rep_tokens, rep_logits, rep_cache) = run_and_cache_model_repeated_tokens(model, seq_len, batch)
+    rep_cache.remove_batch_dim()
     rep_str = model.to_str_tokens(rep_tokens)
     model.reset_hooks()
     ptl = per_token_losses(rep_logits, rep_tokens)
@@ -946,13 +1031,16 @@ if MAIN:
     ).update_layout(showlegend=False, hovermode="x unified")
     fig.add_vrect(x0=0, x1=seq_len-.5, fillcolor="red", opacity=0.2, line_width=0)
     fig.add_vrect(x0=seq_len-.5, x1=2*seq_len-1, fillcolor="green", opacity=0.2, line_width=0)
+    plot_utils.save_fig(fig, "repeated_tokens")
     fig.show()
 ```
 """)
         with st.expander("Hint"):
-            pass
-        with st.expander("Click here to see the output you should be getting:"):
-            st.plotly_chart(fig_dict["repeated_tokens"], use_container_width=False)
+            st.markdown(r"""
+You can define the first half of the repeated tokens using `t.randint(low, high, shape)`. Also remember to specify `dtype=t.long`.
+
+Then you can concatenate together your prefix and two copies of the repeated tokens, using `t.concat`.
+""")
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
@@ -965,17 +1053,31 @@ def run_and_cache_model_repeated_tokens(
     Generates a sequence of repeated random tokens, and runs the model on it, returning logits, tokens and cache
 
     Outputs are:
-    rep_logits: [batch, 1+2*seq_len, d_vocab]
     rep_tokens: [batch, 1+2*seq_len]
+    rep_logits: [batch, 1+2*seq_len, d_vocab]
     rep_cache: The cache of the model run on rep_tokens
     '''
-    prefix = t.ones((batch, 1), dtype=t.int64) * model.tokenizer.bos_token_id
-    rep_tokens_half = t.randint(0, model.cfg.d_vocab, (batch, seq_len), dtype=t.int64)
-    rep_tokens = t.cat([prefix, rep_tokens_half, rep_tokens_half], dim=1).to(device)
+    prefix = t.ones((batch, 1), dtype=t.long) * model.tokenizer.bos_token_id
+    rep_tokens_half = t.randint(0, model.cfg.d_vocab, (batch, seq_len), dtype=t.long)
+    rep_tokens = t.concat([prefix, rep_tokens_half, rep_tokens_half], dim=1).to(device)
     rep_logits, rep_cache = model.run_with_cache(rep_tokens, remove_batch_dim=True)
-    return rep_logits, rep_tokens, rep_cache
+    return rep_tokens, rep_logits, rep_cache
 ```
 """)
+        st.markdown(r"""
+#### Your output
+
+Once you've run the code above without error, press the button below to display your output in this page.
+""")
+        button1 = st.button("Show my output", key="button1")
+        if button1 or "got_repeated_tokens" in st.session_state:
+            if "repeated_tokens" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["repeated_tokens"])
+                st.session_state["got_repeated_tokens"] = True
+        # with st.expander("Click here to see the output you should be getting:"):
+        #     st.plotly_chart(fig_dict["repeated_tokens"], use_container_width=False)
 
     st.markdown(r"""
 ### Looking for Induction Attention Patterns
@@ -985,9 +1087,21 @@ The next natural thing to check for is the induction attention pattern.
 First, go back to the attention patterns visualisation code from earlier (i.e. `cv.attention.attention_heads` or `attention_patterns`) and manually check for likely heads in the second layer. Which ones do you think might be serving as induction heads?
 
 Note - we've defined `rep_str` for you, so you can use it in your `circuitsvis` functions.
+
+```python
+if MAIN:
+    for layer in range(model.cfg.n_layers):
+        # YOUR CODE HERE - display the attention patterns from rep_cache for each layer
 """)
     with st.expander("What you should see (only click after you've made your own observations):"):
         st.markdown(r"""
+```python
+if MAIN:
+    for layer in range(model.cfg.n_layers):
+        attention_pattern = rep_cache["pattern", layer]
+        display(cv.attention.attention_patterns(tokens=rep_str, attention=attention_pattern))
+```
+
 The characteristic pattern of attention heads is a diagonal stripe, with the diagonal offset as `seq_len - 1` (because the destination token attends to the token *after* the destimation token's previous occurrence).
 
 You should see that heads 4 and 10 are strongly induction-y, head 6 is very weakly induction-y, and the rest aren't.
@@ -998,15 +1112,21 @@ For instance, here is `cv.attention.attention_patterns` for head 4. We can see h
         st.markdown("")
         st.markdown("")
         st.markdown(r"""
-(Note - this is a good example of why `attention_patterns` can sometimes be a more helpful visualisation than `attention_heads` - it's easier to see precisely which token attends to which, whereas this information takes slightly longer to parse when you're looking at the grid.)""")
+(Note - this is a good example of why `attention_patterns` is often a more helpful visualisation than `attention_heads` - it's easier to see precisely which token attends to which, whereas this information takes slightly longer to parse when you're looking at the grid.)""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - induction head detector
+#### Exercise - induction head detector""")
+        st.error(r"""
+*This exercise should be similar to the earlier detector exercises. It shouldn't take more than 5-10 minutes, if you understand the previous exercises.*
+""")
 
+        st.markdown(r"""
 Now, you should make an induction pattern score function, which looks for the average attention paid to the offset diagonal. Do this in the same style as our earlier head scorers.
 
-Remember, the offset in your diagonal should be `- (seq_len - 1)`, because the second instance of random token `T` will attend to the token **after** the first instance of `T`.
+Remember, the offset in your diagonal should be `- (seq_len - 1)` (where `seq_len` is the length of the random tokens which you repeat twice), because the second instance of random token `T` will attend to the token **after** the first instance of `T`.""")
+
+        st.markdown(r"""
 
 ```python
 def induction_attn_detector(cache: ActivationCache) -> List[str]:
@@ -1022,12 +1142,7 @@ if MAIN:
     print("Induction heads = ", ", ".join(induction_attn_detector(rep_cache)))
 ```
 
-If this function works as expected, then you should see output that matches your observations from `circuitsvis`.""")
-
-        with st.expander("Help - I'm getting basically every head classified as an induction head."):
-            st.markdown(r"""
-This might be because you're defining `seq_len` directly from the shape of the corresponding cache activations. Remember that the attention pattern activations will actually have shape `[2*seq_len+1, 2*seq_len+1]` (where `seq_len` is the length of the random tokens sequence).
-""")
+If this function works as expected, then you should see output that matches your observations from `circuitsvis` (i.e. the heads which you observed to be induction heads are being classified as induction heads by your function here).""")
 
         with st.expander("Example solution"):
             st.markdown(r"""
@@ -1046,7 +1161,8 @@ def induction_attn_detector(cache: ActivationCache) -> List[str]:
             if score > 0.4:
                 attn_heads.append(f"{layer}.{head}")
     return attn_heads
-```""")
+```
+""")
 
 def section_hooks():
     st.sidebar.markdown("""
@@ -1068,7 +1184,6 @@ def section_hooks():
 <li><a class="contents-el" href="#hooks-intervening-on-activations">Hooks: Intervening on Activations</a></li>
 <li><ul class="contents">
     <li><a class="contents-el" href="#ablations">Ablations</a></li>
-    <li><a class="contents-el" href="#activation-patching-on-the-indirect-object-identification-task">Activation Patching on the Indirect Object Identification Task</a></li>
 </ul></li>
 </ul>
 """, unsafe_allow_html=True)
@@ -1203,7 +1318,8 @@ def hook_all_attention_patterns(
 for head_idx in range(12):
     temp_hook_fn = functools.partial(hook_all_attention_patterns, head_idx=head_idx)
     model.run_with_hooks(tokens, fwd_hooks=[('blocks.1.attn.hook_pattern', temp_hook_fn)])
-```""")
+```
+""")
 
     with st.expander("Relationship to PyTorch hooks"):
         st.markdown(r"""
@@ -1227,7 +1343,12 @@ Note that, in theory, this could all be done using the `run_with_cache` function
 
         st.markdown(r"""
 #### Exercise - calculate induction scores using hooks
+""")
+        st.error(r"""
+Since this will be your first time using heads, if you're still confused after trying for 10 minutes you should look at the solutions. There is also a hint we've provided for you in a dropdown below the code, and you should try using this hint before reading the solution. This exercise is pretty conceptually important, so you should make sure you understand the solutions before moving on.
+""")
 
+        st.markdown(r"""
 To start with, we'll look at how hooks can be used to get the same results as from the previous section (where we ran our induction head detector functions on the values in the cache).
 
 Most of the code has already been provided for you below; the only thing you need to do is **implement the `induction_score_hook` function**. As mentioned, this function takes two arguments: the activation value (which in this case will be our attention pattern) and the hook object (which gives us some useful methods and attributes that we can access in the function, e.g. `hook.layer()` to return the layer, or `hook.name` to return the name, which is the same as the name in the cache). 
@@ -1237,46 +1358,48 @@ Your function should do the following:
 * Calculate the induction score for the attention pattern `pattern`, using the same methodology as you used in the previous section when you wrote your induction head detectors.
     * Note that this time, the batch dimension is greater than 1, so you should compute the average attention score over the batch dimension.
     * Also note that you are computing the induction score for all heads at once, rather than one at a time. You might find the arguments `dim1` and `dim2` of the `torch.diagonal` function useful.
-* Write this score to the tensor `induction_score_store`, which is a global variable that we've provided for you. The `[i, j]`th element of this tensor should be the induction score for the `j`th head in the `i`th layer.
+* Write this score to the tensor `induction_score_store`, which is a global variable that we've provided for you. The `[i, j]`th element of this tensor should be the induction score for the `j`th head in the `i`th layer.""")
+        st.markdown(r"""
 
 ```python
-# We make a tensor to store the induction score for each head. We put it on the model's device to avoid needing to move things between the GPU and CPU, which can be slow.
-induction_score_store = t.zeros((model.cfg.n_layers, model.cfg.n_heads), device=model.cfg.device)
-
-def induction_score_hook(
-    pattern: TT["batch", "head_index", "dest_pos", "source_pos"],
-    hook: HookPoint,
-):
-    '''
-    Calculates the induction score for each head in the corresponding layer, and stores it in the global induction_score_store tensor.
-    '''
-    pass
-
 if MAIN:
-    # Generate repeated tokens (no cache needed)
     seq_len = 50
     batch = 10
-    prefix = t.ones((batch, 1), dtype=t.int64) * model.tokenizer.bos_token_id
-    rep_tokens_half = t.randint(0, model.cfg.d_vocab, (batch, seq_len), dtype=t.int64)
-    rep_tokens = t.cat([prefix, rep_tokens_half, rep_tokens_half], dim=1).to(device)
+    rep_tokens_10 = generate_repeated_tokens(model, seq_len, batch)
 
-    # Make a boolean filter on activation names, that's true only on attention pattern names.
+    # We make a tensor to store the induction score for each head. We put it on the model's device to avoid needing to move things between the GPU and CPU, which can be slow.
+    induction_score_store = t.zeros((model.cfg.n_layers, model.cfg.n_heads), device=model.cfg.device)
+    
+    def induction_score_hook(
+        pattern: TT["batch", "head_index", "dest_pos", "source_pos"],
+        hook: HookPoint,
+    ):
+        '''
+        Calculates the induction score, and stores it in the [layer, head] position of the `induction_score_store` tensor.
+        '''
+        pass
+
+    # We make a boolean filter on activation names, that's true only on attention pattern names.
     pattern_hook_names_filter = lambda name: name.endswith("pattern")
 
     # Run with hooks (this is where we write to the `induction_score_store` tensor`)
     model.run_with_hooks(
-        rep_tokens, 
+        rep_tokens_10, 
         return_type=None, # For efficiency, we don't need to calculate the logits
-        fwd_hooks=[
-            (pattern_hook_names_filter, induction_score_hook)
-        ]
+        fwd_hooks=[(
+            pattern_hook_names_filter,
+            induction_score_hook
+        )]
     )
 
-    # Plot the induction score for each head in each layer
-    imshow(induction_score_store, xaxis="Head", yaxis="Layer", title="Induction Score by Head", text_auto=".2f")
+    # Plot the induction scores for each head in each layer
+    fig = imshow(induction_score_store, xaxis="Head", yaxis="Layer", title="Induction Score by Head", text_auto=".2f")
+    plot_utils.save_fig(fig, "induction_scores")
+    fig.show()
 ```
 
-If this function has been implemented correctly, you should see a result matching your observations from the previous section: a high induction score for all the heads which you identified as induction heads, and a low score for all others.""")
+If this function has been implemented correctly, you should see a result matching your observations from the previous section: a high induction score for all the heads which you identified as induction heads, and a low score for all others.
+""")
 
         with st.expander("Help - I'm not sure how to implement this function."):
             st.markdown(r"""
@@ -1289,8 +1412,7 @@ torch.diagonal(pattern, dim1=-2, dim2=-1, offset=1-seq_len)
 since this returns the diagonal of each attention scores matrix, for every element in the batch and every attention head.
 
 Once you have this, you can then take the mean over the batch and diagonal dimensions, giving you a tensor of length `n_heads`. You can then write this to the global `induction_score_store` tensor, using the `hook.layer()` method to get the correct row number.
-    """)
-
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -1299,6 +1421,9 @@ def induction_score_hook(
     pattern: TT["batch", "head_index", "dest_pos", "source_pos"],
     hook: HookPoint,
 ):
+    '''
+    Calculates the induction score, and stores it in the [layer, head] position of the `induction_score_store` tensor.
+    '''
     # We take the diagonal of attention paid from each destination position to source positions seq_len-1 tokens back
     # (This only has entries for tokens with index>=seq_len)
     induction_stripe = pattern.diagonal(dim1=-2, dim2=-1, offset=1-seq_len)
@@ -1308,8 +1433,18 @@ def induction_score_hook(
     induction_score_store[hook.layer(), :] = induction_score
 ```
 """)
-        with st.expander("Click to see what your result should look like (although the numbers will be slightly different due to randomness):"):
-            st.plotly_chart(fig_dict["induction_scores"], use_container_width=True)
+        st.markdown(r"""
+#### Your output
+""")
+        button2 = st.button("Show my output", key="button2")
+        if button2 or "got_induction_scores" in st.session_state:
+            if "induction_scores" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["induction_scores"])
+                st.session_state["got_induction_scores"] = True
+        # with st.expander("Click to see what your result should look like (although the numbers will be slightly different due to randomness):"):
+        #     st.plotly_chart(fig_dict["induction_scores"], use_container_width=True)
     st.markdown("")
 
     with st.columns(1)[0]:
@@ -1334,6 +1469,46 @@ def visualize_pattern_hook(
     )
 ```
 """)
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+if MAIN:
+    seq_len = 50
+    batch = 10
+    rep_tokens_10 = generate_repeated_tokens(gpt2_small, seq_len, batch)
+
+    induction_score_store = t.zeros((gpt2_small.cfg.n_layers, gpt2_small.cfg.n_heads), device=gpt2_small.cfg.device)
+
+    gpt2_small.run_with_hooks(
+        rep_tokens_10, 
+        return_type=None, # For efficiency, we don't need to calculate the logits
+        fwd_hooks=[(
+            pattern_hook_names_filter,
+            induction_score_hook
+        )]
+    )
+
+    fig = imshow(induction_score_store, xaxis="Head", yaxis="Layer", title="Induction Score by Head", text_auto=".1f")
+    fig.show()
+
+    # Observation: heads 5.1, 5.5, 6.9, 7.2, 7.10 are all strongly induction-y.
+    # Confirm observation by visualizing attn patterns for layers 5 through 7:
+
+    for induction_head_layer in [5, 6, 7]:
+        gpt2_small.run_with_hooks(
+            rep_tokens, 
+            return_type=None, # For efficiency, we don't need to calculate the logits
+            fwd_hooks=[(
+                utils.get_act_name("pattern", induction_head_layer),
+                visualize_pattern_hook
+            )]
+        )
+```
+""")
+
+        st.markdown(r"""
+Note - if you're using VSCode, don't forget to clear your output periodically, because having too many plots open in your interpreter will slow down performance.
+""")
 
     st.markdown(r"""
 
@@ -1355,9 +1530,9 @@ A consequence of the residual stream is that the output logits are the sum of th
     with st.expander("A concrete example"):
 
         st.markdown(r"""
-Let's say that our model knows that the token Harry is followed by the token Potter, and we want to figure out how it does this. The logits on Harry are `W_U @ residual`. But this is a linear map, and the residual stream is the sum of all previous layers `residual = embed + attn_out_0 + attn_out_1`. So `logits = (W_U @ embed) + (W_U @ attn_out_0) + (W_U @ attn_out_1)`
+Let's say that our model knows that the token Harry is followed by the token Potter, and we want to figure out how it does this. The logits on Harry are `residual @ W_U`. But this is a linear map, and the residual stream is the sum of all previous layers `residual = embed + attn_out_0 + attn_out_1`. So `logits = (embed @ W_U) + (attn_out @ W_U) + (attn_out_1 @ W_U)`
 
-We can be even more specific, and *just* look at the logit of the Potter token - this corresponds to a row of `W_U`, and so a direction in the residual stream - our logit is now a single number that is the sum of `(potter_U @ embed) + (potter_U @ attn_out_0) + (potter_U @ attn_out_1)`. Even better, we can decompose each attention layer output into the sum of the result of each head, and use this to get many terms.
+We can be even more specific, and *just* look at the logit of the Potter token - this corresponds to a row of `W_U`, and so a direction in the residual stream - our logit is now a single number that is the sum of `(embed @ potter_U) + (attn_out_0 @ potter_U) + (attn_out_1 @ potter_U)`. Even better, we can decompose each attention layer output into the sum of the result of each head, and use this to get many terms.
 """)
 
     st.markdown(r"""
@@ -1377,7 +1552,7 @@ A few important notes for this exercise:
 * When calculating correct output logits, we will get tensors with a dimension `(position - 1,)`, not `(position,)` - we remove the final element of the output (logits), and the first element of labels (tokens). This is because we're predicting the *next* token, and we don't know the token after the final token, so we ignore it.
 """)
 
-    with st.expander("Aside:"):
+    with st.expander("Aside - centering W_U"):
         st.markdown(r"""
 While we won't worry about this for this exercise, logit attribution is often more meaningful if we first center `W_U` - ie, ensure the mean of each row writing to the output logits is zero. Log softmax is invariant when we add a constant to all the logits, so we want to control for a head that just increases all logits by the same amount. We won't do this here for ease of testing.""")
 
@@ -1387,10 +1562,14 @@ Because log probs aren't linear, they go through `log_softmax`, a non-linear fun
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - build logit attribution tool
-
+#### Exercise - build logit attribution tool""")
+        st.error(r"""
+*This exercise is not particuarly conceptually important, it's just some slightly messy einsums. You should look at the solutions if you're still stuck after 10 minutes.*
+""")
+        st.markdown(r"""
 You should implement the `logit_attribution` function below. This should return the contribution of each component in the "correct direction". We've already given you the unembedding vectors for the correct direction, `W_U_correct_tokens` (note that we take the `[1:]` slice of tokens, for reasons discussed above).
-
+""")
+        st.markdown(r"""
 ```python
 def logit_attribution(embed, l1_results, l2_results, W_U, tokens) -> t.Tensor:
     '''
@@ -1414,11 +1593,10 @@ The code below will check your logit attribution function is working correctly, 
 
 ```python
 if MAIN:
-    text = "This must be Thursday. I never could get the hang of Thursdays."
+    text = "We think that powerful, significantly superhuman machine intelligence is more likely than not to be created this century. If current machine learning techniques were scaled up to this level, we think they would by default produce systems that are deceptive or manipulative, and that no solid plans are known for how to avoid this."
+    logits, cache = model.run_with_cache(text, remove_batch_dim=True)
     str_tokens = model.to_str_tokens(text)
     tokens = model.to_tokens(text).to(device)
-    logits, cache = model.run_with_cache(tokens, remove_batch_dim=True)
-    model.reset_hooks()
 
     with t.inference_mode():
         embed = cache["embed"]
@@ -1427,7 +1605,7 @@ if MAIN:
         logit_attr = logit_attribution(embed, l1_results, l2_results, model.W_U, tokens[0])
         # Uses fancy indexing to get a len(tokens[0])-1 length tensor, where the kth entry is the predicted logit for the correct k+1th token
         correct_token_logits = logits[0, t.arange(len(tokens[0]) - 1), tokens[0, 1:]]
-        t.testing.assert_close(logit_attr.sum(1), correct_token_logits, atol=5e-4, rtol=0)
+        t.testing.assert_close(logit_attr.sum(1), correct_token_logits, atol=1e-3, rtol=0)
 ```
 
 If you're stuck, you can look at the solution below.""")
@@ -1441,7 +1619,7 @@ def logit_attribution(embed, l1_results, l2_results, W_U, tokens) -> t.Tensor:
     direct_attributions = einsum("emb seq, seq emb -> seq", W_U_correct_tokens, embed[:-1])
     l1_attributions = einsum("emb seq, seq nhead emb -> seq nhead", W_U_correct_tokens, l1_results[:-1])
     l2_attributions = einsum("emb seq, seq nhead emb -> seq nhead", W_U_correct_tokens, l2_results[:-1])
-    return t.cat([direct_attributions.unsqueeze(-1), l1_attributions, l2_attributions], dim=-1)
+    return t.concat([direct_attributions.unsqueeze(-1), l1_attributions, l2_attributions], dim=-1)
 ```
 """)
     st.markdown(r"""
@@ -1456,22 +1634,34 @@ def convert_tokens_to_string(tokens, batch_index=0):
         tokens = tokens[batch_index]
     return [f"|{model.tokenizer.decode(tok)}|_{c}" for (c, tok) in enumerate(tokens)]
 
-def plot_logit_attribution(logit_attr: t.Tensor, tokens: t.Tensor):
+def plot_logit_attribution(logit_attr: t.Tensor, tokens: t.Tensor, title: str = ""):
     tokens = tokens.squeeze()
     y_labels = convert_tokens_to_string(tokens[:-1])
     x_labels = ["Direct"] + [f"L{l}H{h}" for l in range(model.cfg.n_layers) for h in range(model.cfg.n_heads)]
-    imshow(utils.to_numpy(logit_attr), x=x_labels, y=y_labels, xaxis="Term", yaxis="Position", caxis="logit", height=25*len(tokens))
+    return imshow(utils.to_numpy(logit_attr), x=x_labels, y=y_labels, xaxis="Term", yaxis="Position", caxis="logit", title=title if title else None, height=25*len(tokens))
 
 if MAIN:
-    embed = cache["hook_embed"]
+    embed = cache["embed"]
     l1_results = cache["result", 0]
     l2_results = cache["result", 1]
     logit_attr = logit_attribution(embed, l1_results, l2_results, model.unembed.W_U, tokens[0])
-    plot_logit_attribution(logit_attr, tokens)
-```""")
+    fig = plot_logit_attribution(logit_attr, tokens)
+    plot_utils.save_fig(fig, "logit_attribution")
+    fig.show()
+```
 
-    with st.expander("Click here to see the output you should be getting."):
-        st.plotly_chart(fig_dict["logit_attribution"], use_container_width=True)
+#### Your output
+""")
+
+    button3 = st.button("Show my output", key="button3")
+    if button3 or "got_logit_attribution" in st.session_state:
+        if "logit_attribution" not in fig_dict:
+            st.error("No figure was found in your directory. Have you run the code above yet?")
+        else:
+            st.plotly_chart(fig_dict["logit_attribution"])
+            st.session_state["got_logit_attribution"] = True
+    # with st.expander("Click here to see the output you should be getting."):
+    #     st.plotly_chart(fig_dict["logit_attribution"], use_container_width=True)
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1507,8 +1697,11 @@ This is because of a point we discussed earlier - this plot doesn't pick up on t
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - logit attribution for the induction heads
-
+#### Exercise - logit attribution for the induction heads""")
+        st.error(r"""
+*This exercise just involves calling the `logit_attribution` function on the appropriate tensors. It's important to understand how the solutions work (and what the output means), but you shouldn't spend too much time on these functions.*
+""")
+        st.markdown(r"""
 Perform logit attribution for your attention-only model `model`, on the `rep_cache`. What do you expect to see?
 
 Remember, you'll need to split the sequence in two, with one overlapping token (since predicting the next token involves removing the final token with no label) - your `logit_attr` should both have shape `[seq_len, 2*n_heads + 1]` (ie `[50, 25]` here).""")
@@ -1523,21 +1716,26 @@ Because the first plot shows the logit attribution for the first half of the seq
 if MAIN:
     seq_len = 50
 
-    embed = rep_cache["hook_embed"]
-    l1_results = rep_cache["blocks.0.attn.hook_result"]
-    l2_results = rep_cache["blocks.1.attn.hook_result"]
-    first_half_tokens = rep_tokens[0, :seq_len+1]
+    embed = rep_cache["embed"]
+    l1_results = rep_cache["result", 0]
+    l2_results = rep_cache["result", 1]
+    first_half_tokens = rep_tokens[0, : 1 + seq_len]
     second_half_tokens = rep_tokens[0, seq_len:]
-    
+
     "YOUR CODE HERE:"
     "Define `first_half_logit_attr` and `second_half_logit_attr`"
 
     assert first_half_logit_attr.shape == (seq_len, 2*model.cfg.n_heads + 1)
     assert second_half_logit_attr.shape == (seq_len, 2*model.cfg.n_heads + 1)
     
-    plot_logit_attribution(first_half_logit_attr, first_half_tokens)
-    plot_logit_attribution(second_half_logit_attr, second_half_tokens)
-```""")
+    fig1 = plot_logit_attribution(first_half_logit_attr, first_half_tokens, "Logit attribution (first half of repeated sequence)")
+    fig2 = plot_logit_attribution(second_half_logit_attr, second_half_tokens, "Logit attribution (second half of repeated sequence)")
+
+    fig1.show()
+    fig2.show()
+    plot_utils.save_fig(fig2, "rep_logit_attribution")
+```
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -1546,11 +1744,25 @@ first_half_logit_attr = logit_attribution(embed[:seq_len+1], l1_results[:seq_len
 second_half_logit_attr = logit_attribution(embed[seq_len:], l1_results[seq_len:], l2_results[seq_len:], model.W_U, second_half_tokens)
 ```
 """)
-        with st.expander("Click here to see the output you should be getting."):
-            st.markdown(r"""
-We only show the second plot (since as discussed, the first plot is meaningless).
+        st.markdown(r"""
+#### Your output
+
+Click below to see your output, when you've run the code above. We only show the second plot, since as discussed, the first plot is meaningless.
 """)
-            st.plotly_chart(fig_dict["rep_logit_attribution"], use_container_width=True)
+
+        button4 = st.button("Show my output", key="button4")
+        if button4 or "got_rep_logit_attribution" in st.session_state:
+            if "rep_logit_attribution" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["rep_logit_attribution"])
+                st.session_state["got_rep_logit_attribution"] = True
+
+#         with st.expander("Click here to see the output you should be getting."):
+#             st.markdown(r"""
+# We only show the second plot (since as discussed, the first plot is meaningless).
+# """)
+#             st.plotly_chart(fig_dict["rep_logit_attribution"], use_container_width=True)
 
         st.markdown(r"""What is the interpretation of this plot, in the context of our induction head circuit?""")
         with st.expander("Answer"):
@@ -1609,7 +1821,11 @@ As mentioned in [the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - zero-ablation for induction heads
-
+""")
+        st.error(r"""
+*This exercise is conceptually important, but very short. Once you understand what the code is meant to do, you should be able to complete it in less than 5 minutes.*
+""")
+        st.markdown(r"""
 The code below provides a template for performing zero-ablation on the value vectors at a particular head (i.e. the vectors we get when applying the weight matrices `W_V` to the residual stream). If you're confused about what different activations mean, you can refer back to the diagram:""")
 
         with st.expander("Attention-only diagram"):
@@ -1621,7 +1837,7 @@ The only thing left for you to do is fill in the function `head_ablation_hook` s
 
 A few notes to help explain the code below:
 
-* In the `get_ablation_scores` function, we run our hook function in a for loop: once for each layer and each head. Each time, we write a single value to the tensor `ablation_scores` that stores the results.
+* In the `get_ablation_scores` function, we run our hook function in a for loop: once for each layer and each head. Each time, we write a single value to the tensor `ablation_scores` that stores the results of ablating that particular head.
 * We use `cross_entropy_loss` as a metric for model performance. If the head didn't have any effect on the output, then the ablation score would be zero (since the loss doesn't increase when we ablate). If the head was very important for making correct predictions, then we should see a very large ablation score.
 * We use `functools.partial` to create a temporary hook function with the head number fixed. This is a nice way to avoid having to write a separate hook function for each head.
 * We use `utils.get_act_name` to get the name of our activation. This is a nice shorthand way of getting the full name.
@@ -1634,6 +1850,7 @@ def head_ablation_hook(
 ) -> TT["batch", "seq", "n_heads", "d_model"]:
     pass
 
+
 def cross_entropy_loss(logits, tokens):
     '''
     Computes the mean cross entropy between logits (the model's prediction) and tokens (the true values).
@@ -1641,6 +1858,7 @@ def cross_entropy_loss(logits, tokens):
     log_probs = F.log_softmax(logits, dim=-1)
     pred_log_probs = t.gather(log_probs[:, :-1], -1, tokens[:, 1:, None])[..., 0]
     return -pred_log_probs.mean()
+
 
 def get_ablation_scores(
     model: HookedTransformer, 
@@ -1673,655 +1891,203 @@ def get_ablation_scores(
 
 if MAIN:
     ablation_scores = get_ablation_scores(model, rep_tokens)
-    imshow(ablation_scores, xaxis="Head", yaxis="Layer", caxis="logit diff", title="Logit Difference After Ablating Heads", text_auto=".2f")
+    tests.test_get_ablation_scores(ablation_scores, model, rep_tokens)
+```
+
+Once you've passed the tests, you can plot the results:
+
+```python
+if MAIN:
+    fig = imshow(ablation_scores, xaxis="Head", yaxis="Layer", caxis="logit diff", title="Logit Difference After Ablating Heads", text_auto=".2f")
+    plot_utils.save_fig(fig, "ablation_scores")
+    fig.show()
 ```
 """)
 
-        with st.expander("Click here to see the output you should be getting."):
-            st.plotly_chart(fig_dict["logit_diff_rep"], use_container_width=True)
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def head_ablation_hook(
+    value: TT["batch", "pos", "head_index", "d_head"],
+    hook: HookPoint,
+    head_index_to_ablate: int,
+) -> TT["batch", "pos", "head_index", "d_head"]:
+    print(f"Shape of the value tensor: {value.shape}")
+    value[:, :, head_index_to_ablate, :] = 0.0
+    return value
+```
+""")
+
+        button5 = st.button("Show my output", key="button5")
+        if button5 or "got_ablation_scores" in st.session_state:
+            if "ablation_scores" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["ablation_scores"])
+                st.session_state["got_ablation_scores"] = True
+        # with st.expander("Click here to see the output you should be getting."):
+        #     st.plotly_chart(fig_dict["ablation_scores"], use_container_width=True)
         
         st.markdown("What is your interpretation of these results?")
         with st.expander("Interpretation:"):
             st.markdown(r"""
 This tells us not just which heads are responsible for writing output to the residual stream that gets us the correct result, but **which heads play an important role in the induction circuit**. 
 
-This chart tells us that head `0.7` is by far the most important in layer 0 (which makes sense, since we observed it to be the strongest "previous token head"), and heads `1.4`, `1.10` are the most important in layer 1 (which makes sense, since we observed these to be the most induction-y).
+This chart tells us that - for sequences of repeated tokens - head `0.7` is by far the most important in layer 0 (which makes sense, since we observed it to be the strongest "previous token head"), and heads `1.4`, `1.10` are the most important in layer 1 (which makes sense, since we observed these to be the most induction-y).
 
-This is a good illustration of the kind of result which we can get from ablation, but **wouldn't be able to get from something like direct logit attribution**.
+This is a good illustration of the kind of result which we can get from ablation, but **wouldn't be able to get from something like direct logit attribution**, because it isn't a causal intervention.
 """)
 
     st.success(r"""
-#### Bonus Exercise
+#### Bonus Exercise (optional)
 
 Try ablating *every* head apart from the previous token head and the two induction heads. What does this do to performance?
 
 What if you mean ablate it, rather than zero ablating it?""")
 
     st.markdown(r"""
-
-### Activation Patching on the Indirect Object Identification Task
-
-For a somewhat more involved example, let's use hooks to apply **activation patching** on the **Indirect Object Identification** (IOI) task. 
-
-The IOI task is the task of identifying that a sentence like "After John and Mary went to the store, Mary gave a bottle of milk to" with " John" rather than " Mary" (ie, finding the indirect object), and Redwood Research have [an excellent paper studying the underlying circuit in GPT-2 Small](https://arxiv.org/abs/2211.00593).
-
-**Activation patching** is a technique from [Kevin Meng and David Bau's excellent ROME paper](https://rome.baulab.info/). The goal is to identify which model activations are important for completing a task. We do this by setting up a **clean prompt** and a **corrupted prompt** and a **metric** for performance on the task. We then pick a specific model activation, run the model on the corrupted prompt, but then *intervene* on that activation and patch in its value when run on the clean prompt. We then apply the metric, and see how much this patch has recovered the clean performance. 
-(See [a more detailed explanation of activation patching here](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/main/Exploratory_Analysis_Demo.ipynb#scrollTo=5nUXG6zqmd0f))
-
-We're returning to our `gpt2_small` for this example.
-
-```python
-clean_prompt = "After John and Mary went to the store, Mary gave a bottle of milk to"
-corrupted_prompt = "After John and Mary went to the store, John gave a bottle of milk to"
-
-clean_tokens = gpt2_small.to_tokens(clean_prompt)
-corrupted_tokens = gpt2_small.to_tokens(corrupted_prompt)
-
-def logits_to_logit_diff(logits, correct_answer=" John", incorrect_answer=" Mary"):
-    # model.to_single_token maps a string value of a single token to the token index for that token
-    # If the string is not a single token, it raises an error.
-    correct_index = gpt2_small.to_single_token(correct_answer)
-    incorrect_index = gpt2_small.to_single_token(incorrect_answer)
-    return logits[0, -1, correct_index] - logits[0, -1, incorrect_index]
-```
+In later sections (IOI coming soon!), we'll use hooks to implement some more advanced causal interventions, such as **activation patching** and **causal tracing**. 
 """)
 
-    with st.columns(1)[0]:
-        st.markdown(r"""
-#### Exercise - what does this function do?
-
-Explain in your own words what the function `logits_to_logit_diff` does.
-
-How do you expect the output of this function to differ if the `logits` are from the clean prompt vs the corrupted prompt?
-""")
-
-        with st.expander("Explanation"):
-            st.markdown(r"""
-`logits[0, -1]` represents the logit output for the final token in the prompt, i.e. the model's prediction for what token comes after `to`. For the clean prompt, the correct answer is `" John"` and the incorrect answer is `" Mary"`.
-
-So this function is taking the logit difference (equivalent to the log likelihood ratio) between `" John"` and `" Mary"`. **This is our metric for the model's performance on the task.**
-
-If the logits are from the clean prompt, we expect the output to be positive, since the model should think that `" John"` is more likely than `" Mary"`. If the logits are from the corrupted prompt, we expect the output to be negative.
-""")
-
-        st.markdown(r"""
-Now run the code below, and verify that your hypothesis is correct.
-
-```python
-# We run on the clean prompt with the cache so we store activations to patch in later.
-clean_logits, clean_cache = gpt2_small.run_with_cache(clean_tokens, remove_batch_dim=True)
-clean_logit_diff = logits_to_logit_diff(clean_logits)
-print(f"Clean logit difference: {clean_logit_diff.item():.3f}")
-
-# We don't need to cache on the corrupted prompt.
-corrupted_logits = gpt2_small(corrupted_tokens)
-corrupted_logit_diff = logits_to_logit_diff(corrupted_logits)
-print(f"Corrupted logit difference: {corrupted_logit_diff.item():.3f}")
-```
-""")
-
-    st.markdown(r"""
-
-We now setup the hook function to do **activation patching**. Here, we'll patch in the residual stream at the start of a specific layer and at a specific position. This will let us see how much the model is using the residual stream at that layer and position to represent the key information for the task. 
-
-A few notes to help explain the code below:
-
-* Our patching works by running the model on the **corrupted prompt**, but then replacing the activations at the specified layer and position with the activations from the **clean prompt**.
-* The function `residual_stream_patching_hook` acts on the residual stream at the **start** of the layer, which is why we've called it `resid_pre`. The residual stream at the end of the layer is called `resid_post`.
-* We use `hook.name` to access the activation name, so we know which activation we're patching in from the clean cache.
-* `clean_resid_pre` has no batch dimension (because we specified `remove_batch_dim=True` when creating our cache), but `resid_pre` does (because by default activations in a model do have a batch dimension).
-* Like before, when we actually run our model with hooks, we use `functools.partial` to construct a hook function to act on a specfic position.
-* At the end, we store the result in the tensor `ioi_patching_result`. We've normalized the result, so that:
-    * If the patching has no effect, then the result is zero (since the patched logit diff is just the same as the corrupted logit diff).
-    * If the patching has "full effect" (i.e. making the output the same as it would have been on the clean prompt), then the result is 1.
-    * Note that this doesn't actually guarantee that the results will always be in the range `[0, 1]`, but in this case it's very likely, because any patching will "move us from the corrupted logit output towards the clean logit output".
-""")
-    st.markdown("")
-    st.markdown(r"""
-```python
-def residual_stream_patching_hook(
-    resid_pre: TT["batch", "pos", "d_model"],
-    hook: HookPoint,
-    position: int,
-) -> TT["batch", "pos", "d_model"]:
-    clean_resid_pre = clean_cache[hook.name]
-    resid_pre[:, position, :] = clean_resid_pre[position, :]
-    return resid_pre
-
-num_positions = len(clean_tokens[0])
-ioi_patching_result = t.zeros((gpt2_small.cfg.n_layers, num_positions), device=gpt2_small.cfg.device)
-
-for layer in tqdm(range(gpt2_small.cfg.n_layers)):
-    for position in range(num_positions):
-        temp_hook_fn = functools.partial(residual_stream_patching_hook, position=position)
-        # Run the model with the patching hook
-        patched_logits = gpt2_small.run_with_hooks(corrupted_tokens, fwd_hooks=[
-            (utils.get_act_name("resid_pre", layer), temp_hook_fn)
-        ])
-        # Calculate the logit difference
-        patched_logit_diff = logits_to_logit_diff(patched_logits).detach()
-        # Store the normalized result
-        ioi_patching_result[layer, position] = (patched_logit_diff - corrupted_logit_diff)/(clean_logit_diff - corrupted_logit_diff)
-```
-
-We can now visualize the results, and see that this computation is extremely localised within the model. Initially, the second subject (Mary) token is all that matters (naturally, as it's the only different token), and all relevant information remains here until heads in layer 7 and 8 move this to the final token where it's used to predict the indirect object.
-
-(Note - the heads are in layer 7 and 8, not 8 and 9, because we patched in the residual stream at the *start* of each layer).
-
-```python
-# Add the index to the end of the label, because plotly doesn't like duplicate labels
-token_labels = [f"{token}_{index}" for index, token in enumerate(gpt2_small.to_str_tokens(clean_tokens))]
-imshow(ioi_patching_result, x=token_labels, xaxis="Position", yaxis="Layer", title="Normalized Logit Difference After Patching Residual Stream on the IOI Task")
-```""")
-
-    st.plotly_chart(fig_dict["logit_diff_from_patching"], use_container_width=False)
-
-    with st.expander("Help - I'm still confused about this diagram."):
-        st.markdown(r"""
-The interpretation of the $n$th **row** of the heatmap is as follows:
-
-> If we run the **corrupted prompt** through the model (i.e. the one where `Mary` is the correct answer), but intervene by replacing the residual stream **before** the start of the $n$th layer with the values produced by the **clean prompt** (where `John` is the correct answer), then how far does this move the output towards predicting `John` instead? 
->
-> (where a value of 0 in the heatmap indicates no movement of the output towards `John`, and a value of 1 indicates we now predict `John` as strongly as we would have on the clean prompt).
-
-So the fact that the first row is zero everywhere except for the `Mary` token is trivial, because intervening at this point is just equivalent to feeding the clean prompt into the model instead.
-
-Similarly, we expect that near the end the rows will be zero everywhere except for the `to` token, because the `to` token holds the information which will eventually result in a prediction of either John or Mary. So there must come a point where this token holds all the information it needs to make this prediction, and no other tokens will affect it.
-
-The more interesting parts are the middle rows. They tells us that:
-
-1. **The computation is very localised.**
-    * In other words, basically only one sequence position holds the "John vs Mary" information at any one time. 
-    * The exception is in the middle rows, where it takes two layers for most of the information to be transferred from the `Mary` token to the `to` token.
-2. **The information path is very direct.**
-    * The "John vs Mary" information moves from the `Mary` token to the `to` token without any detours.
-    * In principle, we could imagine a situation where the information path is less direct, e.g. the majority of the information passes from `Mary` to `gave`, and then from `gave` to `to`. But that's not what's happening here.
-
-One other note - all the values to the left of Mary are zero, whereas the values to the right aren't. This is because we're using causal attention, which means information can only flow forwards. So the residual streams for the clean and corrupted prompt can only differ on or after the first token which is different between the two prompts.
-""")
-        st.markdown("")
 #     st.markdown(r"""
-# A few extra questions about this diagram, to make sure you understand it:""")
-#     with st.expander("All the values to the left of Mary are zero, whereas the values to the right aren't. Why is this?"):
+
+# ### Activation Patching on the Indirect Object Identification Task
+
+# For a somewhat more involved example, let's use hooks to apply **activation patching** on the **Indirect Object Identification** (IOI) task. 
+
+# The IOI task is the task of identifying that a sentence like "After John and Mary went to the store, Mary gave a bottle of milk to" with " John" rather than " Mary" (ie, finding the indirect object), and Redwood Research have [an excellent paper studying the underlying circuit in GPT-2 Small](https://arxiv.org/abs/2211.00593).
+
+# **Activation patching** is a technique from [Kevin Meng and David Bau's excellent ROME paper](https://rome.baulab.info/). The goal is to identify which model activations are important for completing a task. We do this by setting up a **clean prompt** and a **corrupted prompt** and a **metric** for performance on the task. We then pick a specific model activation, run the model on the corrupted prompt, but then *intervene* on that activation and patch in its value when run on the clean prompt. We then apply the metric, and see how much this patch has recovered the clean performance. 
+# (See [a more detailed explanation of activation patching here](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/main/Exploratory_Analysis_Demo.ipynb#scrollTo=5nUXG6zqmd0f))
+
+# We're returning to our `gpt2_small` for this example.
+
+# ```python
+# if MAIN:
+#     clean_prompt = "After John and Mary went to the store, Mary gave a bottle of milk to"
+#     corrupted_prompt = "After John and Mary went to the store, John gave a bottle of milk to"
+
+#     clean_tokens = gpt2_small.to_tokens(clean_prompt)
+#     corrupted_tokens = gpt2_small.to_tokens(corrupted_prompt)
+
+# def logits_to_logit_diff(logits, correct_answer=" John", incorrect_answer=" Mary"):
+#     # model.to_single_token maps a string value of a single token to the token index for that token
+#     # If the string is not a single token, it raises an error.
+#     correct_index = gpt2_small.to_single_token(correct_answer)
+#     incorrect_index = gpt2_small.to_single_token(incorrect_answer)
+#     return logits[0, -1, correct_index] - logits[0, -1, incorrect_index]
+# ```
+
+# **Explain in your own words what the function `logits_to_logit_diff` does.** How do you expect the output of this function to differ if the `logits` are from the clean prompt vs the corrupted prompt?
+# """)
+
+#     with st.expander("Explanation"):
 #         st.markdown(r"""
-# The attention is causal, or to put this another way, information in the model only ever flows forwards. So the output at token `T` can't be different for the clean and corrupted prompt, if `T` comes before the first token which is different between the two prompts.
+# `logits[0, -1]` represents the logit output for the final token in the prompt, i.e. the model's prediction for what token comes after `to`. For the clean prompt, the correct answer is `" John"` and the incorrect answer is `" Mary"`.
+
+# So this function is taking the logit difference (equivalent to the log likelihood ratio) between `" John"` and `" Mary"`. **This is our metric for the model's performance on the task.**
+
+# If the logits are from the clean prompt, we expect the output to be positive, since the model should think that `" John"` is more likely than `" Mary"`. If the logits are from the corrupted prompt, we expect the output to be negative.
+# """)
+
+#     st.markdown(r"""
+# Now run the code below, and verify that your hypothesis is correct.
+
+# ```python
+# if MAIN:
+#     # We run on the clean prompt with the cache so we store activations to patch in later.
+#     clean_logits, clean_cache = gpt2_small.run_with_cache(clean_tokens, remove_batch_dim=True)
+#     clean_logit_diff = logits_to_logit_diff(clean_logits)
+#     print(f"Clean logit difference: {clean_logit_diff.item():.3f}")
+
+#     # We don't need to cache on the corrupted prompt.
+#     corrupted_logits = gpt2_small(corrupted_tokens)
+#     corrupted_logit_diff = logits_to_logit_diff(corrupted_logits)
+#     print(f"Corrupted logit difference: {corrupted_logit_diff.item():.3f}")
+# ```
+# """)
+
+#     st.markdown(r"""
+
+# We now setup the hook function to do **activation patching**. Here, we'll patch in the residual stream at the start of a specific layer and at a specific position. This will let us see how much the model is using the residual stream at that layer and position to represent the key information for the task. 
+
+# A few notes to help explain the code below:
+
+# * Our patching works by running the model on the **corrupted prompt**, but then replacing the activations at the specified layer and position with the activations from the **clean prompt**.
+# * The function `residual_stream_patching_hook` acts on the residual stream at the **start** of the layer, which is why we've called it `resid_pre`. The residual stream at the end of the layer is called `resid_post`.
+# * We use `hook.name` to access the activation name, so we know which activation we're patching in from the clean cache.
+# * `clean_resid_pre` has no batch dimension (because we specified `remove_batch_dim=True` when creating our cache), but `resid_pre` does (because by default activations in a model do have a batch dimension).
+# * Like before, when we actually run our model with hooks, we use `functools.partial` to construct a hook function to act on a specfic position.
+# * At the end, we store the result in the tensor `ioi_patching_result`. We've normalized the result, so that:
+#     * If the patching has no effect, then the result is zero (since the patched logit diff is just the same as the corrupted logit diff).
+#     * If the patching has "full effect" (i.e. making the output the same as it would have been on the clean prompt), then the result is 1.
+#     * Note that this doesn't actually guarantee that the results will always be in the range `[0, 1]`, but in this case it's very likely, because any patching will "move us from the corrupted logit output towards the clean logit output".
+# """)
+#     st.markdown("")
+#     st.markdown(r"""
+# ```python
+# def residual_stream_patching_hook(
+#     resid_pre: TT["batch", "pos", "d_model"],
+#     hook: HookPoint,
+#     position: int,
+# ) -> TT["batch", "pos", "d_model"]:
+#     clean_resid_pre = clean_cache[hook.name]
+#     resid_pre[:, position, :] = clean_resid_pre[position, :]
+#     return resid_pre
+
+# num_positions = len(clean_tokens[0])
+# ioi_patching_result = t.zeros((gpt2_small.cfg.n_layers, num_positions), device=gpt2_small.cfg.device)
+
+# for layer in tqdm(range(gpt2_small.cfg.n_layers)):
+#     for position in range(num_positions):
+#         temp_hook_fn = functools.partial(residual_stream_patching_hook, position=position)
+#         # Run the model with the patching hook
+#         patched_logits = gpt2_small.run_with_hooks(corrupted_tokens, fwd_hooks=[
+#             (utils.get_act_name("resid_pre", layer), temp_hook_fn)
+#         ])
+#         # Calculate the logit difference
+#         patched_logit_diff = logits_to_logit_diff(patched_logits).detach()
+#         # Store the normalized result
+#         ioi_patching_result[layer, position] = (patched_logit_diff - corrupted_logit_diff)/(clean_logit_diff - corrupted_logit_diff)
+# ```
+
+# We can now visualize the results, and see that this computation is extremely localised within the model. Initially, the second subject (Mary) token is all that matters (naturally, as it's the only different token), and all relevant information remains here until heads in layer 7 and 8 move this to the final token where it's used to predict the indirect object.
+
+# (Note - the heads are in layer 7 and 8, not 8 and 9, because we patched in the residual stream at the *start* of each layer).
+
+# ```python
+# # Add the index to the end of the label, because plotly doesn't like duplicate labels
+# token_labels = [f"{token}_{index}" for index, token in enumerate(gpt2_small.to_str_tokens(clean_tokens))]
+# imshow(ioi_patching_result, x=token_labels, xaxis="Position", yaxis="Layer", title="Normalized Logit Difference After Patching Residual Stream on the IOI Task")
+# ```
+# """)
+
+#     st.plotly_chart(fig_dict["logit_diff_from_patching"], use_container_width=False)
+
+#     with st.expander("Help - I'm still confused about this diagram."):
+#         st.markdown(r"""
+# The interpretation of the $n$th **row** of the heatmap is as follows:
+
+# > *If we run the **corrupted prompt** through the model (i.e. the one where `Mary` is the correct answer), but intervene by replacing the residual stream **before** the start of the $n$th layer with the values produced by the **clean prompt** (where `John` is the correct answer), then how far does this move the output towards predicting `John` instead?*
+# >
+# > *(where a value of 0 in the heatmap indicates no movement of the output towards `John`, and a value of 1 indicates we now predict `John` as strongly as we would have on the clean prompt)*
+
+# So the fact that the first row is zero everywhere except for the `Mary` token is trivial, because intervening at this point is just equivalent to feeding the clean prompt into the model instead.
+
+# Similarly, we expect that near the end the rows will be zero everywhere except for the `to` token, because the `to` token holds the information which will eventually result in a prediction of either John or Mary. So there must come a point where this token holds all the information it needs to make this prediction, and no other tokens will affect it.
+
+# The more interesting parts are the middle rows. They tells us that:
+
+# 1. **The computation is very localised.**
+#     * In other words, basically only one sequence position holds the "John vs Mary" information at any one time. 
+#     * The exception is in the middle rows, where it takes two layers for most of the information to be transferred from the `Mary` token to the `to` token.
+# 2. **The information path is very direct.**
+#     * The "John vs Mary" information moves from the `Mary` token to the `to` token without any detours.
+#     * In principle, we could imagine a situation where the information path is less direct, e.g. the majority of the information passes from `Mary` to `gave`, and then from `gave` to `to`. But that's not what's happening here.
+
+# One other note - all the values to the left of Mary are zero, whereas the values to the right aren't (although most of them are very close to zero). This is because we're using causal attention, which means information can only flow forwards. So the residual streams for the clean and corrupted prompt can only differ on or after the first token which is different between the two prompts.
 # """)
     
-
-def section_other_features():
-    st.sidebar.markdown("""
-## Table of Contents
-
-<ul class="contents">
-    <li><a class="contents-el" href="#available-models">Available Models</a></li>
-    <li><ul class="contents">
-        <li><a class="contents-el" href="#an-overview-of-the-important-open-source-models-in-the-library">An overview of the important open source models in the library</a></li>
-        <li><a class="contents-el" href="#an-overview-of-some-interpretability-friendly-models-i-ve-trained-and-included">An overview of some interpretability-friendly models I've trained and included</a></li>
-    </ul></li>
-    <li><a class="contents-el" href="#other-resources">Other Resources:</a></li>
-    <li><a class="contents-el" href="#transformer-architecture">Transformer architecture</a></li>
-    <li><ul class="contents">
-        <li><a class="contents-el" href="#parameter-names">Parameter Names</a></li>
-        <li><a class="contents-el" href="#activation--hook-names">Activation + Hook Names</a></li>
-        <li><a class="contents-el" href="#folding-layernorm-for-the-curious">Folding LayerNorm (For the Curious)</a></li>
-    </ul></li>
-   <li><a class="contents-el" href="#dealing-with-tokens">Dealing with tokens</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#gotcha-prepend-bos">Gotcha: <code>prepend_bos</code></a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#factored-matrix-class">Factored Matrix Class</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#basic-examples">Basic Examples</a></li>
-       <li><a class="contents-el" href="#medium-example-eigenvalue-copying-scores">Medium Example: Eigenvalue Copying Scores</a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#generating-text">Generating Text</a></li>
-   <li><a class="contents-el" href="#hook-points">Hook Points</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#toy-example">Toy Example</a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#loading-pre-trained-checkpoints">Loading Pre-Trained Checkpoints</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#example-induction-head-phase-transition">Example: Induction Head Phase Transition</a></li>
-    </ul></li>
-</ul>
-""", unsafe_allow_html=True)
-
-    st.markdown(r"""
-# TransformerLens: Other Features
-
-## Available Models
-
-TransformerLens comes with over 40 open source models available, all of which can be loaded into a consistent(-ish) architecture by just changing the name in `from_pretrained`. You can see [a table of the available models here](https://github.com/neelnanda-io/TransformerLens/blob/main/easy_transformer/model_properties_table.md), including the hyper-parameters and the alias used to load the model in TransformerLens.
-
-**Note:** Though TransformerLens can load in some large transformers (eg OPT-66B), it does not currently support loading a single model across multiple GPUs, so in practice loading a model (eg >7B parameters) will be impractical, depending on your GPU memory. Feel free to reach out if you need to use larger models for your research.
-
-Notably, this means that analysis can be near immediately re-run on a different model by just changing the name.
-
-#### Exercise - re-run your analysis on a different model
-
-Load in DistilGPT-2 (a distilled version of GPT-2, with half as many layers), with the following code: 
-
-```python
-distilgpt2 = HookedTransformer.from_pretrained("distilgpt2")
-```
-
-Take some analysis you did for GPT-2 small (e.g. locating induction heads), and re-run the exact same code on DistilGPT-2. Verify that it works without any further modification needed.""")
-
-
-    st.markdown(r"""
-### An overview of the important open source models in the library
-
-* **GPT-2** - the classic generative pre-trained models from OpenAI
-    * Sizes Small (85M), Medium (300M), Large (700M) and XL (1.5B).
-    * Trained on ~22B tokens of internet text. ([Open source replication](https://huggingface.co/datasets/openwebtext))
-* **GPT-Neo** - Eleuther's replication of GPT-2
-    * Sizes 125M, 1.3B, 2.7B
-    * Trained on 300B(ish?) tokens of [the Pile](https://pile.eleuther.ai/) a large and diverse dataset including a bunch of code (and weird stuff)
-* **[OPT](https://ai.facebook.com/blog/democratizing-access-to-large-scale-language-models-with-opt-175b/)** - Meta AI's series of open source models
-    * Trained on 180B tokens of diverse text.
-    * 125M, 1.3B, 2.7B, 6.7B, 13B, 30B, 66B
-* **GPT-J** - Eleuther's 6B parameter model, trained on the Pile
-* **GPT-NeoX** - Eleuther's 20B parameter model, trained on the Pile
-* **Stanford CRFM models** - a replication of GPT-2 Small and GPT-2 Medium, trained on 5 different random seeds.
-    * Notably, 600 checkpoints were taken during training per model, and these are available in the library with eg `HookedTransformer.from_pretrained("stanford-gpt2-small-a", checkpoint_index=265)`.
-
-
-### An overview of some interpretability-friendly models I've trained and included
-
-(Feel free to [reach out](mailto:neelnanda27@gmail.com) if you want more details on any of these models)
-
-Each of these models has about ~200 checkpoints taken during training that can also be loaded from TransformerLens, with the `checkpoint_index` argument to `from_pretrained`.
-
-Note that all models are trained with a Beginning of Sequence token, and will likely break if given inputs without that! 
-
-* **Toy Models**: Inspired by [A Mathematical Framework](https://transformer-circuits.pub/2021/framework/index.html), I've trained 12 tiny language models, of 1-4L and each of width 512. I think that interpreting these is likely to be far more tractable than larger models, and both serve as good practice and will likely contain motifs and circuits that generalise to far larger models (like induction heads):
-    * Attention-Only models (ie without MLPs): attn-only-1l, attn-only-2l, attn-only-3l, attn-only-4l
-    * GELU models (ie with MLP, and the standard GELU activations): gelu-1l, gelu-2l, gelu-3l, gelu-4l
-    * SoLU models (ie with MLP, and [Anthropic's SoLU activation](https://transformer-circuits.pub/2022/solu/index.html), designed to make MLP neurons more interpretable): solu-1l, solu-2l, solu-3l, solu-4l
-    * All models are trained on 22B tokens of data, 80% from C4 (web text) and 20% from Python Code
-    * Models of the same layer size were trained with the same weight initialization and data shuffle, to more directly compare the effect of different activation functions.
-* **SoLU** models: A larger scan of models trained with [Anthropic's SoLU activation](https://transformer-circuits.pub/2022/solu/index.html), in the hopes that it makes the MLP neuron interpretability easier. 
-    * A scan up to GPT-2 Medium size, trained on 30B tokens of the same data as toy models, 80% from C4 and 20% from Python code. 
-        * solu-6l (40M), solu-8l (100M), solu-10l (200M), solu-12l (340M)
-    * An older scan up to GPT-2 Medium size, trained on 15B tokens of [the Pile](https://pile.eleuther.ai/)
-        * solu-1l-pile (13M), solu-2l-pile (13M), solu-4l-pile (13M), solu-6l-pile (40M), solu-8l-pile (100M), solu-10l-pile (200M), solu-12l-pile (340M)
-
-## Other Resources:
-
-* [Concrete Open Problems in Mechanistic Interpretability](https://docs.google.com/document/d/1WONBzNqfKIxERejrrPlQMyKqg7jSFW92x5UMXNrMdPo/edit), a doc I wrote giving a long list of open problems in mechanistic interpretability, and thoughts on how to get started on trying to work on them. 
-    * There's a lot of low-hanging fruit in the field, and I expect that many people reading this could use TransformerLens to usefully make progress on some of these!
-* Other demos:
-    * **[Exploratory Analysis Demo](https://colab.research.google.com/github/neelnanda-io/TransformerLens/blob/main/Exploratory_Analysis_Demo.ipynb)**, a demonstration of my standard toolkit for how to use TransformerLens to explore a mysterious behaviour in a language model.
-    * [Interpretability in the Wild](https://github.com/redwoodresearch/Easy-Transformer) a codebase from Arthur Conmy and Alex Variengien at Redwood research using this library to do a detailed and rigorous reverse engineering of the Indirect Object Identification circuit, to accompany their paper
-        * Note - this was based on an earlier version of this library, called EasyTransformer. It's pretty similar, but several breaking changes have been made since. 
-    * A [recorded walkthrough](https://www.youtube.com/watch?v=yo4QvDn-vsU) of me doing research with TransformerLens on whether a tiny model can re-derive positional information, with [an accompanying Colab](https://colab.research.google.com/github/neelnanda-io/TransformerLens/blob/main/No_Position_Experiment.ipynb)
-* [Neuroscope](https://neuroscope.io), a website showing the text in the dataset that most activates each neuron in some selected models. Good to explore to get a sense for what kind of features the model tends to represent, and as a "wiki" to get some info
-    * A tutorial on how to make an [Interactive Neuroscope](https://github.com/neelnanda-io/TransformerLens/blob/main/Hacky-Interactive-Lexoscope.ipynb), where you type in text and see the neuron activations over the text update live.
-
-### Folding LayerNorm (For the Curious)
-
-(For the curious - this is an important technical detail that's worth understanding, especially if you have preconceptions about how transformers work, but not necessary to use TransformerLens)
-
-LayerNorm is a normalization technique used by transformers, analogous to BatchNorm but more friendly to massive parallelisation. No one *really* knows why it works, but it seems to improve model numerical stability. Unlike BatchNorm, LayerNorm actually changes the functional form of the model, which makes it a massive pain for interpretability! 
-
-Folding LayerNorm is a technique to make it lower overhead to deal with, and the flags `center_writing_weights` and `fold_ln` in `HookedTransformer.from_pretrained` apply this automatically (they default to True). These simplify the internal structure without changing the weights.
-
-Intuitively, LayerNorm acts on each residual stream vector (ie for each batch element and token position) independently, sets their mean to 0 (centering) and standard deviation to 1 (normalizing) (*across* the residual stream dimension - very weird!), and then applies a learned elementwise scaling and translation to each vector.
-
-Mathematically, centering is a linear map, normalizing is *not* a linear map, and scaling and translation are linear maps. 
-* **Centering:** LayerNorm is applied every time a layer reads from the residual stream, so the mean of any residual stream vector can never matter - `center_writing_weights` set every weight matrix writing to the residual to have zero mean. 
-* **Normalizing:** Normalizing is not a linear map, and cannot be factored out. The `hook_scale` hook point lets you access and control for this.
-* **Scaling and Translation:** Scaling and translation are linear maps, and are always followed by another linear map. The composition of two linear maps is another linear map, so we can *fold* the scaling and translation weights into the weights of the subsequent layer, and simplify things without changing the underlying computation. 
-
-[See the docs for more details](https://github.com/neelnanda-io/TransformerLens/blob/main/further_comments.md#what-is-layernorm-folding-fold_ln)
-
-A fun consequence of LayerNorm folding is that it creates a bias across the unembed, a `d_vocab` length vector that is added to the output logits - GPT-2 is not trained with this, but it *is* trained with a final LayerNorm that contains a bias. 
-
-Turns out, this LayerNorm bias learns structure of the data that we can only see after folding! In particular, it essentially learns **unigram statistics** - rare tokens get suppressed, common tokens get boosted, by pretty dramatic degrees! Let's list the top and bottom 20 - at the top we see common punctuation and words like " the" and " and", at the bottom we see weird-ass tokens like " RandomRedditor":
-
-```python
-unembed_bias = model.unembed.b_U
-bias_values, bias_indices = unembed_bias.sort(descending=True)
-```
-
-```python
-top_k = 20
-print(f"Top {top_k} values")
-for i in range(top_k):
-    print(f"{bias_values[i].item():.2f} {repr(model.to_string(bias_indices[i]))}")
-
-print("...")
-print(f"Bottom {top_k} values")
-for i in range(top_k, 0, -1):
-    print(f"{bias_values[-i].item():.2f} {repr(model.to_string(bias_indices[-i]))}")
-```
-
-This can have real consequences for interpretability - for example, this bias favours " John" over " Mary" by about 1.2, about 1/3 of the effect size of the Indirect Object Identification Circuit! All other things being the same, this makes the John token 3.6x times more likely than the Mary token.
-
-```python
-john_bias = model.unembed.b_U[model.to_single_token(' John')]
-mary_bias = model.unembed.b_U[model.to_single_token(' Mary')]
-
-print(f"John bias: {john_bias.item():.4f}")
-print(f"Mary bias: {mary_bias.item():.4f}")
-print(f"Prob ratio bias: {t.exp(john_bias - mary_bias).item():.4f}x")
-```
-
-## Dealing with tokens
-
-**Tokenization** is one of the most annoying features of studying language models. We want language models to be able to take in arbitrary text as input, but the transformer architecture needs the inputs to be elements of a fixed, finite vocabulary. The solution to this is **tokens**, a fixed vocabulary of "sub-words", that any natural language can be broken down into with a **tokenizer**. This is invertible, and we can recover the original text, called **de-tokenization**. 
-
-TransformerLens comes with a range of utility functions to deal with tokenization. Different models can have different tokenizers, so these are all methods on the model.
-
-`get_token_position`, `to_tokens`, `to_string`, `to_str_tokens`, `prepend_bos`, `to_single_token`
-
-The first thing you need to figure out is *how* things are tokenized. `model.to_str_tokens` splits a string into the tokens *as a list of substrings*, and so lets you explore what the text looks like. To demonstrate this, let's use it on this paragraph.
-
-Some observations - there are a lot of arbitrary-ish details in here!
-* The tokenizer splits on spaces, so no token contains two words.
-* Tokens include the preceding space, and whether the first token is a capital letter. `'how'` and `' how'` are different tokens!
-* Common words are single tokens, even if fairly long (` paragraph`) while uncommon words are split into multiple tokens (` token|ized`).
-* Tokens *mostly* split on punctuation characters (eg `*` and `.`), but eg `'s` is a single token.
-
-```python
-example_text = "The first thing you need to figure out is *how* things are tokenized. `model.to_str_tokens` splits a string into the tokens *as a list of substrings*, and so lets you explore what the text looks like. To demonstrate this, let's use it on this paragraph."
-example_text_str_tokens = model.to_str_tokens(example_text)
-print(example_text_str_tokens)
-```
-
-The transformer needs to take in a sequence of integers, not strings, so we need to convert these tokens into integers. `model.to_tokens` does this, and returns a tensor of integers on the model's device (shape `[batch, position]`). It maps a string to a batch of size 1.
-
-```python
-example_text_tokens = model.to_tokens(example_text)
-print(example_text_tokens)
-```
-
-`to_tokens` can also take in a list of strings, and return a batch of size `len(strings)`. If the strings are different numbers of tokens, it adds a PAD token to the end of the shorter strings to make them the same length.
-
-(Note: In GPT-2, 50256 signifies both the beginning of sequence, end of sequence and padding token - see the `prepend_bos` section for details)
-
-```python
-example_multi_text = ["The cat sat on the mat.", "The cat sat on the mat really hard."]
-example_multi_text_tokens = model.to_tokens(example_multi_text)
-print(example_multi_text_tokens)
-```
-
-`model.to_single_token` is a convenience function that takes in a string corresponding to a *single* token and returns the corresponding integer. This is useful for eg looking up the logit corresponding to a single token. 
-
-For example, let's input `The cat sat on the mat.` to GPT-2, and look at the log prob predicting that the next token is ` The`. 
-""")
-    with st.expander("Technical notes"):
-        st.markdown(r"""
-Note that if we input a string to the model, it's implicitly converted to a string with `to_tokens`. 
-
-Note further that the log probs have shape `[batch, position, d_vocab]==[1, 8, 50257]`, with a vector of log probs predicting the next token for *every* token position. GPT-2 uses causal attention which means heads can only look backwards (equivalently, information can only move forwards in the model.), so the log probs at position k are only a function of the first k tokens, and it can't just cheat and look at the k+1 th token. This structure lets it generate text more efficiently, and lets it treat every *token* as a training example, rather than every *sequence*.""")
-
-    st.markdown(r"""
-```python
-cat_text = "The cat sat on the mat."
-cat_logits = model(cat_text)
-cat_probs = cat_logits.softmax(dim=-1)
-print(f"Probability tensor shape [batch, position, d_vocab] == {cat_probs.shape}")
-
-capital_the_token_index = model.to_single_token(" The")
-print(f"| The| probability: {cat_probs[0, -1, capital_the_token_index].item():.2%}")
-```
-
-`model.to_string` is the inverse of `to_tokens` and maps a tensor of integers to a string or list of strings. It also works on integers and lists of integers.
-
-For example, let's look up token 256 (due to technical details of tokenization, this will be the most common pair of ASCII characters!), and also verify that our tokens above map back to a string.
-
-```python
-print(f"Token 256 - the most common pair of ASCII characters: |{model.to_string(256)}|")
-# Squeeze means to remove dimensions of length 1. 
-# Here, that removes the dummy batch dimension so it's a rank 1 tensor and returns a string
-# Rank 2 tensors map to a list of strings
-print(f"De-Tokenizing the example tokens: {model.to_string(example_text_tokens.squeeze())}")
-```
-
-A related annoyance of tokenization is that it's hard to figure out how many tokens a string will break into. `model.get_token_position(single_token, tokens)` returns the position of `single_token` in `tokens`. `tokens` can be either a string or a tensor of tokens. 
-
-Note that position is zero-indexed, it's two (ie third) because there's a beginning of sequence token automatically prepended (see the next section for details)
-
-```python
-print("With BOS:", model.get_token_position(" cat", "The cat sat on the mat"))
-print("Without BOS:", model.get_token_position(" cat", "The cat sat on the mat", prepend_bos=False))
-```
-
-If there are multiple copies of the token, we can set `mode="first"` to find the first occurence's position and `mode="last"` to find the last
-
-```python
-print("First occurence", model.get_token_position(
-    " cat", 
-    "The cat sat on the mat. The mat sat on the cat.", 
-    mode="first"))
-print("Final occurence", model.get_token_position(
-    " cat", 
-    "The cat sat on the mat. The mat sat on the cat.", 
-    mode="last"))
-```
-
-In general, tokenization is a pain, and full of gotchas. I highly recommend just playing around with different inputs and their tokenization and getting a feel for it. As another "fun" example, let's look at the tokenization of arithmetic expressions - tokens do *not* contain consistent numbers of digits. (This makes it even more impressive that GPT-3 can do arithmetic!)
-
-```python
-print(model.to_str_tokens("2342+2017=21445"))
-print(model.to_str_tokens("1000+1000000=999999"))
-```
-
-I also *highly* recommend investigating prompts with easy tokenization when starting out - ideally key words should form a single token, be in the same position in different prompts, have the same total length, etc. Eg study Indirect Object Identification with common English names like ` Tim` rather than ` Ne|el`. Transformers need to spend some parameters in early layers converting multi-token words to a single feature, and then de-converting this in the late layers, and unless this is what you're explicitly investigating, this will make the behaviour you're investigating be messier.
-
-### Gotcha: `prepend_bos`
-
-##### Key Takeaway: **If you get weird off-by-one errors, check whether there's an unexpected `prepend_bos`!**
-
-A weirdness you may have noticed in the above is that `to_tokens` and `to_str_tokens` added a weird `<|endoftext|>` to the start of each prompt. TransformerLens does this by default, and it can easily trip up new users. Notably, **this includes `model.forward`** (which is what's implicitly used when you do eg `model("Hello World")`). This is called a **Beginning of Sequence (BOS)** token, and it's a special token used to mark the beginning of the sequence. Confusingly, in GPT-2, the End of Sequence (EOS), Beginning of Sequence (BOS) and Padding (PAD) tokens are all the same, `<|endoftext|>` with index `50256`.
-
-You can disable this behaviour by setting the flag `prepend_bos=False` in `to_tokens`, `to_str_tokens`, `model.forward` and any other function that converts strings to multi-token tensors. 
-
-**Gotcha:** You only want to do this at the *start* of a prompt. If you, eg, want to input a question followed by an answer, and want to tokenize these separately, you do *not* want to prepend_bos on the answer.
-
-```python
-print("Logits shape by default (with BOS)", model("Hello World").shape)
-print("Logits shape with BOS", model("Hello World", prepend_bos=True).shape)
-print("Logits shape without BOS - only 2 positions!", model("Hello World", prepend_bos=False).shape)
-```
-
-`prepend_bos` is a bit of a hack, and I've gone back and forth on what the correct default here is. The reason I do this is that transformers tend to treat the first token weirdly - this doesn't really matter in training (where all inputs are >1000 tokens), but this can be a big issue when investigating short prompts! The reason for this is that attention patterns are a probability distribution and so need to add up to one, so to simulate being "off" they normally look at the first token. Giving them a BOS token lets the heads rest by looking at that, preserving the information in the first "real" token.
-
-Further, *some* models are trained to need a BOS token (OPT and my interpretability-friendly models are, GPT-2 and GPT-Neo are not). But despite GPT-2 not being trained with this, empirically it seems to make interpretability easier.
-
-For example, the model can get much worse at Indirect Object Identification without a BOS (and with a name as the first token):
-
-```python
-ioi_logits_with_bos = model("Claire and Mary went to the shops, then Mary gave a bottle of milk to", prepend_bos=True)
-mary_logit_with_bos = ioi_logits_with_bos[0, -1, model.to_single_token(" Mary")].item()
-claire_logit_with_bos = ioi_logits_with_bos[0, -1, model.to_single_token(" Claire")].item()
-print(f"Logit difference with BOS: {(claire_logit_with_bos - mary_logit_with_bos):.3f}")
-
-ioi_logits_without_bos = model("Claire and Mary went to the shops, then Mary gave a bottle of milk to", prepend_bos=False)
-mary_logit_without_bos = ioi_logits_without_bos[0, -1, model.to_single_token(" Mary")].item()
-claire_logit_without_bos = ioi_logits_without_bos[0, -1, model.to_single_token(" Claire")].item()
-print(f"Logit difference without BOS: {(claire_logit_without_bos - mary_logit_without_bos):.3f}")
-```
-
-Though, note that this also illustrates another gotcha - when `Claire` is at the start of a sentence (no preceding space), it's actually *two* tokens, not one, which probably confuses the relevant circuit. (Note - in this test we put `prepend_bos=False`, because we want to analyse the tokenization of a specific string, not to give an input to the model!)
-
-```
-print(f"| Claire| -> {model.to_str_tokens(' Claire', prepend_bos=False)}")
-print(f"|Claire| -> {model.to_str_tokens('Claire', prepend_bos=False)}")
-```
-
-## Generating Text
-
-TransformerLens also has basic text generation functionality, which can be useful for generally exploring what the model is capable of (thanks to Ansh Radhakrishnan for adding this!). This is pretty rough functionality, and where possible I recommend using more established libraries like HuggingFace for this.
-
-```python
-model.generate("(CNN) President Barack Obama caught in embarrassing new scandal\n", max_new_tokens=50, temperature=0.7, prepend_bos=True)
-```
-
-## Hook Points
-
-The key part of TransformerLens that lets us access and edit intermediate activations are the HookPoints around every model activation. Importantly, this technique will work for *any* model architecture, not just transformers, so long as you're able to edit the model code to add in HookPoints! This is essentially a lightweight library bundled with TransformerLens that should let you take an arbitrary model and make it easier to study. 
-
-This is implemented by having a HookPoint layer. Each transformer component has a HookPoint for every activation, which wraps around that activation. The HookPoint acts as an identity function, but has a variety of helper functions that allows us to put PyTorch hooks in to edit and access the relevant activation. 
-
-There is also a `HookedRootModule` class - this is a utility class that the root module should inherit from (root module = the model we run) - it has several utility functions for using hooks well, notably `reset_hooks`, `run_with_cache` and `run_with_hooks`. 
-
-The default interface is the `run_with_hooks` function on the root module, which lets us run a forwards pass on the model, and pass on a list of hooks paired with layer names to run on that pass. 
-
-The syntax for a hook is `function(activation, hook)` where `activation` is the activation the hook is wrapped around, and `hook` is the `HookPoint` class the function is attached to. If the function returns a new activation or edits the activation in-place, that replaces the old one, if it returns None then the activation remains as is.
-
-### Toy Example
-
-Here's a simple example of defining a small network with HookPoints:
-
-We define a basic network with two layers that each take a scalar input $x$, square it, and add a constant:
-$x_0=x$, $x_1=x_0^2+3$, $x_2=x_1^2-4$.
-
-We wrap the input, each layer's output, and the intermediate value of each layer (the square) in a hook point.
-
-```python
-from transformer_lens.hook_points import HookedRootModule, HookPoint
-
-class SquareThenAdd(nn.Module):
-    def __init__(self, offset):
-        super().__init__()
-        self.offset = nn.Parameter(t.tensor(offset))
-        self.hook_square = HookPoint()
-
-    def forward(self, x):
-        # The hook_square doesn't change the value, but lets us access it
-        square = self.hook_square(x * x)
-        return self.offset + square
-
-class TwoLayerModel(HookedRootModule):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = SquareThenAdd(3.0)
-        self.layer2 = SquareThenAdd(-4.0)
-        self.hook_in = HookPoint()
-        self.hook_mid = HookPoint()
-        self.hook_out = HookPoint()
-
-        # We need to call the setup function of HookedRootModule to build an
-        # internal dictionary of modules and hooks, and to give each hook a name
-        super().setup()
-
-    def forward(self, x):
-        # We wrap the input and each layer's output in a hook - they leave the
-        # value unchanged (unless there's a hook added to explicitly change it),
-        # but allow us to access it.
-        x_in = self.hook_in(x)
-        x_mid = self.hook_mid(self.layer1(x_in))
-        x_out = self.hook_out(self.layer2(x_mid))
-        return x_out
-
-model = TwoLayerModel()
-```
-
-We can add a cache, to save the activation at each hook point
-
-(There's a custom `run_with_cache` function on the root module as a convenience, which is a wrapper around model.forward that return model_out, cache_object - we could also manually add hooks with `run_with_hooks` that store activations in a global caching dictionary. This is often useful if we only want to store, eg, subsets or functions of some activations.)
-
-```python
-out, cache = model.run_with_cache(t.tensor(5.0))
-print("Model output:", out.item())
-for key in cache:
-    print(f"Value cached at hook {key}", cache[key].item())
-```
-
-We can also use hooks to intervene on activations - eg, we can set the intermediate value in layer 2 to zero to change the output to -5
-
-```python
-def set_to_zero_hook(tensor, hook):
-    print(hook.name)
-    return t.tensor(0.0)
-
-print(
-    "Output after intervening on layer2.hook_scaled",
-    model.run_with_hooks(
-        t.tensor(5.0), fwd_hooks=[("layer2.hook_square", set_to_zero_hook)]
-    ).item(),
-)
-```
-
-## Loading Pre-Trained Checkpoints
-
-There are a lot of interesting questions combining mechanistic interpretability and training dynamics - analysing model capabilities and the underlying circuits that make them possible, and how these change as we train the model. 
-
-TransformerLens supports these by having several model families with checkpoints throughout training. `HookedTransformer.from_pretrained` can load a checkpoint of a model with the `checkpoint_index` (the label 0 to `num_checkpoints-1`) or `checkpoint_value` (the step or token number, depending on how the checkpoints were labelled).
-
-
-Available models:
-* All of my interpretability-friendly models have checkpoints available, including:
-    * The toy models - `attn-only`, `solu`, `gelu` 1L to 4L
-        * These have ~200 checkpoints, taken on a piecewise linear schedule (more checkpoints near the start of training), up to 22B tokens. Labelled by number of tokens seen.
-    * The SoLU models trained on 80% Web Text and 20% Python Code (`solu-6l` to `solu-12l`)
-        * Same checkpoint schedule as the toy models, this time up to 30B tokens
-    * The SoLU models trained on the pile (`solu-1l-pile` to `solu-12l-pile`)
-        * These have ~100 checkpoints, taken on a linear schedule, up to 15B tokens. Labelled by number of steps.
-        * The 12L training crashed around 11B tokens, so is truncated.
-* The Stanford Centre for Research of Foundation Models trained 5 GPT-2 Small sized and 5 GPT-2 Medium sized models (`stanford-gpt2-small-a` to `e` and `stanford-gpt2-medium-a` to `e`)
-    * 600 checkpoints, taken on a piecewise linear schedule, labelled by the number of steps.
-
-The checkpoint structure and labels is somewhat messy and ad-hoc, so I mostly recommend using the `checkpoint_index` syntax (where you can just count from 0 to the number of checkpoints) rather than `checkpoint_value` syntax (where you need to know the checkpoint schedule, and whether it was labelled with the number of tokens or steps). The helper function `get_checkpoint_labels` tells you the checkpoint schedule for a given model - ie what point was each checkpoint taken at, and what type of label was used.
-
-Here are graphs of the schedules for several checkpointed models: (note that the first 3 use a log scale, latter 2 use a linear scale)
-
-```python
-from transformer_lens.loading_from_pretrained import get_checkpoint_labels
-for model_name in ["attn-only-2l", "solu-12l", "stanford-gpt2-small-a"]:
-    checkpoint_labels, checkpoint_label_type = get_checkpoint_labels(model_name)
-    line(checkpoint_labels, xaxis="Checkpoint Index", yaxis=f"Checkpoint Value ({checkpoint_label_type})", title=f"Checkpoint Values for {model_name} (Log scale)", log_y=True, markers=True)
-for model_name in ["solu-1l-pile", "solu-6l-pile"]:
-    checkpoint_labels, checkpoint_label_type = get_checkpoint_labels(model_name)
-    line(checkpoint_labels, xaxis="Checkpoint Index", yaxis=f"Checkpoint Value ({checkpoint_label_type})", title=f"Checkpoint Values for {model_name} (Linear scale)", log_y=False, markers=True)
-```
-
-### Example: Induction Head Phase Transition
-
-One of the more interesting results analysing circuit formation during training is the [induction head phase transition](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html). They find a pretty dramatic shift in models during training - there's a brief period where models go from not having induction heads to having them, which leads to the models suddenly becoming much better at in-context learning (using far back tokens to predict the next token, eg over 500 words back). This is enough of a big deal that it leads to a visible *bump* in the loss curve, where the model's rate of improvement briefly increases. 
-
-As a brief demonstration of the existence of the phase transition, let's load some checkpoints of a two layer model, and see whether they have induction heads. An easy test, as we used above, is to give the model a repeated sequence of random tokens, and to check how good its loss is on the second half. `evals.induction_loss` is a rough util that runs this test on a model.
-(Note - this is deliberately a rough, non-rigorous test for the purposes of demonstration, eg `evals.induction_loss` by default just runs it on 4 sequences of 384 tokens repeated twice. These results totally don't do the paper justice - go check it out if you want to see the full results!)
-
-In the interests of time and memory, let's look at a handful of checkpoints (chosen to be around the phase change), indices `[10, 25, 35, 60, -1]`. These are roughly 22M, 200M, 500M, 1.6B and 21.8B tokens through training, respectively. (I generally recommend looking things up based on indices, rather than checkpoint value!). 
-
-```python
-from transformer_lens import evals
-# We use the two layer model with SoLU activations, chosen fairly arbitrarily as being both small (so fast to download and keep in memory) and pretty good at the induction task.
-model_name = "solu-2l"
-# We can load a model from a checkpoint by specifying the checkpoint_index, -1 means the final checkpoint
-checkpoint_indices = [10, 25, 35, 60, -1]
-checkpointed_models = []
-tokens_trained_on = []
-induction_losses = []
-```
-
-We load the models, cache them in a list, and 
-
-```python
-for index in checkpoint_indices:
-    # Load the model from the relevant checkpoint by index
-    model_for_this_checkpoint = HookedTransformer.from_pretrained(model_name, checkpoint_index=index)
-    checkpointed_models.append(model_for_this_checkpoint)
-
-    tokens_seen_for_this_checkpoint = model_for_this_checkpoint.cfg.checkpoint_value
-    tokens_trained_on.append(tokens_seen_for_this_checkpoint)
-
-    induction_loss_for_this_checkpoint = evals.induction_loss(model_for_this_checkpoint).item()
-    induction_losses.append(induction_loss_for_this_checkpoint)
-```
-
-We can plot this, and see there's a sharp shift from ~200-500M tokens trained on (note the log scale on the x axis). Interestingly, this is notably earlier than the phase transition in the paper, I'm not sure what's up with that.
-
-(To contextualise the numbers, the tokens in the random sequence are uniformly chosen from the first 20,000 tokens (out of ~48,000 total), so random performance is at least $\ln(20000)\approx 10$. A naive strategy like "randomly choose a token that's already appeared in the first half of the sequence (384 elements)" would get $\ln(384)\approx 5.95$, so the model is doing pretty well here.)
-
-```python
-line(induction_losses, x=tokens_trained_on, xaxis="Tokens Trained On", yaxis="Induction Loss", title="Induction Loss over training: solu-2l", markers=True, log_x=True)
-```
-""")
-
 def section_reverse_engineering():
     st.sidebar.markdown("""
 ## Table of Contents
@@ -2347,6 +2113,7 @@ def section_reverse_engineering():
     <li><a class="contents-el" href="#further-exploration-of-induction-circuits">Further Exploration of Induction Circuits</a></li>
     <li><ul class="contents">
         <li><a class="contents-el" href="#composition-scores">Composition scores</a></li>
+        <li><a class="contents-el" href="#targeted-ablations">Targeted Ablations</a></li>
     </ul></li>
     <li><a class="contents-el" href="#bonus">Bonus</a></li>
     <li><ul class="contents">
@@ -2392,11 +2159,16 @@ You can use the dropdown below to check your understanding.
         st.markdown(r"""
 * Head `0.7` is a previous token head (the QK-circuit ensures it always attends to the previous token).
 * The OV circuit of head `0.7` writes a copy of the previous token in a *different* subspace to the one used by the embedding.
-* The output of head `0.7` is used by the *key* input of head `1.4` via K-Composition to attend to 'the source token whose previous token is the destination token'.
-* The OV-circuit of head `1.4` copies the *value* of the source token to the same output logit.
+* The output of head `0.7` is used by the *key* input of head `1.10` via K-Composition to attend to 'the source token whose previous token is the destination token'.
+* The OV-circuit of head `1.10` copies the *value* of the source token to the same output logit.
     * Note that this is copying from the embedding subspace, *not* the `0.7` output subspace - it is not using V-Composition at all.
+* `1.4` is also performing the same role as `1.10` (so together they can be more accurate - we'll see exactly how later).
 
-To emphasise - the sophisticated hard part is computing the *attention* pattern of the induction head - this takes careful composition. The previous token and copying parts are fairly easy. This is a good illustrative example of how the QK circuits and OV circuits act semi-independently, and are often best thought of somewhat separately. And that computing the attention patterns can involve real and sophisticated computation!")""")
+To emphasise - the sophisticated hard part is computing the *attention* pattern of the induction head - this takes careful composition. The previous token and copying parts are fairly easy. This is a good illustrative example of how the QK circuits and OV circuits act semi-independently, and are often best thought of somewhat separately. And that computing the attention patterns can involve real and sophisticated computation!
+
+Below is a diagram of the induction circuit, with the heads indicated in the weight matrices.""")
+        st_image("kcomp_diagram_described_3.png", 1000)
+        st.markdown("")
 
     st.markdown(r"""
 ## Refresher - QK and OV circuits (and some terminology)
@@ -2408,16 +2180,19 @@ As a shorthand, I'll often have $A$ denote the one-hot encoding of token `A` (i.
 Lastly, I'll refer to special matrix products as follows:
 
 * $W_{OV}^{h} := W_V^{h}W_O^{h}$ is the **OV circuit** for head $h$, and $W_E W_{OV}^h W_U$ is the **full OV circuit**. 
-* $W_{QK}^h := W_Q^h {W_K^{hT}}$ is the **QK circuit** for head $h$, and $W_E W_{QK}^h W_E^T$ is the **full QK circuit**. 
+* $W_{QK}^h := W_Q^h (W_K^h)^T$ is the **QK circuit** for head $h$, and $W_E W_{QK}^h W_E^T$ is the **full QK circuit**. 
 
 Note that the order of these matrices are slightly different from the **Mathematical Frameworks** paper - this is a consequence of the way TransformerLens stores its weight matrices.
 """)
     st.markdown("")
 
     st.markdown(r"""
-
-#### Question - what is the interpretation of each of the following four matrices?
-
+#### Question - what is the interpretation of each of the following matrices?
+""")
+    st.error(r"""
+*There are quite a lot of questions here, but they are conceptually important. If you're confused, you might want to read the answers to the first few questions and then try the later ones.*
+""")
+    st.markdown(r"""
 In your answers, you should describe the type of input it takes, and what the outputs represent.
 
 #### $W_{OV}^{h}$
@@ -2427,17 +2202,26 @@ In your answers, you should describe the type of input it takes, and what the ou
         st.markdown(r"""
 $W_{OV}^{h}$ has size $(d_\text{model}, d_\text{model})$, it is a linear map describing **what information gets moved from source to destination, in the residual stream.**
 
-In other words, if $x_j$ is the embedding vector at position $j$, then $x_j^T W_{OV}^{h}$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to $x_j$.
+In other words, if $x$ is a vector in the residual stream, then $x^T W_{OV}^{h}$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to the source token at the position of the vector $x$.
 """)
     st.markdown(r"""
 #### $W_E W_{OV}^h W_U$
 """)
-
+    with st.expander("Hint"):
+        st.markdown(r"""
+If $A$ is the one-hot encoding for token `A` (i.e. the vector with zeros everywhere except for a one in the position corresponding to token `A`), then think about what $A^T W_E W_{OV}^h W_U$ represents. You can evaluate this expression from left to right (e.g. start with thinking about what $A^T W_E$ represents, then multiply by the other two matrices).
+""")
     with st.expander("Answer"):
         st.markdown(r"""
 $W_E W_{OV}^h W_U$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a linear map describing **what information gets moved from source to destination, in a start-to-end sense.**
 
 If $A$ is the one-hot encoding for token `A`, then $A^T W_E W_{OV}^h W_U$ is the vector of logits output by head $h$ at any token which pays attention to `A`.
+
+To further break this down, if it still seems confusing:
+
+* $A^T W_E$ is the embedding vector for `A`.
+* $A^T W_E W_{OV}^h$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to `A`.
+* $A^T W_E W_{OV}^h W_U$ is the unembedding of this vector, i.e. how it affects the final logits.
 """)
 
     st.markdown(r"""
@@ -2447,30 +2231,112 @@ If $A$ is the one-hot encoding for token `A`, then $A^T W_E W_{OV}^h W_U$ is the
         st.markdown(r"""
 $W_{QK}^{h}$ has size $(d_\text{model}, d_\text{model})$, it is a bilinear form describing **where information is moved to and from** in the residual stream (i.e. which residual stream vectors attend to which others).
 
-$x_i^T W_{QK}^h x_j$ is the attention score paid by token $i$ to token $j$.
+$x_i^T W_{QK}^h x_j = (x_i^T W_Q^h) (x_j^T W_K^h)^T$ is the attention score paid by token $i$ to token $j$.
 """)
     st.markdown(r"""
 #### $W_E W_{QK}^h W_E^T$
 """)
-
     with st.expander("Answer"):
         st.markdown(r"""
 $W_E W_{QK}^h W_E^T$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a bilinear form describing **where information is moved to and from**, among words in our vocabulary (i.e. which tokens pay attention to which others).
 
 If $A$ and $B$ are one-hot encodings for tokens `A` and `B`, then $A^T W_E W_{QK}^h W_E^T B$ is the attention score paid by token `A` to token `B`.
+
+To further break this down, if it still seems confusing:
+
+* $A^T W_E$ is the embedding vector for `A`.
+* $B^T W_E$ is the embedding vector for `B`.
+* $(A^T W_E) W_{QK}^h (B^T W_E)^T$ is the attention score.
+""")
+    st.markdown(r"""
+#### $W_{pos} W_{QK}^h W_{pos}^T$
+""")
+
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_{pos} W_{QK}^h W_{pos}^T$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a bilinear form describing **where information is moved to and from**, among words in our vocabulary (i.e. which tokens pay attention to which others).
+
+If $i$ and $j$ are one-hot encodings for positions `i` and `j` (in other words they are just the ith and jth basis vectors), then $i^T W_{pos} W_{QK}^h W_{pos}^T j$ is the attention score paid by the token with position `i` to the token with position `j`.
+
+To further break this down, if it still seems confusing:
+
+* $i^T W_{pos}$ is the positional encoding vector for `i`.
+* $j^T W_{pos}$ is the positional encoding vector for `j`.
+* $(i^T W_{pos}) W_{QK}^h (i^T W_{pos})^T$ is the attention score.
+""")
+    st.markdown(r"""
+#### $W_E W_{OV}^{h_1} W_{QK}^{h_2} W_E^T$ 
+
+where $h_1$ is in an earlier layer than $h_2$.
+""")
+
+    with st.expander("Hint"):
+        st.markdown(r"""
+This matrix is best seen as a bilinear form of size $(d_\text{vocab}, d_\text{vocab})$. The $(A, B)$-th element is:
+
+$$
+(A^T W_E W_{OV}^{h_1}) W_{QK}^{h_2} (B^T W_E)^T
+$$
+""")
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_E W_{OV}^{h_1} W_{QK}^{h_2} W_E^T$ has size $(d_\text{vocab}, d_\text{vocab})$, it is a bilinear form describing where information is moved to and from in head $h_2$, given that the **query-side vector** is formed from the output of head $h_1$. In other words, this is an instance of **Q-composition**.
+
+If $A$ and $B$ are one-hot encodings for tokens `A` and `B`, then $A^T W_E W_{OV}^{h_1} W_{QK}^{h_2} W_E^T B$ is the attention score paid ***to*** token `B`, ***by*** any token which attended strongly to an `A`-token in head $h_1$.
+
+---
+
+To further break this down, if it still seems confusing:
+
+* $A^T W_E$ is the embedding vector for `A`.
+* $A^T W_E W_{OV}^{h_1}$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to an `A`-token in head $h_1$.
+* $(A^T W_E W_{OV}^{h_1}) W_{QK}^{h_2} (B^T W_E)^T$ is the attention score (in head $h_2$) between query **[token which attended to `A` in head $h_1$]** and key **[token `B`]**.
+
+---
+
+Note that the actual attention score will be a sum of multiple terms, not just this one (in fact, we'd have a different term for every combination of query and key input). But this term describes the particular contribution to the attention score from this combination of query and key input, and it might be the case that this term is the only one that matters (i.e. all other terms don't much affect the final probabilities).
+""")
+    st.markdown(r"""
+#### $W_E W_{QK}^{h_2} (W_{OV}^{h_1})^T W_E^T$ 
+
+where $h_1$ is in an earlier layer than $h_2$.
+""")
+
+    with st.expander("Hint"):
+        st.markdown(r"""
+This matrix is best seen as a bilinear form of size $(d_\text{vocab}, d_\text{vocab})$. The $(A, B)$-th element is:
+
+$$
+(A^T W_E) W_{QK}^{h_2} (B^T W_E W_{OV}^{h_1})^T
+$$
+""")
+    with st.expander("Answer"):
+        st.markdown(r"""
+$W_E W_{QK}^{h_2} (W_{OV}^{h_1})^T W_E^T$  has size $(d_\text{vocab}, d_\text{vocab})$, it is a bilinear form describing where information is moved to and from in head $h_2$, given that the **key-side vector** is formed from the output of head $h_1$. In other words, this is an instance of **K-composition**.
+
+If $A$ and $B$ are one-hot encodings for tokens `A` and `B`, then $A^T W_E W_{OV}^{h_1} W_{QK}^{h_2} W_E^T B$ is the attention score paid ***by*** token `A`, ***to*** any token which attended strongly to a `B`-token in head $h_1$.
+
+---
+
+To further break this down, if it still seems confusing:
+
+* $B^T W_E$ is the embedding vector for `B`.
+* $B^T W_E W_{OV}^{h_1}$ is the vector written to the residual stream at the destination position, if the destination token only pays attention to a `B`-token in head $h_1$.
+* $(A^T W_E) W_{QK}^{h_2} (B^T W_E W_{OV}^{h_1})^T$ is the attention score (in head $h_2$) between query **[token `A`]** and key **[token which attended to `B` in head $h_1$]**.
+
+---
+
+Note that the actual attention score will be a sum of multiple terms, not just this one (in fact, we'd have a different term for every combination of query and key input). But this term describes the particular contribution to the attention score from this combination of query and key input, and it might be the case that this term is the only one that matters (i.e. all other terms don't much affect the final probabilities).
 """)
 
     st.markdown(r"""
-
-
-
-Before we start, there's a problem that we might run into when calculating all these matrices. Some of them are massive, and might not fit on our GPU. For instance, both full circuit matrices have shape $(d_\text{vocab}, d_\text{vocab})$, which in our case means $50278\times 50278 \approx 2.5\times 10^{9}$ elements. If you're doing these exercises in Colab or using a powerful GPU then you might manage, but anything short of that will probably result in a `RuntimeError: CUDA error: out of memory` error. How can we get around this problem?
+Before we start, there's a problem that we might run into when calculating all these matrices. Some of them are massive, and might not fit on our GPU. For instance, both full circuit matrices have shape $(d_\text{vocab}, d_\text{vocab})$, which in our case means $50278\times 50278 \approx 2.5\times 10^{9}$ elements. Even if your GPU can handle this, it still seems inefficient. Is there any way we can meaningfully analyse these matrices, without actually having to calculate them?
 
 ## Factored Matrix class
 
 In transformer interpretability, we often need to analyse low rank factorized matrices - a matrix $M = AB$, where M is `[large, large]`, but A is `[large, small]` and B is `[small, large]`. This is a common structure in transformers. 
 
-For instance, we can factorise the OV circuit above as $W_{OV}^h = W_V^h W_O^h$, where $W_V^h$ has shape `[768, 64]` and $W_O^h$ has shape `[64, 768]`. Even more extreme - the full OV circuit can be written as $(W_E W_V^h) (W_O^h W_U)$, where these two matrices have shape `[50278, 64]` and `[64, 50278]` respectively. 
+For instance, we can factorise the OV circuit above as $W_{OV}^h = W_V^h W_O^h$, where $W_V^h$ has shape `[768, 64]` and $W_O^h$ has shape `[64, 768]`. For an even more extreme example, the full OV circuit can be written as $(W_E W_V^h) (W_O^h W_U)$, where these two matrices have shape `[50278, 64]` and `[64, 50278]` respectively. Similarly, we can write the full QK circuit as $(W_E W_Q^h) (W_E W_K^h)^T$.
 
 The `FactoredMatrix` class is a convenient way to work with these. It implements efficient algorithms for various operations on these, such as computing the trace, eigenvalues, Frobenius norm, singular value decomposition, and products with other matrices. It can (approximately) act as a drop-in replacement for the original matrix.
 
@@ -2505,7 +2371,9 @@ $AB$ is an $(m, m)$-matrix, but $BA$ is $(n, n)$ (much smaller). So we can just 
 
         st.markdown(r"""
 **Question - how can you easily compute the eigenvalues of $M$?**
-    """)
+
+(As you'll see in later exercises, eigenvalues are very important for evaluating matrices, for instance we can assess the [copying scores](https://transformer-circuits.pub/2021/framework/index.html#copying-matrix) of an OV circuit by looking at the eigenvalues of $W_{OV}$.)
+""")
         with st.expander("Hint"):
             st.markdown(r"""
 It's computationally cheaper to find the eigenvalues of $BA$ rather than $AB$.
@@ -2549,16 +2417,16 @@ Then we have:
 
 $$
 \begin{aligned}
-M &= AB \\
+\quad\quad\quad\quad M &= AB \\
 &= U_A (S_A V_A^T U_B S_B) V_B^T
 \end{aligned}
 $$
 
-Note that the matrix in the middle has size $(n, n)$ (i.e. small), so we can compute its SVD easily:
+Note that the matrix in the middle has size $(n, n)$ (i.e. small), so we can compute its SVD cheaply:
 
 $$
 \begin{aligned}
-S_A V_A^T U_B S_B &= U' S' {V'}^T
+\; S_A V_A^T U_B S_B &= U' S' {V'}^T \quad\quad\quad\quad\quad
 \end{aligned}
 $$
 
@@ -2566,14 +2434,14 @@ and finally, this gives us the SVD of $M$:
 
 $$
 \begin{aligned}
-M &= U_A U' S' {V'}^T V_B^T \\
+\quad\quad M &= U_A U' S' {V'}^T V_B^T \\
 &= U S {V'}^T
 \end{aligned}
 $$
 
 where $U = U_A U'$, $V = V_B V'$, and $S = S' S_B$.
 
-All our SVD calculations and matrix multiplications had complexity at most $O(mn^2)$, which is much better than $O(m^3)$.
+All our SVD calculations and matrix multiplications had complexity at most $O(mn^2)$, which is much better than $O(m^3)$ (remember that we don't need to compute all the values of $U = U_A U'$, only the ones which correspond to non-zero singular values).
 """)
         st.markdown(r"""
 If you're curious, you can go to the `FactoredMatrix` documentation to see the implementation of the SVD calculation, as well as other properties and operations.""")
@@ -2606,9 +2474,22 @@ print()
 print("Singular Values:")
 print(t.linalg.svd(AB).S)
 print(AB_factor.S)
+print("Full SVD:")
+print(AB_factor.svd())
 ```
+""")
+    with st.expander("Aside - the sizes of objects returned by the SVD method."):
+        st.markdown(r"""
+If $M = USV^T$, and `M.shape = (m, n)` and the rank is `r`, then the SVD method returns the matrices $U, S, V$. They have shape `(m, r)`, `(r,)`, and `(n, r)` respectively, because:
 
-We can multiply with other matrices - it automatically chooses the smallest possible dimension to factor along (here it's 2, rather than 5).
+* We don't bother storing the off-diagonal entries of $S$, since they're all zero.
+* We don't bother storing the columns of $U$ and $V$ which correspond to zero singular values, since these won't affect the value of $USV^T$.
+""")
+    # A few last comments - the documentation of TransformerLens mentions that the method returns `U, S, Vh`. The `h` here stands for Hermitian conjugate; it's the generalisation of transpose for complex matrices (it means the same as conjugate transpose). It's often denoted $V^*$. 
+
+    # Also, the documentation says that the method returns `Vh` rather than `V`, because it is using the convention of writing $M = USV$ rather than $M=USV^*$. However, we'll be sticking to the convention of writing `M = U @ S @ Vh` here.
+    st.markdown(r"""
+We can multiply a factored matrix with an unfactored matrix to get another factored matrix (as in example below). We can also multiply two factored matrices together to get another factored matrix.
 
 ```python
 C = t.randn(5, 300)
@@ -2654,7 +2535,8 @@ t.testing.assert_close(AB_unfactored, AB)
 
 # OV_copying_score = OV_circuit_all_heads_eigenvalues.sum(dim=-1).real / OV_circuit_all_heads_eigenvalues.abs().sum(dim=-1)
 # imshow(utils.to_numpy(OV_copying_score), xaxis="Head", yaxis="Layer", title="OV Copying Score for each head in GPT-2 Small", zmax=1.0, zmin=-1.0)
-# ```""")
+# ```
+# """)
 
 #         st.plotly_chart(fig_dict["ov_copying"], use_container_width=True)
 #         st.markdown(r"""
@@ -2663,7 +2545,8 @@ t.testing.assert_close(AB_unfactored, AB)
 
 # ```python
 # scatter(x=OV_circuit_all_heads_eigenvalues[-1, -1, :].real, y=OV_circuit_all_heads_eigenvalues[-1, -1, :].imag, title="Eigenvalues of Head L11H11 of GPT-2 Small", xaxis="Real", yaxis="Imaginary")
-# ```""")
+# ```
+# """)
 
 #         st.plotly_chart(fig_dict["scatter_evals"], use_container_width=True)
 #         st.markdown(r"""
@@ -2697,77 +2580,89 @@ t.testing.assert_close(AB_unfactored, AB)
 # # Here, that removes the dummy batch dimension so it's a rank 1 tensor and returns a string
 # # Rank 2 tensors map to a list of strings
 # print(f"De-Tokenizing the example tokens: {model.to_string(example_text_tokens.squeeze())}")
-# ```""")
+# ```
+# """)
 
     st.markdown(r"""
 
 ## Reverse-engineering circuits
 
-Within our induction circuit, we have four individual circuits: the OV and QK circuits in our previous token head, and the OV and QK circuits in our attention head. They are all shown in the diagram below (each of the boxes with dashed borders explains a different one of the four). 
-""")
+Within our induction circuit, we have four individual circuits: the OV and QK circuits in our previous token head, and the OV and QK circuits in our attention head. In the following sections of the exercise, we'll reverse-engineer each of these circuits in turn.
 
-    st_image("kcomp_diagram.png", 900)
-    st.markdown("")
+* In the section **OV copying circuit**, we'll look at the layer-1 OV circuit.
+* In the section **QK prev-token circuit**, we'll look at the layer-0 QK circuit.
+* The third section (**K-composition**) is a bit trickier, because it involves looking at the composition of the layer-0 OV circuit **and** layer-1 QK circuit. We will have to do two things: 
+    1. Show that these two circuits are composing (i.e. that the output of the layer-0 OV circuit is the main determinant of the key vectors in the layer-1 QK circuit).
+    2. Show that the joint operation of these two circuits is "make the second instance of a token attend to the token *following* an earlier instance.
+
+The dropdown below contains a diagram explaining how the three sections relate to the different components of the induction circuit.
+""")
+    # As an analogy, pretend each of the attention heads is a person reading coded messages from the airwaves, and sending coded messages forwards to people further down the line. We might not be able to crack the code that Alice and Bob are using to communicate with each other, but as long as we can (1) show that they are communicating with each other more than with anyone else, and (2) deduce how they function as a single unit (i.e. how our coded message changes when it passes through Alice *and* Bob), then we can consider their joint function as having been fully reverse-engineered.
+
+    with st.expander("Diagram"):
+        st.markdown("")
+        st_image(r"kcomp_diagram_described_2.png", 1800)
+        st.markdown("")
 
     st.markdown(r"""
-The eagle-eyed among you may have noticed that the contents page only has three subsections: the OV copying circuit, the QK prev-token circuit, and K-composition. Why three sections, but four circuits?
-
-The reason is because we can't actually analyse the layer-0 OV circuit or the layer-1 QK circuit in isolation. The OV circuit writes information to a subspace (named the "prev token subspace" below) which is then used by the QK circuit to form the attention patterns in the induction head. So we have to analyse the circuit formed by composing these two heads.
-
-As an analogy, pretend each of the attention heads is a person reading coded messages from the airwaves, and sending coded messages forwards to people further down the line. We might not be able to crack the code that Alice and Bob are using to communicate with each other, but as long as we can (1) show that they are communicating with each other more than with anyone else, and (2) deduce how they function as a single unit (i.e. how our coded message changes when it passes through Alice *and* Bob), then we can consider their joint function as having been fully reverse-engineered.
-
-Here is a summary of how each of the three sections will proceed:
-
-* **OV copying circuit**
-    * We show that $W_{OV}$ in layer 1 is indeed mapping token embeddings to their unembeddings (i.e. sending the embedding of token `T` to a vector which will be decoded as `T` by the unembedding matrix with high probability).
-* **QK prev-token circuit**
-    * We show that $W_{QK}$ in layer 0 is indeed making tokens attend backwards by one position.
-* **K-composition**
-    * We show that the layer-0 OV circuit and layer-1 QK circuit are composing together to form the characteristic induction patterns we observed in the previous section (and that all other inputs into the layer-1 QK circuit are not important for determining the attention pattern), when we feed the model repeating sequences.
-    * Now that composition has been established, we evaluate the end-to-end circuit formed by composing these two, and show that it is performing the role of "make token attend back to the token *after* a previous instance of itself."
 
 After this, we'll have a look at composition scores, which are a more mathematically justified way of showing that two attention heads are composing (without having to look at their behaviour on any particular class of inputs, since it is a property of the actual model weights).
 
-### OV copying circuit
+### OV copying circuit""")
 
-Let's start with an easy parts of the circuit - the copying OV circuit of `1.4` and `1.10`. Let's start with head 4. The only interpretable (read: **privileged basis**) things here are the input tokens and output logits, so we want to study the matrix $W_E W_{OV}^{1.4} W_U$ (and same for `1.10`). This is the $(d_\text{vocab}, d_\text{vocab})$-shape matrix that combines with the attention pattern to get us from input to output.
+    
+    st.markdown("")
+
+    st.markdown(r"""
+
+Let's start with an easy parts of the circuit - the copying OV circuit of `1.4` and `1.10`. Let's start with head 4. The only interpretable (read: **privileged basis**) things here are the input tokens and output logits, so we want to study the matrix:
+
+$$
+W_E W_{OV}^{1.4} W_U
+$$ 
+
+ (and same for `1.10`). This is the $(d_\text{vocab}, d_\text{vocab})$-shape matrix that combines with the attention pattern to get us from input to output.
 
 We want to calculate this matrix, and inspect it. We should find that its diagonal values are very high, and its non-diagonal values are much lower.
 
-**Question - why should we expect this observation? (Try and come up with your own answer before reading.)**
+**Question - why should we expect this observation?** (you may find it helpful to refer back to the previous section, where you described what the interpretation of different matrices was.)
 """)
 
     with st.expander("Hint"):
         st.markdown(r"""
-Take a repeated pattern `A B ... A B`. Your induction head is responsible for making sure the prediction at the second `A` token is `B`.
+Suppose our repeating sequence is `A B ... A B`. Let $A$, $B$ be the corresponding one-hot encoded tokens. The `B`-th row of this matrix is:
 
-Try and work through each step of the matrix multiplication $B^T (W_E W_{OV}^{1.4} W_U)$, where $B$ is a one-hot encoding of the token `B` (i.e. it's a vector with zeros everywhere, except for a one at position `B`). In other words, first apply $W_E$, then $W_{OV}^{1.4}$, then $W_U$. What should you be left with at the end?
+$$
+B^T W_E W_{OV}^{1.4} W_U
+$$
+
+What is the interpretation of this expression, in the context of our attention head?
 """)
 
     with st.expander("Answer"):
+        
         st.markdown(r"""
-The OV circuit $W_{OV}^{1.4}$ is meant to be a **copy circuit**. In other words, it takes the embedding of some token, and returns a vector which will result in that same token being predicted.
+If our repeating sequence is `A B ... A B`, then:
 
-Let's make this a bit more concrete. Suppose our repeated pattern is `A B ... A B`, and let $B$ be a one-hot encoding of the token `B`. Then we have:
+$$
+B^T W_E W_{OV}^{1.4} W_U
+$$
 
-* $B^T W_E$ is the token-embedding of `B`. It is a vector of length $d_\text{model}$.
-
-* $B^T W_E W_{OV}^{1.4}$ is the vector which gets moved from the first `B` token to the second `A` token, by the operation of attention head `1.4`. It is a vector of length $d_\text{model}$.
-
-* $B^T W_E W_{OV}^{1.4} W_U$ is the logit distribution corresponding to our prediction for the token following the second `A`. It is a vector of length $d_\text{vocab}$.
-
-We want this prediction to be `B`, in other words we want $(B^T W_E W_{OV}^{1.4} W_U)_B$ to be the largest element of this vector (the subscript here means we're taking the $B$th element of the vector). 
-
-Since $B$ is a one-hot encoding, $(B^T W_E W_{OV}^{1.4} W_U)$ is the $B$th row of the $(d_\text{vocab}, d_\text{vocab})$-size matrix $W_E W_{OV}^{1.4} W_U$. So we want the largest element of the $B$th row to be the $B$th element, i.e. the one lying on the diagonal of the matrix $W_E W_{OV}^{1.4} W_U$. 
-
-Since $B$ was arbitrary here (we expect this to work for any repeated sequence), we conclude that each row of $W_U W_{OV}^{1.4} W_E$ should have its largest element be on the diagonal.
+is the **vector of logits which gets moved from the first `B` token to the second `A` token, to be used as the prediction for the token following the second `A` token**. It should result in a high prediction for `B`, and a low prediction for everything else. In other words, the `(B, X)`-th element of this matrix should be highest for `X=B`, which is exactly what we claimed.
 
 ---
 
-Note a small subtlety here - we don't expect this matrix to be the identity. If the induction head always resulted in a 100% probability that the repeated sequence would continue, then we *would* expect the matrix to be the identity **after applying softmax over the columns**. But in reality this doesn't happen, and it turns out to be much more helpful studying the matrix before applying softmax.
+If this still seems confusing, let's break it down bit by bit. We have:
 
-Sometimes, we'll describe a logit matrix like this one as the identity, as a shorthand. You should interpret statements like this as *"the logit distribution implied by this matrix is (approximately) the identity"*.
+* $B^T W_E$ is the token-embedding of `B`.
+* $B^T W_E W_{OV}^{1.4}$ is the vector which gets moved from the first `B` token to the second `A` token, by our attention head (because the second `A` token attends strongly to the first `B`).
+* $B^T W_E W_{OV}^{1.4} W_U$ is the vector of logits representing how this attention head affects the prediction of the token following the second `A`. There should be a higher logit for `B` than for any other token, because the attention head is trying to copy `B` to the second `A`.
+
+---
 """)
+
+        st_image("kcomp_diagram_described-OV.png", 900)
+        st.markdown("")
 
 #     st.info(r"""
 # Tip: If you start running out of CUDA memory, cast everything to float16 (`tensor` -> `tensor.half()`) before multiplying - 50K x 50K matrices are large! Alternately, do the multiply on CPU if you have enough CPU memory. This should take less than a minute.
@@ -2798,6 +2693,8 @@ if MAIN:
     head_index = 4
     layer = 1
     full_OV_circuit = None # YOUR CODE HERE - calculate matrix
+
+    tests.test_full_OV_circuit(full_OV_circuit, model, layer, head_index)
 ```
 """)
 
@@ -2809,11 +2706,24 @@ You can compute it directly, as:
 full_OV_circuit = FactoredMatrix(W_E @ W_V, W_O @ W_U)
 ```
 
-Alternatively, another nice feature about the `FactoredMatrix` class is that you can chain together matrix multiplications:
+Alternatively, another nice feature about the `FactoredMatrix` class is that you can chain together matrix multiplications. The following code defines exactly the same `FactoredMatrix` object:
 
 ```python
 OV_circuit = FactoredMatrix(W_V, W_O)
-full_OV_circuit = W_E @ OV_circuit @ W_U # this is also a FactoredMatrix
+full_OV_circuit = W_E @ OV_circuit @ W_U
+```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+if MAIN:
+    W_O_4 = model.W_O[1, 4]
+    W_V_4 = model.W_V[1, 4]
+    W_E = model.W_E
+    W_U = model.W_U
+
+    OV_circuit = FactoredMatrix(W_V_4, W_O_4)
+    full_OV_circuit = W_E @ OV_circuit @ W_U
 ```
 """)
     with st.columns(1)[0]:
@@ -2823,51 +2733,107 @@ full_OV_circuit = W_E @ OV_circuit @ W_U # this is also a FactoredMatrix
 
 Now we want to check that this matrix is the identity. Since it's in factored matrix form, this is a bit tricky, but there are still things we can do.
 
-First, to validate that it looks diagonal-ish, let's pick 200 random rows and columns and visualise that - it should at least look identity-ish here! The `FactoredMatrix` class comes with a `get_sample` method, which allows you to compute a small randomly-chosen submatrix.
-
+First, to validate that it looks diagonal-ish, let's pick 200 random rows and columns and visualise that - it should at least look identity-ish here!
 
 ```python
 if MAIN:
     # YOUR CODE HERE - compute random 200x200 sample
-    imshow(full_OV_circuit_sample)
+    imshow(full_OV_circuit_sample).show()
+```
+""")
+
+        with st.expander("Aside - indexing factored matrices"):
+            st.markdown(r"""
+Yet another nice thing about factored matrices is that you can evaluate small submatrices without having to compute the entire matrix. This is based on the fact that the `[i, j]`-th element of matrix `AB` is `A[i, :] @ B[:, j]`.
+
+When you index a factored matrix, you get back another factored matrix. So the two methods below are both valid ways to get a 200x200 sample:
+
+```python
+indices = t.randint(0, model.cfg.d_vocab, (200,))
+full_OV_circuit_sample = full_OV_circuit[indices, indices].AB
 ```
 
+and:
+
+```python
+indices = t.randint(0, model.cfg.d_vocab, (200,))
+full_OV_circuit_sample = full_OV_circuit.A[indices, :] @ full_OV_circuit.B[:, indices]
+```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+if MAIN:
+    indices = t.randint(0, model.cfg.d_vocab, (200,))
+
+    # full_OV_circuit_sample = full_OV_circuit.A[indices, :] @ full_OV_circuit.B[:, indices]
+    full_OV_circuit_sample = full_OV_circuit[indices, indices].AB
+
+    imshow(full_OV_circuit_sample).show()
+```
+""")
+        st.markdown(r"""
+#### Your output
+""")
+        button6 = st.button("Show my output", key="button6")
+        if button6 or "got_OV_circuit_sample" in st.session_state:
+            if "OV_circuit_sample" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["OV_circuit_sample"])
+                st.session_state["got_OV_circuit_sample"] = True
+        st.markdown(r"""
 You should observe a pretty distinct diagonal pattern here, which is a good sign. However, the matrix is pretty noisy so it probably won't be exactly the identity. Instead, we should come up with a summary statistic to capture a rough sense of "closeness to the identity".
 
 **Accuracy** is a good summary statistic - what fraction of the time is the largest logit in a row on the diagonal? Even if there's lots of noise, you'd probably still expect the largest logit to be on the diagonal a good deal of the time.
 
-If you're on a Colab or have a powerful GPU, you should be able to compute the full matrix and perform this test. If not, the most efficient method is to pick some sample of the columns and work on them individually. Hint - if `M = AB` is a factored matrix, then the $i$th row of `M` is `A[i, :] @ B` (which should fit on your GPU!).
+If you're on a Colab or have a powerful GPU, you should be able to compute the full matrix and perform this test. If not, the most efficient method is to iterate through the rows (or batches of rows). Remember - if `M = AB` is a factored matrix, then the $i$th row of `M` is `A[i, :] @ B`.
 
 Bonus exercise: Top-5 accuracy is also a good metric (use `t.topk`, take the indices output).
 
-When I run this I get about 30.79% - pretty underwhelming. It goes up to 47.73% for top-5. What's up with that?
-
 ```python
-def top_1_acc(full_OV_circuit):
+def top_1_acc(full_OV_circuit: FactoredMatrix) -> float:
     '''
     This should take the argmax of each column (ie over dim=0) and return the fraction of the time that's equal to the correct logit
     '''
     pass
 
 if MAIN:
-    print("Fraction of the time that the best logit is on the diagonal:")
-    print(top_1_acc(full_OV_circuit))
-```""")
+    print(f"Fraction of the time that the best logit is on the diagonal: {top_1_acc_iteration(full_OV_circuit):.4f}")
+```
+""")
 
-        with st.expander("Solution:"):
+        with st.expander("Solution"):
             st.markdown(r"""
 ```python
-def top_1_acc(full_OV_circuit: FactoredMatrix):
+def top_1_acc(full_OV_circuit: FactoredMatrix) -> float:
+    '''
+    This should take the argmax of each column (ie over dim=0) and return the fraction of the time that's equal to the correct logit
+    '''
+    AB = full_OV_circuit.AB
+
+    return (t.argmax(AB, dim=1) == t.arange(AB.shape[0])).float().mean().item()
+```
+
+or a solution using iteration:
+
+```python
+def top_1_acc_iteration(full_OV_circuit: FactoredMatrix, batch_size: int = 100) -> float: 
     '''
     This should take the argmax of each column (ie over dim=0) and return the fraction of the time that's equal to the correct logit
     '''
     A, B = full_OV_circuit.A, full_OV_circuit.B
+    nrows = full_OV_circuit.shape[0]
+    nrows_max_on_diagonal = 0
 
-    correct = []
-    for i in tqdm(range(full_OV_circuit.shape[-1])):
-        correct.append(t.argmax(A[i, :] @ B) == i)
+    for i in tqdm(range(0, nrows + batch_size, batch_size)):
+        rng = range(i, min(i + batch_size, nrows))
+        if rng:
+            submatrix = A[rng, :] @ B
+            diag_indices = t.tensor(rng, device=submatrix.device)
+            nrows_max_on_diagonal += (submatrix.argmax(-1) == diag_indices).float().sum().item()
     
-    return t.tensor(correct).float().mean()
+    return nrows_max_on_diagonal / nrows
 ```
 
 And for top-5:
@@ -2887,15 +2853,20 @@ def top_5_acc(full_OV_circuit: FactoredMatrix):
     return t.tensor(correct).float().mean()
 ```
 """)
+        st.markdown(r"""
+This should return about 30.79% - pretty underwhelming. It goes up to 47.73% for top-5. What's up with that?""")
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - compute circuit for both induction heads
 
-Now we return to why we have *two* induction heads. If both have the same attention pattern, the effective OV circuit is actually $W_U(W_O^{[1,4]}W_V^{[1,4]}+W_O^{[1,10]}W_V^{[1,10]})W_E$, and this is what matters. So let's re-run our analysis on this!""")
+Now we return to why we have *two* induction heads. If both have the same attention pattern, the effective OV circuit is actually $W_U(W_O^{1.4}W_V^{1.4}+W_O^{1.10}W_V^{1.10})W_E$, and this is what matters. So let's re-run our analysis on this!""")
+        
+        st_image("effective_ov_circuit.png", 600)
+        st.markdown(r"")
 
         with st.expander("Question - why might the model want to split the circuit across two heads?"):
             st.markdown(r"""
-Because $W_O W_V$ is a rank 64 matrix. The sum of two is a rank 128 matrix. This can be a significantly better approximation to the desired 50K x 50K matrix!""")
+Because $W_V W_O$ is a rank 64 matrix. The sum of two is a rank 128 matrix. This can be a significantly better approximation to the desired 50K x 50K matrix!""")
 
         st.markdown(r"""
 ```python
@@ -2906,80 +2877,53 @@ if MAIN:
 ```
 """)
 
-        with st.expander("Hint"):
-            st.markdown(r"""
-The easiest way is to store them as two separate factored matrices, i.e. `full_OV_circuit_4` and `full_OV_circuit_10`. Then you can loop through them, calculating the rows and adding them together.
-
-You can use this function as a template
-
-```python
-def top_1_acc_effective_circuit(full_OV_circuit_list: List[FactoredMatrix]):
-    '''
-    Inputs: list of factored matrices W_U @ W_OV^h @ W_E, for different heads h
-
-    Returns: top_1_acc for more than one OV_circuit
-    '''
-    pass
-```
-""")
+#         with st.expander("Hint"):
+#             st.markdown(r"""
+# The easiest way is to define stacked `W_O` and `W_V` matrices (as in the diagram in the dropdown above), then calculate accuracy in the same way you did with the previous circuits.
+# """)
         with st.expander("Solution (and expected output)"):
             st.markdown(r"""
 ```python
-def top_1_acc_effective_circuit(full_OV_circuit_list: List[FactoredMatrix]):
-    '''
-    Returns top_1_acc for more than one OV circuit
-    '''
-    num_circuits = len(full_OV_circuit_list)
-    A_shape = full_OV_circuit_list[0].A.shape
-
-    all_A = t.stack([full_OV_circuit.A for full_OV_circuit in full_OV_circuit_list])
-    all_B = t.stack([full_OV_circuit.B for full_OV_circuit in full_OV_circuit_list])
-
-    assert all_A.shape == (num_circuits, *A_shape)
-
-    correct = []
-    for i in tqdm(range(A_shape[0] // 30)):
-        row = t.einsum("nj,njk->k", all_A[:, i, :], all_B)
-        correct.append(row.argmax() == i)
-    
-    return t.tensor(correct).float().mean()
-
 if MAIN:
-    W_O_4, W_O_10 = model.W_O[1, [4, 10]]
-    W_V_4, W_V_10 = model.W_V[1, [4, 10]]
-    OV_circuit_4_full = W_E @ FactoredMatrix(W_V_4, W_O_4) @ W_U
-    OV_circuit_10_full = W_E @ FactoredMatrix(W_V_10, W_O_10) @ W_U
-    full_OV_circuit_list = [OV_circuit_4_full, OV_circuit_10_full]
+    W_O_both = einops.rearrange(model.W_O[1, [4, 10]], "head d_head d_model -> (head d_head) d_model")
+    W_V_both = einops.rearrange(model.W_V[1, [4, 10]], "head d_model d_head -> d_model (head d_head)")
 
-    print("Fraction of the time that the best logit is on the diagonal:")
-    print(top_1_acc_effective_circuit(full_OV_circuit_list))
+    W_OV_eff = W_E @ FactoredMatrix(W_V_both, W_O_both) @ W_U
+
+    print(f"Fraction of the time that the best logit is on the diagonal: {top_1_acc_iteration(W_OV_eff):.4f}")
 ```
 
-You should get an accuracy of greater than 95%!
+You should get an accuracy of greater than 95% - much better!
 """)
 
     st.markdown(r"""
-
 ### QK prev-token circuit
 
 The other easy circuit is the QK-circuit of L0H7 - how does it know to be a previous token circuit?
 
-We can multiply out the full QK circuit via the positional embeddings: $W_\text{pos} W_Q^{0.7} (W_K^{0.7})^T W_\text{pos}^T$ to get a matrix `pos_by_pos` of shape `[max_ctx, max_ctx]` (max ctx = max context length, i.e. maximum length of a sequence we're allowing, which is set by our choice of dimensions in $W_\text{pos}$).
+We can multiply out the full QK circuit via the positional embeddings: 
+
+$$
+W_\text{pos} W_Q^{0.7} (W_K^{0.7})^T W_\text{pos}^T
+$$
+
+to get a matrix `pos_by_pos` of shape `[max_ctx, max_ctx]` (max ctx = max context length, i.e. maximum length of a sequence we're allowing, which is set by our choice of dimensions in $W_\text{pos}$).
 
 Note that in this case, our max context window is 2048 (we can check this via `model.cfg.n_ctx`). This is much smaller than the 50k-size matrices we were working with in the previous section, so we shouldn't need to use the factored matrix class here.
 
 Once we calculate it, we can then mask it and apply a softmax, and should get a clear stripe on the lower diagonal (Tip: Click and drag to zoom in, hover over cells to see their values and indices!)
-
-**Question - why should we expect this matrix to have a lower-diagonal stripe?**
 """)
 
-    with st.expander("Answer"):
+    with st.expander("Question - why should we expect this matrix to have a lower-diagonal stripe?"):
         st.markdown(r"""
 The full QK circuit $W_\text{pos} W_{QK}^{0.7} W_\text{pos}^T$ has shape `[n_ctx, n_ctx]`. After masking and scaling, the $(i, j)$th element of the matrix is the **attention score** paid by the token with position $i$ to the token with position $j$ (ignoring token encoding). We expect this to be very large when $j = i - 1$, because this is a **previous head token**.
 
-After applying softmax, the $(i, j)$th element is the **attention probability** token $i$ pays to $j$, in a sequence of length 2048 (again ignoring token encodings). We expect this to be close to 1 when $j = i - 1$, and others to be close to zero.
+After applying softmax over keys (i.e. over $j$), the $(i, j)$th element is the **attention probability** token $i$ pays to $j$, in a sequence of length 2048 (again ignoring token encodings). We expect this to be close to 1 when $j = i - 1$, and others to be close to zero.
 
----
+""")
+        st_image("kcomp_diagram_described-QK.png", 900)
+        st.markdown("")
+        st.markdown(r"""
 
 #### Optional bonus exercise
 
@@ -2991,11 +2935,8 @@ Why is it justified to ignore token encodings? In this case, it turns out that t
 
 Now, you should compute and plot the matrix.
 
-Remember, you're calculating the attention pattern (i.e. probabilites) not the scores. You'll need to mask the scores (you can use the `mask_scores` function we've provided you with), and scale them.""")
+Remember, you're calculating the attention pattern (i.e. probabilites) not the scores. You'll need to mask the scores (you can use the `mask_scores` function we've provided you with), and scale them.
 
-        st.info(r"""If you're using VSCode, it might help to periodically clear the plotly graphs from your screen; they can slow down your performance by quite a bit!""")
-
-        st.markdown(r"""
 ```python
 def mask_scores(attn_scores: TT["query_d_model", "key_d_model"]):
     '''Mask the attention scores so that tokens don't attend to previous tokens.'''
@@ -3003,13 +2944,27 @@ def mask_scores(attn_scores: TT["query_d_model", "key_d_model"]):
     neg_inf = t.tensor(-1.0e6).to(attn_scores.device)
     masked_attn_scores = t.where(mask, attn_scores, neg_inf)
     return masked_attn_scores
+```
 
+Once the tests pass, you can plot a corner of your matrix:
+
+```python
 if MAIN:
     "YOUR CODE HERE - define pos_by_pos_pattern"
 
     print(f"Avg lower-diagonal value: {pos_by_pos_pattern.diag(-1).mean():.4f}")
-    imshow(utils.to_numpy(pos_by_pos_pattern[:200, :200]), xaxis="Key", yaxis="Query")
-```""")
+    imshow(utils.to_numpy(pos_by_pos_pattern[:100, :100]), xaxis="Key", yaxis="Query")
+```
+
+#### Your output
+""")
+        button10 = st.button("Show my output", key="button10")
+        if button10 or "got_pos_by_pos_pattern" in st.session_state:
+            if "pos_by_pos_pattern" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["pos_by_pos_pattern"])
+                st.session_state["got_pos_by_pos_pattern"] = True
 
     st.markdown(r"""
 
@@ -3095,9 +3050,12 @@ if MAIN:
 
     # Plot importance results
     component_labels = ["Embed", "PosEmbed"] + [f"L0H{h}" for h in range(model.cfg.n_heads)]
-    imshow(utils.to_numpy(decomposed_q.pow(2).sum([-1])), xaxis="Pos", yaxis="Component", title="Norms of components of query")
-    imshow(utils.to_numpy(decomposed_k.pow(2).sum([-1])), xaxis="Pos", yaxis="Component", title="Norms of components of key")
-```""")
+    for decomposed_input, name in [(decomposed_q, "query"), (decomposed_k, "key")]:
+        fig = imshow(utils.to_numpy(decomposed_input.pow(2).sum([-1])), xaxis="Pos", yaxis="Component", title=f"Norms of components of {name}", y=component_labels)
+        fig.show()
+        plot_utils.save_fig(fig, f"norms_of_{name}_components")
+```
+""")
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
@@ -3111,7 +3069,7 @@ def decompose_qk_input(cache: ActivationCache) -> t.Tensor:
     y1 = cache["pos_embed"].unsqueeze(0) # shape (1, seq, d_model)
     y_rest = cache["result", 0].transpose(0, 1) # shape (12, seq, d_model)
 
-    return t.cat([y0, y1, y_rest], dim=0)
+    return t.concat([y0, y1, y_rest], dim=0)
 
 
 def decompose_q(decomposed_qk_input: t.Tensor, ind_head_index: int) -> t.Tensor:
@@ -3141,13 +3099,20 @@ def decompose_k(decomposed_qk_input: t.Tensor, ind_head_index: int) -> t.Tensor:
         decomposed_qk_input, W_K
     )
 ```
-""")
-        with st.expander("Click to see the output you should be getting."):
-            st.markdown(r"""
+
 You should see that the most important query components are the token and positional embeddings. The most important key components are those from $y_9$, which is $x_7$, i.e. from head `0.7`.
 """)
-            st.plotly_chart(fig_dict["norms_of_query_components"], use_container_width=True)
-            st.plotly_chart(fig_dict["norms_of_key_components"], use_container_width=True)
+        button7 = st.button("Show my output", key="button7")
+        if button7 or "got_norms_of_query_components" in st.session_state:
+            if "norms_of_query_components" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["norms_of_query_components"])
+                st.plotly_chart(fig_dict["norms_of_key_components"])
+                st.session_state["got_norms_of_query_components"] = True
+        # with st.expander("Click to see the output you should be getting."):
+        #     st.plotly_chart(fig_dict["norms_of_query_components"], use_container_width=True)
+        #     st.plotly_chart(fig_dict["norms_of_key_components"], use_container_width=True)
 
         with st.expander("A technical note on the positional embeddings - optional, feel free to skip this."):
             st.markdown(r"""
@@ -3159,7 +3124,7 @@ positional_embedding_type="shortformer"
 
 The result of this is that the positional embedding isn't added to the residual stream. Instead, it's added as inputs to the Q and K calculation (i.e. we calculate `(resid_pre + pos_embed) @ W_Q` and same for `W_K`), but **not** as inputs to the V calculation (i.e. we just calculate `resid_pre @ W_V`). This isn't actually how attention works in general, but for our purposes it makes the analysis of induction heads cleaner because we don't have positional embeddings interfering with the OV circuit.
 
-**Question - this type of embedding actually makes it impossible for attention heads to form via $Q$-composition. Can you see why?**
+**Question - this type of embedding actually makes it impossible for attention heads to form via Q-composition. Can you see why?**
 """)
 
     st.markdown(r"""
@@ -3212,22 +3177,59 @@ def decompose_attn_scores(decomposed_q: t.Tensor, decomposed_k: t.Tensor) -> t.T
     '''
     pass
 
+if MAIN:
+    tests.test_decompose_attn_scores(decompose_attn_scores, decomposed_q, decomposed_k)
+```
 
+Once these tests have passed, you can plot the results:
+
+```python
 if MAIN:
     decomposed_scores = decompose_attn_scores(decomposed_q, decomposed_k)
     decomposed_stds = einops.reduce(
         decomposed_scores, "query_decomp key_decomp query_pos key_pos -> query_decomp key_decomp", t.std
     )
+
     # First plot: attention score contribution from (query_component, key_component) = (Embed, L0H7)
-    imshow(to_numpy(t.tril(decomposed_scores[0, 9])), title="Attention Scores for component from Q=Embed and K=Prev Token Head")
+    fig_per_component = imshow(utils.to_numpy(t.tril(decomposed_scores[0, 9])), title="Attention Scores for component from Q=Embed and K=Prev Token Head")
     # Second plot: std dev over query and key positions, shown by component
-    imshow(to_numpy(decomposed_stds), xaxis="Key Component", yaxis="Query Component", title="Standard deviations of components of scores", x=component_labels, y=component_labels)
+    fig_std = imshow(utils.to_numpy(decomposed_stds), xaxis="Key Component", yaxis="Query Component", title="Standard deviations of components of scores", x=component_labels, y=component_labels)
+    
+    fig_per_component.show()
+    fig_std.show()
+    plot_utils.save_fig(fig_per_component, "attn_scores_per_component")
+    plot_utils.save_fig(fig_std, "attn_scores_std_devs")
+```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def decompose_attn_scores(decomposed_q: t.Tensor, decomposed_k: t.Tensor) -> t.Tensor:
+    '''
+    Output is decomposed_scores with shape [query_component, key_component, query_pos, key_pos]
+    
+    The [i, j, 0, 0]th element is y_i @ W_QK @ y_j^T (so the sum along both first axes are the attention scores)
+    '''
+    return einsum(
+        "q_comp q_pos d_model, k_comp k_pos d_model -> q_comp k_comp q_pos k_pos",
+        decomposed_q, decomposed_k
+    )
+```
+""")
+        st.markdown(r"""
+#### Your output""")
 
-```""")
-
-        with st.expander("Click here to see the output you should be getting"):
-            st.plotly_chart(fig_dict["attn_scores_for_component"], use_container_width=True)
-            st.plotly_chart(fig_dict["attn_scores_std_devs"], use_container_width=True)
+        button8 = st.button("Show my output", key="button8")
+        if button8 or "got_attn_scores_per_component" in st.session_state:
+            if "attn_scores_per_component" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["attn_scores_per_component"])
+                st.plotly_chart(fig_dict["attn_scores_std_devs"])
+                st.session_state["got_attn_scores_per_component"] = True
+        # with st.expander("Click here to see the output you should be getting"):
+        #     st.plotly_chart(fig_dict["attn_scores_per_component"], use_container_width=True)
+        #     st.plotly_chart(fig_dict["attn_scores_std_devs"], use_container_width=True)
 
         with st.expander("Question - what is the interpretation of these plots?"):
             st.markdown(r"""
@@ -3251,37 +3253,41 @@ W_E\, W_{QK}^{1.4}\, (W_{OV}^{0.7})^T\, W_E^T
 $$
 
 and verify that it's the identity. (Note, when we say identity here, we're again thinking about it as a distribution over logits, so this should be taken to mean "high diagonal values", and we'll be using our previous metric of `top_1_acc`.)
+
+##### Question - why should this be the identity?
 """)
 
 
-    with st.expander("Question - why should this be the identity?"):
+    with st.expander("Answer"):
         st.markdown(r"""
-Like before, we'll consider the repeating sequence `A B ... A B`, denoting $A$ and $B$ as the one-hot encoded vectors. Take any arbitrary token $X$. Then the $(A, X)$th element of this matrix is:
+Like before, we'll consider the repeating sequence `A B ... A B`, denoting $A$ and $B$ as the one-hot encoded vectors. The `(A, A)`-th element of this matrix is:
 
 $$
-A^T \, W_E\, W_{QK}^{1.4}\, (W_{OV}^{0.7})^T\, W_E^T \, X = (\color{red}A\color{black}^T \, W_{Q}^{1.4}) \; (\color{red}X\color{black}^T \, W_{OV}^{0.7} \, W_K^{1.4})^T
+(A^T W_E) W_{QK}^{1.4} (A^T W_{OV}^{0.7} W_E)^T
 $$
 
-where the red letters denote embedding vectors.
+Remember that $A^T W_{OV}^{0.7} W_E$ is the vector which gets moved one position forward by our prev token head. So the expression above is **the attention score paid by the second instance of `A` to the token following the first instance of `A`**. We want this to be high, because the token following the first `A` (which is `B`) is the one we want to use as our prediction for the token following the second `A`.
 
-The left term $(\color{red}A\color{black}^T \, W_{Q}^{1.4})$ is the query vector for token $A$. This query vector is essentially **"looking for a token which followed $A$".**
+On the other hand, now consider the `(A, X)`-th element for arbitrary token `X`. This is the attention paid by the second instance of `A` to the token following the first instance of `X`. This should be small, since the token following `X` is not the one we want to use as our prediction for what follows `A`.
 
-$\color{red}X\color{black}^T W_{OV}^{0.7}$ is the vector which was moved one position forwards by our prev attention head `0.7`. When projected by $W_K^{1.4}$, we get a key vector $(\color{red}X\color{black}^T \, W_{OV}^{0.7} \, W_K^{1.4})$ which essentially contains the information **"this token followed $X$".**
+---
 
-So, to verbally describe this attention pattern:
+Another way to describe this calculation intuitively is to split it into keys and queries. We have:
 
 $$
 \begin{aligned}
-A^T \, W_E\, W_{QK}^{1.4}\, W_{OV}^{0.7}\, W_E^T \, X &= \underbrace{(\text{I'm looking for a token which followed A})}_\text{query} \boldsymbol{\cdot} \underbrace{(\text{I am a token which followed X})}_{\text{key}} \\
+A^T \, W_E\, W_{QK}^{1.4}\, W_{OV}^{0.7}\, W_E^T \, X &= (A^T W_E W_Q^{1.4}) (X^T W_E W_{OV}^{0.7} W_K^{1.4})^T \\
+&= \underbrace{(\text{I'm looking for a token which followed A})}_\text{query} \boldsymbol{\cdot} \underbrace{(\text{I am a token which followed X})}_{\text{key}}
 \end{aligned}
 $$
 
 If $X=A$, then the key is a good match for the query (since it's exactly what the query was "looking for"), so the dot product is large. If $X\neq A$, then the key is a poor match for the query, and the inner product is small.
 
 ---
-
-To summarize, we've argued that the $(A, X)$th element of the matrix is large when $X=A$, and small when $X \neq A$. This is equivalent to saying that the largest element in each **column** is the diagonal element (note this is different from the previous case, where we were looking at **rows**, so you'll have to transpose your matrix - the `FactoredMatrix` class has a transpose method).
 """)
+        st_image("kcomp_diagram_described-K.png", 1450)
+        st.markdown("")
+
 
 # Note - this actually shows why the largest element of each **row** of the matrix should be the diagonal one, rather than the largest element on each column. It's important to get this the right way round - remember that logits are invariant to the addition of a constant, so it's meaningless to compare across two different logit distributions! That's why, in the code below, we've applied the test to the transpose of your function's output.
 # """)
@@ -3311,12 +3317,15 @@ FactoredMatrix(M1.A, M1.B @ M2.AB)
 
 with these two objects corresponding to the factorisations $M = (A_1 B_1) (A_2 B_2)$ and $M = A_1 (B_1 A_2 B_2)$ respectively.
 
-Which one gets returned depends on the size of the hidden dimension, e.g. `M1.mdim < M2.mdim` then the factorisation used will be $M = (A_1 B_1) (A_2 B_2)$.
+Which one gets returned depends on the size of the hidden dimension, e.g. `M1.mdim < M2.mdim` then the factorisation used will be $M = A_1 (B_1 (A_2 B_2)$.
+
+Remember that both these factorisations are valid, and will give you the exact same SVD. The only reason to prefer one over the other is for computational efficiency (we prefer a smaller bottleneck dimension, because this determines the computational complexity of operations like finding SVD).
 """)
         st.markdown(r"""
 
 ```python
 def find_K_comp_full_circuit(
+    model: HookedTransformer,
     prev_token_head_index: int,
     ind_head_index: int
 ) -> FactoredMatrix:
@@ -3326,13 +3335,38 @@ def find_K_comp_full_circuit(
     pass
 
 if MAIN:
-    ind_head_index = 4
     prev_token_head_index = 7
-    K_comp_circuit = find_K_comp_full_circuit(prev_token_head_index, ind_head_index)
-    print("Fraction of tokens where the highest activating key is the same token", top_1_acc(K_comp_circuit.T).item())
-    del K_comp_circuit
-```
+    ind_head_index = 4
+    K_comp_circuit = find_K_comp_full_circuit(model, prev_token_head_index, ind_head_index)
 
+    tests.test_find_K_comp_full_circuit(find_K_comp_full_circuit, model)
+
+    print(f"Fraction of tokens where the highest activating key is the same token: {top_1_acc_iteration(K_comp_circuit.T):.4f}", )
+```""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def find_K_comp_full_circuit(
+    model: HookedTransformer,
+    prev_token_head_index: int,
+    ind_head_index: int
+) -> FactoredMatrix:
+    '''
+    Returns a (vocab, vocab)-size FactoredMatrix, with the first dimension being the query side and the second dimension being the key side (going via the previous token head)
+    '''
+    W_E = model.W_E
+    W_Q = model.W_Q[1, ind_head_index]
+    W_K = model.W_K[1, ind_head_index]
+    W_O = model.W_O[0, prev_token_head_index]
+    W_V = model.W_V[0, prev_token_head_index]
+    
+    Q = W_E @ W_Q
+    K = W_E @ W_V @ W_O @ W_K
+    return FactoredMatrix(Q, K.T)
+```""")
+
+        st.markdown(r"""
 You can also try this out for `ind_head_index = 10`. Do you get a better result?
 
 Note - unlike last time, it doesn't make sense to consider the "effective circuit" formed by adding together the weight matrices for heads `1.4` and `1.10`. Why not?
@@ -3361,55 +3395,16 @@ We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W
 
     with st.expander("Help - I don't understand what motivates these definitions."):
         st.markdown(r"""
-Before we discuss the definitions, a quick reminder - we're using the convention that matrices multiply **on the right**. So when we use language like *"the output of matrix $M$ when fed input $x$"*, we mean the vector $x^T M$. And *"the output space of matrix $M$"* is all the vectors which can be written as $x^T M$ for some $x$.
+Recall that we can view each head as having three input wires (keys, queries and values), and one output wire (the outputs). The different forms of composition come from the fact that keys, queries and values can all be supplied from the output of a different head.
 
----
-
-First, let's consider Q-composition. 
-
-Let $x_i, x_j$ be the residual stream vectors. The attention paid by the $i$th token to the $j$th token is:
-
-$$
-x_i^T W_Q W_K^T x_j
-$$
-
-Suppose we think K-composition might be happening in this head, i.e. the query input $x_i$ comes from the output of an earlier head. We can write $x_i^T = y^T (W_V' W_O')$ (where $y$ is some mix of values earlier in the residual stream, produced by the attention matrix $A'$). So our attention score is:
-
-$$
-y^T (W_V' W_O') (W_Q W_K^T) x_j
-$$
-
-If we multiply from left to right, we can see that the **output** of $W_V' W_O'$ is used as the **input** for $W_Q W_K^T$. This is why we call the former the output space, and the latter the input space. If there is lots of overlap between these two spaces, it probably means that meaningful computation is being done via their composition. In contrast, if there is very little overlap between these spaces, then the composition of these two matrices will mostly just send vectors to zero, and no information will be transmitted.
-
----
-
-K-composition is very similar. This time it's the key-side vector $x_j$ which was produced from a previous attention head, so we have:
-
-$$
-\begin{aligned}
-x_i^T W_Q W_K^T x_j &= x_j^T W_K W_Q^T x_i \\
-&= y^T (W_V' W_O') (W_K W_Q^T) x_i \\
-\end{aligned}
-$$
-
-i.e. the output of $W_V' W_O'$ is being used as input for $W_K W_Q^T$.
-
----
-
-Finally, let's consider V-composition.
-
-The complexity here isn't in how the attention scores are computed, but in which vectors get moved from the source to the destination. We suppose $x_j$ (the key-side vector) was itself produced by an **earlier** attention head, i.e. $x_j^T = y^T (W_V' W_O')$. So the vector that gets moved from source position $j$ (when it is attended to) in the **later** attention head is:
-
-$$
-x_j^T (W_V W_O) = y^T (W_V' W_O') (W_V W_O)
-$$
-
-so again, by examining the right hand side expression, we see that the output of $W_V' W_O'$ is used as input for $W_V W_O$.
+Here is an illustration which shows the three different cases, and should also explain why we use this terminology.
 """)
+        st_image("composition.png", 1400)
+        st.markdown("")
 
     st.markdown(r"""
-
-How do we formalise overlap? This is basically an open question, but a surprisingly good metric is $\frac{|W_AW_B|}{|W_B||W_A|}$ where $|W|=\sum_{i,j}W_{i,j}^2$ is the Frobenius norm, the sum of squared elements. (If you're dying of curiosity as to what makes this a good metric, you can jump to the section immediately after the exercises below.)""")
+How do we formalise overlap? This is basically an open question, but a surprisingly good metric is $\frac{\|W_AW_B\|_F}{\|W_B\|_F\|W_A\|_F}$ where $\|W\|_F=\sum_{i,j}W_{i,j}^2$ is the Frobenius norm, the sum of squared elements. (If you're dying of curiosity as to what makes this a good metric, you can jump to the section immediately after the exercises below.)
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -3421,17 +3416,6 @@ We'll start by implementing this using plain old tensors (later on we'll see how
 
 We've given you tensors `q_comp_scores` etc. to hold the composition scores for each of Q, K and V composition (i.e. the `[i, j]`th element of `q_comp_scores` is the Q-composition score between the output from the `i`th head in layer 0 and the input to the `j`th head in layer 1). You should complete the function `get_comp_score`, and then fill in each of these tensors.
 """)
-
-# def get_comp_score(
-#     W_A: TT["idx_A", "in_A", "out_A"], 
-#     W_B: TT["idx_B", "out_A", "out_B]
-# ) -> TT["idx_A", "idx_B"]:
-#     '''
-#     W_A is a batch of output matrices, indexed by first dimension.
-#     W_B is a batch of input matrices, indexed by first dimension.
-
-#     Return the composition scores between each matrix in W_A and W_B.
-#     '''
         st.markdown(r"""
 
 ```python
@@ -3445,46 +3429,30 @@ def get_comp_score(
     pass
 
 if MAIN:
+    tests.test_get_comp_score(get_comp_score)
+```
+
+Once you've passed the tests, you can fill in all the composition scores. Here you should just use a for loop, iterating over all possible pairs of `W_A` in layer 0 and `W_B` in layer 1, for each type of composition. Later on, we'll look at ways to batch this computation.
+
+```python
+if MAIN:
     # Get all QK and OV matrices
     W_QK = model.W_Q @ model.W_K.transpose(-1, -2)
     W_OV = model.W_V @ model.W_O
 
     # Define tensors to hold the composition scores
-    q_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads)
-    k_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads)
-    v_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads)
+    q_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads, device=device)
+    k_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads, device=device)
+    v_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads, device=device)
     
     # Fill in the tensors
     "YOUR CODE HERE!"
 
-    px.imshow(
-        to_numpy(q_comp_scores),
-        y=[f"L1H{h}" for h in range(model.cfg.n_heads)],
-        x=[f"L0H{h}" for h in range(model.cfg.n_heads)],
-        labels={"x": "Layer 0", "y": "Layer 1"},
-        title="Q Composition Scores",
-        color_continuous_scale="Blues",
-        zmin=0.0,
-    ).show()
-    px.imshow(
-        to_numpy(k_comp_scores),
-        y=[f"L1H{h}" for h in range(model.cfg.n_heads)],
-        x=[f"L0H{h}" for h in range(model.cfg.n_heads)],
-        labels={"x": "Layer 0", "y": "Layer 1"},
-        title="K Composition Scores",
-        color_continuous_scale="Blues",
-        zmin=0.0,
-    ).show()
-    px.imshow(
-        to_numpy(v_comp_scores),
-        y=[f"L1H{h}" for h in range(model.cfg.n_heads)],
-        x=[f"L0H{h}" for h in range(model.cfg.n_heads)],
-        labels={"x": "Layer 0", "y": "Layer 1"},
-        title="V Composition Scores",
-        color_continuous_scale="Blues",
-        zmin=0.0,
-    ).show()
-```""")
+    plot_utils.plot_comp_scores(model, q_comp_scores, "Q Composition Scores").show()
+    plot_utils.plot_comp_scores(model, k_comp_scores, "K Composition Scores").show()
+    plot_utils.plot_comp_scores(model, v_comp_scores, "V Composition Scores").show()
+```
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -3500,9 +3468,12 @@ def get_comp_score(
     W_B_norm = W_B.pow(2).sum().sqrt()
     W_AB_norm = (W_A @ W_B).pow(2).sum().sqrt()
 
-    return (W_AB_norm / (W_A_norm * W_B_norm)).item()
+    return (W_AB_norm / (W_A_norm * W_B_norm)).item() ** 0.5
+
 
 if MAIN:
+    tests.test_get_comp_score(get_comp_score)
+
     # Get all QK and OV matrices
     W_QK = model.W_Q @ model.W_K.transpose(-1, -2)
     W_OV = model.W_V @ model.W_O
@@ -3518,12 +3489,13 @@ if MAIN:
             q_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_QK[1, j])
             k_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_QK[1, j].T)
             v_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_QK[1, j])
-```""")
+```
+""")
         st.markdown(r"""
 
 #### Setting a Baseline
 
-To interpret the above graphs we need a baseline! A good one is what the scores look like at initialisation. Make a function that randomly generates a composition score 200 times and tries this. Remember to generate 4 [d_head, d_model] matrices, not 2 [d_model, d_model] matrices! This model was initialised with Kaiming Uniform Initialisation:
+To interpret the above graphs we need a baseline! A good one is what the scores look like at initialisation. Make a function that randomly generates a composition score 200 times and tries this. Remember to generate 4 `[d_head, d_model]` matrices, not 2 `[d_model, d_model]` matrices! This model was initialised with **Kaiming Uniform Initialisation**:
 
 ```python
 W = t.empty(shape)
@@ -3555,46 +3527,31 @@ We can re-plot our above graphs with this baseline set to white. Look for intere
 
 ```python
 if MAIN:
-    px.imshow(
-        utils.to_numpy(q_comp_scores),
-        y=[f"L0H{h}" for h in range(model.cfg.n_heads)],
-        x=[f"L1H{h}" for h in range(model.cfg.n_heads)],
-        labels={"x": "Layer 1", "y": "Layer 0"},
-        title="Q Composition Scores",
-        color_continuous_scale="RdBu",
-        color_continuous_midpoint=comp_scores_baseline.mean(),
-    ).show()
-    px.imshow(
-        utils.to_numpy(k_comp_scores),
-        y=[f"L0H{h}" for h in range(model.cfg.n_heads)],
-        x=[f"L1H{h}" for h in range(model.cfg.n_heads)],
-        labels={"x": "Layer 1", "y": "Layer 0"},
-        title="K Composition Scores",
-        color_continuous_scale="RdBu",
-        color_continuous_midpoint=comp_scores_baseline.mean(),
-    ).show()
-    px.imshow(
-        utils.to_numpy(v_comp_scores),
-        y=[f"L0H{h}" for h in range(model.cfg.n_heads)],
-        x=[f"L1H{h}" for h in range(model.cfg.n_heads)],
-        labels={"x": "Layer 1", "y": "Layer 0"},
-        title="V Composition Scores",
-        color_continuous_scale="RdBu",
-        color_continuous_midpoint=comp_scores_baseline.mean(),
-    ).show()
-```""")
-        with st.expander("Click to see the output you should be getting"):
-            st.markdown(r"The plots for Q, K and V composition respectively:")
-            st.plotly_chart(fig_dict["q_comp_scores"], use_container_width=True)
-            st.plotly_chart(fig_dict["k_comp_scores"], use_container_width=True)
-            st.plotly_chart(fig_dict["v_comp_scores"], use_container_width=True)
+    baseline = comp_scores_baseline.mean()
+    for comp_scores, name in [(q_comp_scores, "Q"), (k_comp_scores, "K"), (v_comp_scores, "V")]:
+        fig = plot_utils.plot_comp_scores(model, comp_scores, f"{name} Composition Scores", baseline=baseline)
+        fig.show()
+        plot_utils.save_fig(fig, f"{name.lower()}_comp_scores")
+```
+
+#### Your output
+""")
+        button9 = st.button("Show my output", key="button9")
+        if button9 or "got_q_comp_scores" in st.session_state:
+            if "q_comp_scores" not in fig_dict:
+                st.error("No figure was found in your directory. Have you run the code above yet?")
+            else:
+                st.plotly_chart(fig_dict["q_comp_scores"])
+                st.plotly_chart(fig_dict["k_comp_scores"])
+                st.plotly_chart(fig_dict["v_comp_scores"])
+                st.session_state["got_q_comp_scores"] = True
         with st.expander("Some interesting things to observe:"):
             st.markdown(r"""
 The most obvious thing that jumps out (when considered in the context of all the analysis we've done so far) is the K-composition scores. `0.7` (the prev token head) is strongly composing with `1.4` and `1.10` (the two attention heads). This is what we expect, and is a good indication that our composition scores are working as intended.
 
 Another interesting thing to note is that the V-composition scores for heads `1.4` and `1.10` with all other heads in layer 0 are very low. In the context of the induction circuit, this is a good thing - the OV circuits of our induction heads should be operating on the **embeddings**, rather than the outputs of the layer-0 heads. (If our repeating sequence is `A B ... A B`, then it's the QK circuit's job to make sure the second `A` attends to the first `B`, and it's the OV circuit's job to project the residual vector at that position onto the **embedding space** in order to extract the `B`-information, while hopefully ignoring anything else that has been written to that position by the heads in layer 0). So once again, this is a good sign for our composition scores.
-
 """)
+            st_image("small_comp_diagram.png", 700)
 
     st.markdown(r"""
 
@@ -3607,17 +3564,17 @@ So, what's up with that metric? The key is a cute linear algebra result that the
 
 ---
 
-##### Short, not-fully-rigorous proof:
+##### Short sketch of proof:
 
-Clearly the Frobenius norm equals the sum of squared singular values when $M$ is diagonal. The singular values of $M$ don't change when we multiply it by an orthogonal matrix (only the matrices $U$ and $V$ will change, not $S$), so it remains to show that the Frobenius norm also won't change when we multiply $M$ by an orthogonal matrix. But this follows from the fact that the Frobenius norm is the sum of the squared $l_2$ norms of the column vectors of $M$, and orthogonal matrices preserve $l_2$ norms.
+Clearly $\|M\|_F^2$ equals the sum of squared singular values when $M$ is diagonal. The singular values of $M$ don't change when we multiply it by an orthogonal matrix (only the matrices $U$ and $V$ will change, not $S$), so it remains to show that the Frobenius norm also won't change when we multiply $M$ by an orthogonal matrix. But this follows from the fact that the Frobenius norm is the sum of the squared $l_2$ norms of the column vectors of $M$, and orthogonal matrices preserve $l_2$ norms. (If we're right-multiplying $M$ by an orthogonal matrix, then we instead view this as performing orthogonal operations on the row vectors of $M$, and the same argument holds.)
 
 ---
 
-##### Ugly proof:
+##### Long proof:
 
 $$
 \begin{aligned}
-|M|^2 &= \sum_{ij}M_{ij}^2 \\
+\|M\|_F^2 &= \sum_{ij}M_{ij}^2 \\
 &= \sum_{ij}((USV^T)_{ij})^2 \\
 &= \sum_{ij}\bigg(\sum_k U_{ik}S_{kk}V_{jk}\bigg)^2 \\
 &= \sum_{ijk_1 k_2}S_{k_1 k_1} S_{k_2 k_2} U_{i k_1} U_{i k_2} V_{j k_2} V_{j k_2} \\
@@ -3628,7 +3585,7 @@ $$
 Each of the terms in large brackets is actually the dot product of columns of $U$ and $V$ respectively. Since these are orthogonal matrices, these terms evaluate to 1 when $k_1=k_2$ and 0 otherwise. So we are left with:
 
 $$
-|M|^2 = \sum_{k}S_{k k}^2
+\|M\|_F^2 = \sum_{k}S_{k k}^2
 $$
 
 ---
@@ -3636,13 +3593,13 @@ $$
 ##### Cute proof which uses the fact that the squared Frobenius norm $|M|^2$ is the same as the trace of $MM^T$:
 
 $$
-|M|^2 = \text{Tr}(MM^T) = \text{Tr}(USV^TVSU^T) = \text{Tr}(US^2U^T) = \text{Tr}(S^2 U^T U) = \text{Tr}(S^2) = |S|^2
+\|M\|_F^2 = \text{Tr}(MM^T) = \text{Tr}(USV^TVSU^T) = \text{Tr}(US^2U^T) = \text{Tr}(S^2 U^T U) = \text{Tr}(S^2) = \|S\|_F^2
 $$
 
-where we used the cyclicity of trace, and the fact that $U$ is orthogonal so $U^TU=I$ (and same for $V$). We finish by observing that $|S|^2$ is precisely the sum of the squared singular values.
+where we used the cyclicity of trace, and the fact that $U$ is orthogonal so $U^TU=I$ (and same for $V$). We finish by observing that $\|S\|_F^2$ is precisely the sum of the squared singular values.
 """)
     st.markdown(r"""
-So if $W_A=U_AS_AV_A^T$, $W_B=U_BS_BV_B^T$, then $|W_A|=|S_A|$, $|W_B|=|S_B|$ and $|W_AW_B|=|S_AV_A^TU_BS_B|$. In some sense, $V_A^TU_B$ represents how aligned the subspaces written to and read from are, and the $S_A$ and $S_B$ terms weights by the importance of those subspaces.""")
+So if $W_A=U_AS_AV_A^T$, $W_B=U_BS_BV_B^T$, then $\|W_A\|_F=\|S_A\|_F$, $\|W_B\|_F=\|S_B\|_F$ and $\|W_AW_B\|_F=\|S_AV_A^TU_BS_B\|_F$. In some sense, $V_A^TU_B$ represents how aligned the subspaces written to and read from are, and the $S_A$ and $S_B$ terms weights by the importance of those subspaces.""")
 
     with st.expander("Click here, if this explanation still seems confusing."):
         st.markdown(r"""
@@ -3658,21 +3615,20 @@ $V_A^T U_B$ is a matrix of shape `[d_head, d_head]`. Each element of this matrix
 Let the singular values of $S_A$ be $\sigma_1^A, ..., \sigma_k^A$ and similarly for $S_B$. Then:
 
 $$
-|S_A V_A^T U_B S_B| = \sum_{i,j=1}^k (\sigma_i^A \sigma_j^B)^2 |v^A_i \cdot u^B_j|^2
+\|S_A V_A^T U_B S_B\|_F^2 = \sum_{i,j=1}^k (\sigma_i^A \sigma_j^B)^2 \|v^A_i \cdot u^B_j\|_F^2
 $$
 
-This is a weighted sum of the squared cosine similarity of the columns of $V_A$ and $U_B$ (i.e. the output directions of the earlier head and the input directions of the later head). The weights are given by the singular values of both $S_A$ and $S_B$ - i.e. if $v^A_i$ is an important output direction, and $u_B^i$ is an important input direction, then the composition score will be much higher when these two directions are aligned with each other.
+This is a weighted sum of the squared cosine similarity of the columns of $V_A$ and $U_B$ (i.e. the output directions of the earlier head and the input directions of the later head). The weights in this sum are given by the singular values of both $S_A$ and $S_B$ - i.e. if $v^A_i$ is an important output direction, **and** $u_B^i$ is an important input direction, then the composition score will be much higher when these two directions are aligned with each other.
 
 ---
 
-To build intuition, let's consider some extreme examples.
+To build intuition, let's consider a couple of extreme examples.
 
 * If there was no overlap between the spaces being written to and read from, then $V_A^T U_B$ would be a matrix of zeros (since every $v_i^A \cdot u_j^B$ would be zero). This would mean that the composition score would be zero.
-
-* If there was perfect overlap, i.e. the column vectors of $U_B$ and $V_A$ are the same up to a permutation, then $V_A^T U_B$ would just be a permutation matrix, and $|S_AV_A^TU_BS_B|$ would be some sumproduct of the squared singular values from $S_A$ and $S_B$. This is largest when the singular values are sorted in the same way, i.e. when .the "most important output vectors" of the earlier head line up with the "most important input vectors" of the later head.
-
-* If our output $W_A$ actually had rank 1, then $|S_AV_A^TU_BS_B| = \sigma_1^A |  v_1^A \cdot \sum_{j=1}^k \sigma_j^B u_j^B|^2$. This is largest when $v_1^A$ is aligned with the most important singular vectors of $S_B$ (i.e. the most important input directions).
+* If there was perfect overlap, i.e. the span of the $v_i^A$ vectors and $u_j^B$ vectors is the same, then the composition score is large. It is as large as possible when the most important input directions and most important output directions line up (i.e. when the singular values $\sigma_i^A$ and $\sigma_j^B$ are in the same order).
+* If our matrices $W_A$ and $W_B$ were just rank 1 (i.e. $W_A = \sigma_A u_A v_A^T$, and $W_B = \sigma_B u_B v_B^T$), then the composition score is $|v_A^T u_B|$, in other words just the cosine similarity of the output direction of $W_A$ and the input direction of $W_B$.
 """)
+        st.markdown(r"")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -3702,11 +3658,16 @@ if MAIN:
     W_QK = FactoredMatrix(model.W_Q, model.W_K.transpose(-1, -2))
     W_OV = FactoredMatrix(model.W_V, model.W_O)
 
-    q_comp_scores = get_batched_comp_scores(W_OV[0], W_QK[1])
-    k_comp_scores = get_batched_comp_scores(W_OV[0], W_QK[1].T) 
-    # Note - for FactoredMatrix, .T is interpreted as transpose of last two dims
-    v_comp_scores = get_batched_comp_scores(W_OV[0], W_OV[1])
-```""")
+    q_comp_scores_batched = get_batched_comp_scores(W_OV[0], W_QK[1])
+    k_comp_scores_batched = get_batched_comp_scores(W_OV[0], W_QK[1].T) # Factored matrix: .T is interpreted as transpose of the last two axes
+    v_comp_scores_batched = get_batched_comp_scores(W_OV[0], W_OV[1])
+
+    t.testing.assert_close(q_comp_scores, q_comp_scores_batched)
+    t.testing.assert_close(k_comp_scores, k_comp_scores_batched)
+    t.testing.assert_close(v_comp_scores, v_comp_scores_batched)
+    print("Tests passed - your `get_batched_comp_scores` function is working!")
+```
+""")
 
         with st.expander("Hint"):
             st.markdown(r"""
@@ -3755,11 +3716,12 @@ def get_batched_comp_scores(
 
     # Compute the norms, and return the metric
     return W_ABs.norm() / (W_As.norm() * W_Bs.norm())
-```""")
+```
+""")
 
     st.markdown(r"""
 
-#### Targeted Ablations
+### Targeted Ablations
 
 We can refine the ablation technique to detect composition by looking at the effect of the ablation on the attention pattern of an induction head, rather than the loss. Let's implement this!
 
@@ -3796,7 +3758,8 @@ if MAIN:
         new_induction_score = ablation_induction_score(i, 4)
         induction_score_change = new_induction_score - baseline_induction_score
         print(f"Ablation score change for head {i}:", induction_score_change)
-```""")
+```
+""")
 
     with st.expander("Question - what is the interpretation of the results you're getting?"):
         st.markdown(r"""
@@ -3882,7 +3845,7 @@ func_page_list = [
     (section_finding_induction_heads, "2️⃣ Finding induction heads"), 
     (section_hooks, "3️⃣ TransformerLens: Hooks"), 
     (section_reverse_engineering, "4️⃣ Reverse-engineering induction circuits"),
-    (section_other_features, "5️⃣ TransformerLens: Other Features"), 
+    # (section_other_features, "5️⃣ TransformerLens: Other Features"), 
 ]
 
 func_list = [func for func, page in func_page_list]
