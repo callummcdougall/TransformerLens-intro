@@ -3133,7 +3133,8 @@ If $X=A$, then the key is a good match for the query (since it's exactly what th
         st.markdown(r"""
 #### Exercise - compute the K-composition circuit
 
-Calculate the matrix above, as a `FactoredMatrix` object.""")
+Calculate the matrix above, as a `FactoredMatrix` object.
+""")
 
         
         with st.expander("Aside about multiplying FactoredMatrix objects together."):
@@ -3150,9 +3151,9 @@ or it might be:
 FactoredMatrix(M1.A, M1.B @ M2.AB)
 ```
 
-with these two objects corresponding to the factorisations $M = (A_1 B_1) (A_2 B_2)$ and $M = A_1 (B_1 A_2 B_2)$ respectively.
+with these two objects corresponding to the factorisations $M = (A_1 B_1 A_2) (B_2)$ and $M = A_1 (B_1 A_2 B_2)$ respectively.
 
-Which one gets returned depends on the size of the hidden dimension, e.g. `M1.mdim < M2.mdim` then the factorisation used will be $M = A_1 (B_1 (A_2 B_2)$.
+Which one gets returned depends on the size of the hidden dimension, e.g. `M1.mdim < M2.mdim` then the factorisation used will be $M = A_1 (B_1 A_2 B_2)$.
 
 Remember that both these factorisations are valid, and will give you the exact same SVD. The only reason to prefer one over the other is for computational efficiency (we prefer a smaller bottleneck dimension, because this determines the computational complexity of operations like finding SVD).
 """)
@@ -3176,8 +3177,9 @@ if MAIN:
 
     tests.test_find_K_comp_full_circuit(find_K_comp_full_circuit, model)
 
-    print(f"Fraction of tokens where the highest activating key is the same token: {top_1_acc_iteration(K_comp_circuit.T):.4f}", )
-```""")
+    print(f"Fraction of tokens where the highest activating key is the same token: {top_1_acc_iteration(K_comp_circuit.T):.4f}")
+```
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -3199,7 +3201,8 @@ def find_K_comp_full_circuit(
     Q = W_E @ W_Q
     K = W_E @ W_V @ W_O @ W_K
     return FactoredMatrix(Q, K.T)
-```""")
+```
+""")
 
         st.markdown(r"""
 You can also try this out for `ind_head_index = 10`. Do you get a better result?
@@ -3212,8 +3215,6 @@ Because the weight matrices we're dealing with here are from the QK circuit, not
 """)
 
     st.markdown(r"""
-
-
 ## Further Exploration of Induction Circuits
 
 I now consider us to have fully reverse engineered an induction circuit - by both interpreting the features and by reverse engineering the circuit from the weights. But there's a bunch more ideas that we can apply for finding circuits in networks that are fun to practice on induction heads, so here's some bonus content - feel free to skip to the later bonus ideas though.
@@ -3226,7 +3227,8 @@ The key idea of compositional scores is that the residual stream is a large spac
 
 We represent the **output space** with $W_{OV}=W_V W_O$. Call matrices like this $W_A$.
 
-We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W_{QK}^T=W_K  W_Q^T$ (for K-Composition) or $W_{OV}=W_V W_O$ (for V-Composition, of the later head). Call matrices like these $W_B$ (we've used this notation so that $W_B$ refers to a later head, and $W_A$ to an earlier head).""")
+We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W_{QK}^T=W_K  W_Q^T$ (for K-Composition) or $W_{OV}=W_V W_O$ (for V-Composition, of the later head). Call matrices like these $W_B$ (we've used this notation so that $W_B$ refers to a later head, and $W_A$ to an earlier head).
+""")
 
     with st.expander("Help - I don't understand what motivates these definitions."):
         st.markdown(r"""
