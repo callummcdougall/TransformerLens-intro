@@ -2991,7 +2991,8 @@ Remember that each of our components writes to the residual stream separately. S
             # st_excalidraw("components", 550)
             st.markdown("")
             st.markdown(r"""
-We're particularly interested in the attention scores computed in head `1.4`, and how they depend on the inputs into that head. We've already decomposed the residual stream value $x$ into its terms $e$, $pe$, and $x^ 0$ through $x^{11}$ (which we've labelled $y_0, ..., y_{13}$ for simplicity), and we've done the same for key and query terms. We can picture these terms being passed into head `1.4` as:""")
+We're particularly interested in the attention scores computed in head `1.4`, and how they depend on the inputs into that head. We've already decomposed the residual stream value $x$ into its terms $e$, $pe$, and $x^ 0$ through $x^{11}$ (which we've labelled $y_0, ..., y_{13}$ for simplicity), and we've done the same for key and query terms. We can picture these terms being passed into head `1.4` as:
+""")
             st_image("components-2.png", 680)
             # st_excalidraw("components-2", 800)
             st.markdown("")
@@ -3127,12 +3128,6 @@ If $X=A$, then the key is a good match for the query (since it's exactly what th
 """)
         st_image("kcomp_diagram_described-K.png", 1450)
         st.markdown("")
-
-
-# Note - this actually shows why the largest element of each **row** of the matrix should be the diagonal one, rather than the largest element on each column. It's important to get this the right way round - remember that logits are invariant to the addition of a constant, so it's meaningless to compare across two different logit distributions! That's why, in the code below, we've applied the test to the transpose of your function's output.
-# """)
-
-# We can now reuse our `top_1_acc` code from before to check that it's identity-like, we see that half the time the diagonal is the top (goes up to 89% with top 5 accuracy) (We transpose first, because we want the argmax over the key dimension)
 
     with st.columns(1)[0]:
         st.markdown(r"""
