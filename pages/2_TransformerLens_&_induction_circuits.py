@@ -2704,7 +2704,8 @@ This should return about 30.79% - pretty underwhelming. It goes up to 47.73% for
         st.markdown(r"""
 #### Exercise - compute circuit for both induction heads
 
-Now we return to why we have *two* induction heads. If both have the same attention pattern, the effective OV circuit is actually $W_U(W_O^{1.4}W_V^{1.4}+W_O^{1.10}W_V^{1.10})W_E$, and this is what matters. So let's re-run our analysis on this!""")
+Now we return to why we have *two* induction heads. If both have the same attention pattern, the effective OV circuit is actually $W_U(W_O^{1.4}W_V^{1.4}+W_O^{1.10}W_V^{1.10})W_E$, and this is what matters. So let's re-run our analysis on this!
+""")
         
         st_image("effective_ov_circuit.png", 600)
         st.markdown(r"")
