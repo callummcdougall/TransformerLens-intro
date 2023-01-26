@@ -2022,9 +2022,9 @@ Below is a diagram of the induction circuit, with the heads indicated in the wei
     st.markdown(r"""
 ## Refresher - QK and OV circuits (and some terminology)
 
-Before we start, a brief terminology note. I'll refer to weight matrices for a particular layer and head using superscript notation, e.g. $W_Q^{1.4}$ is the query matrix for the 4th head in layer 1, and it has shape `[d_model, d_head]` (remember that we multiply with weight matrices on the right). Similarly, attention patterns will be denoted $A^{1.4}$ (remember that these are **activations**, not parameters, since they're given by the formula $A^h = x_i^T W_{QK}^h x_j$, where $x_i$ and $x_j$ are vectors in the residual stream). 
+Before we start, a brief terminology note. I'll refer to weight matrices for a particular layer and head using superscript notation, e.g. $W_Q^{1.4}$ is the query matrix for the 4th head in layer 1, and it has shape `[d_model, d_head]` (remember that we multiply with weight matrices on the right). Similarly, attention patterns will be denoted $A^{1.4}$ (remember that these are **activations**, not parameters, since they're given by the formula $A^h = x W_{QK}^h x^T$, where $x$ is the residual stream (with shape `[seq_len, d_model]`).
 
-As a shorthand, I'll often have $A$ denote the one-hot encoding of token `A` (i.e. the vector with zeros everywhere except a one at the index of `A`), and $\color{red}A\color{black} := A^T W_E$ will denote the embedding vector for `A`.
+As a shorthand, I'll often have $A$ denote the one-hot encoding of token `A` (i.e. the vector with zeros everywhere except a one at the index of `A`), so $A^T W_E$ is the embedding vector for `A`.
 
 Lastly, I'll refer to special matrix products as follows:
 
@@ -2243,12 +2243,12 @@ It's much computationally cheaper to compute the eigenvalues of $BA$ (since it's
 """)
         st.markdown(r"""
 **Question (hard) - how can you easily compute the SVD of $M$?**
-    """)
+""")
 
         with st.expander("Hint"):
             st.markdown(r"""
 For a size-$(m, n)$ matrix with $m > n$, the [algorithmic complexity of finding SVD](https://en.wikipedia.org/wiki/Singular_value_decomposition#Numerical_approach) is $O(mn^2)$. So it's relatively cheap to find the SVD of $A$ and $B$ (complexity $mn^2$ vs $m^3$). Can you use that to find the SVD of $M$?
-    """)
+""")
         with st.expander("Solution"):
             st.markdown(r"""
 It's much cheaper to compute the SVD of the small matrices $A$ and $B$. Denote these SVDs by:
@@ -2293,7 +2293,8 @@ where $U = U_A U'$, $V = V_B V'$, and $S = S' S_B$.
 All our SVD calculations and matrix multiplications had complexity at most $O(mn^2)$, which is much better than $O(m^3)$ (remember that we don't need to compute all the values of $U = U_A U'$, only the ones which correspond to non-zero singular values).
 """)
         st.markdown(r"""
-If you're curious, you can go to the `FactoredMatrix` documentation to see the implementation of the SVD calculation, as well as other properties and operations.""")
+If you're curious, you can go to the `FactoredMatrix` documentation to see the implementation of the SVD calculation, as well as other properties and operations.
+""")
     st.markdown(r"""
 Now that we've discussed some of the motivations behind having a `FactoredMatrix` class, let's see it in action.
 
@@ -2444,7 +2445,7 @@ Within our induction circuit, we have four individual circuits: the OV and QK ci
     1. Show that these two circuits are composing (i.e. that the output of the layer-0 OV circuit is the main determinant of the key vectors in the layer-1 QK circuit).
     2. Show that the joint operation of these two circuits is "make the second instance of a token attend to the token *following* an earlier instance.
 
-The dropdown below contains a diagram explaining how the three sections relate to the different components of the induction circuit.
+The dropdown below contains a diagram explaining how the three sections relate to the different components of the induction circuit. You can open it in a new tab if the details aren't clear.
 """)
     # As an analogy, pretend each of the attention heads is a person reading coded messages from the airwaves, and sending coded messages forwards to people further down the line. We might not be able to crack the code that Alice and Bob are using to communicate with each other, but as long as we can (1) show that they are communicating with each other more than with anyone else, and (2) deduce how they function as a single unit (i.e. how our coded message changes when it passes through Alice *and* Bob), then we can consider their joint function as having been fully reverse-engineered.
 
