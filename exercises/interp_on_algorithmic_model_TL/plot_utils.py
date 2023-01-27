@@ -10,13 +10,6 @@ from transformer_lens import utils, HookedTransformer
 import einops
 import torch as t
 
-color_discrete_map = {
-    'just total elevation failure': 'grey',
-    'just neg failure': 'blue',
-    'balanced': 'green',
-    'both failures':'firebrick'
-}
-
 WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
 def save_fig(fig, filename):
     with open(f"{WIP}/{filename}.html", "w") as f:

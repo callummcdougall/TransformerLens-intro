@@ -70,6 +70,23 @@ st.sidebar.markdown("""
     <li><a class="contents-el" href="#glossary">Glossary</a></li>
     <li><a class="contents-el" href="#prerequisites">Prerequisites</a></li>
     <li><a class="contents-el" href="#about-these-pages">About these pages</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#transformer-from-scratch">Transformer from scratch</a></li>
+        <li><a class="contents-el" href="#transformerlens-induction-circuits">TransformerLens & induction circuits</a></li>
+        <li><a class="contents-el" href="#interpretability-on-an-algorithmic-model">Interpretability on an algorithmic model</a></li>
+        <li><a class="contents-el" href="#grokking">Grokking</a></li>
+        <li><a class="contents-el" href="#indirect-obbjct-identification">Indirect Objct Identification</a></li>
+    </ul></li>
+    <li><a class="contents-el" href="#page-structure">Page Structure</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
+        <li><a class="contents-el" href="#exercises">Exercises</a></li>
+    </ul></li>
+    <li><a class="contents-el" href="#how-you-should-use-this-material">How you should use this material</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#option-1-colab">Option 1: Colab</a></li>
+        <li><a class="contents-el" href="#option-2-your-own-ide">Option 2: Your own IDE</a></li>
+    </ul></li>
 </ul>
 """, unsafe_allow_html=True)
 
@@ -81,35 +98,11 @@ def page():
 
 This page contains a collation of resources and exercises on interpretability. The focus is on [`TransformerLens`](https://github.com/neelnanda-io/TransformerLens), a library maintained by Neel Nanda.
 
-All the demos, exercises and solutions can be found in the 
-
-### How you should use this material
-
-The best way to use this material is to clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro), and run it on your local machine. The vast majority of the exercises will not require a particularly good GPU, and where there are exceptions we will give some advice for how to get the most out of the exercises regardless.
-
-Full instructions for running the exercises in this way:
-
-* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
-* Open in your choice of IDE (we recommend VSCode).
-* Make & activate a virtual environment
-    * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
-* Install requirements.
-    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in your repo).
-    * Then install the rest of the requirements e.g. with `pip install requirements.txt`.
-* Navigate to the directory, and run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
-    * This should open up a local copy of the page you're reading right now!
-
-You can go through each batch of exercises (i.e. each section at the top of the left-hand sidebar) by going into the appropriate directory in the repo, and creating a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks). For each exercise, you'll be given import instructions which should go at the top of the file. These imports will incude local imports (e.g. you will have `tests.py` which contain test functions, to validate that your solutions are correct, and `solutions.py` which contain the solutions to all exercises - although the solutions will also be viewable in dropdowns in the Streamlit page). The exercises will also occasionally have you generate output that gets displayed in your Streamlit page.
-
-Alternatively, you can open the pages in Colab. This means GPU support is guaranteed, but you won't be able to use your chosen IDE, and there are certain features of these exercises which might not work as well.
-
 ## About TransformerLens
 
-From Neel's [TransformerLens repo's README](https://github.com/neelnanda-io/TransformerLens):
+TransformerLens is a library for doing [mechanistic interpretability](https://distill.pub/2020/circuits/zoom-in/) of GPT-2 Style language models. The goal of mechanistic interpretability is to take a trained model and reverse engineer the algorithms the model learned during training from its weights. It is a fact about the world today that we have computer programs that can essentially speak English at a human level (GPT-3, PaLM, etc), yet we have no idea how they work nor how to write one ourselves. This offends me greatly, and I would like to solve this!*
 
-> *This is a library for doing [mechanistic interpretability](https://distill.pub/2020/circuits/zoom-in/) of GPT-2 Style language models. The goal of mechanistic interpretability is to take a trained model and reverse engineer the algorithms the model learned during training from its weights. It is a fact about the world today that we have computer programs that can essentially speak English at a human level (GPT-3, PaLM, etc), yet we have no idea how they work nor how to write one ourselves. This offends me greatly, and I would like to solve this!*
-> 
-> *TransformerLens lets you load in an open source language model, like GPT-2, and exposes the internal activations of the model to you. You can cache any internal activation in the model, and add in functions to edit, remove or replace these activations as the model runs. The core design principle I've followed is to enable exploratory analysis. One of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. Part of what I aimed for is to make my experience of doing research easier and more fun, hopefully this transfers to you!*
+*TransformerLens lets you load in an open source language model, like GPT-2, and exposes the internal activations of the model to you. You can cache any internal activation in the model, and add in functions to edit, remove or replace these activations as the model runs. The core design principle I've followed is to enable exploratory analysis. One of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. Part of what I aimed for is to make my experience of doing research easier and more fun, hopefully this transfers to you!*
 
 ## Glossary
 
@@ -182,16 +175,39 @@ The key point to remember is that if you ever get confused about what a tensor p
 
 ## About these pages
 
-There are three main pages in this notebook. 
+Here is a rundown of all the pages in the Streamlit app, and what to expect from each of them: 
 
-* **TransformerLens & induction circuits** shows you the core features of TransformerLens, and also includes exercises to help reinforce what you've learned.
-* **Interpretability on an algorithmic model** takes you through the application of TransformerLens features to an algorithmic task - interpreting a model trained to classify bracket strings as balanced or unbalanced. This is a great way to get a feel for interpretability, since we can compare the solution our model finds to the algorithmic solution.
-* Finally, **Interpretability in the wild** takes you on a tour through some of the results of the recent paper [Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 small](https://arxiv.org/abs/2211.00593). This is to date the largest circuit that has been discovered in a language model.
+### Transformer from scratch
 
-Each page is split into several sub-pages. Each subpage starts with a list of learning objectives. For example, here's the learning objectives for the first subpage of the TransformerLens & induction circuits page:""")
+* This shows you how to build a transformer from scratch, which mirrors the prototypical transformers used in the `transformer_lens` library.
+* Even if you're familiar with transformers I'd recommend at least skimming this page, to get an idea of how this library works.
+* This page is a lot shorter than most of the other pages.
+
+### TransformerLens & induction circuits
+* The first half shows you the core features of TransformerLens, and walks you through identifying induction circuits in models. It's relatively introductory in tone, and is quite coding-heavy.
+* The second half shows you how to reverse-engineer induction circuits directly from the model's weights. It is much more conceptual, with heavy use of linear algebra.
+* This page (the latter half in particular) draws heavily from Anthropic's [Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) paper.
+
+### Interpretability on an algorithmic model
+
+* These exercises take you through the application of TransformerLens features to an algorithmic task - interpreting a model trained to classify bracket strings as balanced or unbalanced.
+* This is less conceptually difficult, with more of a focus on forming and testing hypotheses about a model's behaviour.
+
+### Grokking
+
+Coming soon!
+
+### Indirect Objct Identification
+
+Coming soon!
+
+## Page structure
+
+Each page is split into several sub-pages. Each subpage starts with a list of learning objectives. For example, here's the learning objectives for the first subpage of the TransformerLens & induction circuits page:
+""")
 
     st.info(r"""
-## Learning objectives
+### Learning objectives
 
 * Load and run a `HookedTransformer` model.
 * Understand the basic architecture of these models.
@@ -200,7 +216,8 @@ Each page is split into several sub-pages. Each subpage starts with a list of le
 * Use `circuitsvis` to visualise attention heads.""")
 
     st.markdown(r"""
-Additionally, each subpage will have exercises for you to complete. These are denoted by a purple box. For example, here's a short exercise from the first subpage of the TransformerLens & induction circuits page:""")
+Additionally, each subpage will have exercises for you to complete. These are denoted by a purple box. For example, here's a short exercise from the first subpage of the TransformerLens & induction circuits page:
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -232,7 +249,39 @@ t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
 
     st.markdown(r"""
 Some of these exercises will be very directed, and will just require you to fill in a few lines of code. Others will be more challenging. All the exercises have solutions available to view, so you can use them if you get stuck.
+
+## How you should use this material
+
+### Option 1: Colab
+
+The simplest way to get these exercises up and running is to use Colab. This guarantees good GPU support, and means you'll spend less time messing around with environments and IDEs. Each set of exercises will have a link to the accompanying Colab notebook, which you should make a copy of and work through. The Colabs have essentially the same structure as the Streamlit pages.
+
+Each of the pages on the left hand sidebar corresponds to a different Colab notebook. You can work through them, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells.
+
+### Option 2: Your own IDE
+
+An alternative way to use this material is to run it on an IDE of your own choice (we strongly recommend VSCode). The vast majority of the exercises will not require a particularly good GPU, and where there are exceptions we will give some advice for how to get the most out of the exercises regardless.
+
+Full instructions for running the exercises in this way:
+
+* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
+* Open in your choice of IDE (we recommend VSCode).
+* Make & activate a virtual environment
+    * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
+* Install requirements.
+    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
+    * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
+* While in the directory, run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
+    * This should open up a local copy of the page you're reading right now, and you're good to go!
+
+To complete one of the exercise pages, you should:
+
+* Navigate to the appropriate directory in the repo (e.g. `exercises/transformer_from_scratch`)
+* Create a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks)
+* Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
+    * For each page, this will always start with some basic imports (including libraries like `transformer_lens`, as well as local files like `tests.py` and `solutions.py`).
 """)
+    
 
 if is_local or check_password():
     page()

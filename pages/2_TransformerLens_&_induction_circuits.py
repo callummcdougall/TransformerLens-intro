@@ -81,7 +81,7 @@ def section_home():
 ## Table of Contents
 
 <ul class="contents">
-    <li><a class="contents-el" href="#setup">Setup</a></li>
+    <li><a class="contents-el" href="#imports">Imports</a></li>
     <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
 </ul>
 """, unsafe_allow_html=True)
@@ -93,9 +93,9 @@ These pages are designed to get you introduced to Neel's **TransformerLens** lib
 Most of the sections are constructed in the following way:
 
 1. A particular feature of TransformerLens is introduced. 
-2. You are given an exercise, in which you have to apply the feature. 
+2. You are given an exercise, in which you have to use the feature.
 
-The running theme of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.
+The throughline of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.
 """)
 
     st.markdown("")
@@ -103,63 +103,49 @@ The running theme of the exercises is **induction circuits**. Induction circuits
     st.markdown("")
 
     st.markdown(r"""
-## Setup
+## Imports
 
-If you haven't done initial setup, then you should navigate to the **Home** page from the left hand sidebar, and follow the instructions there.
-
-Once you have, you can run the following code at the top of your file before starting:
+Note - if you haven't done the initial setup yet (i.e. installing packages), you should return to the home page (on the left hand sidebar) and follow the instructions there.
 
 ```python
-import plotly.io as pio
+import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 import plotly.express as px
+import plotly.io as pio
 pio.renderers.default = "notebook_connected" # or use "browser" if you want plots to open with browser
-
 import torch as t
-from torch import nn, optim
+import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import einops
 from fancy_einsum import einsum
-import random
-from pathlib import Path
-from torch.utils.data import DataLoader
-
 from torchtyping import TensorType as TT
-from torchtyping import patch_typeguard
-from typeguard import typechecked
-from typing import List, Union, Optional, Tuple
+from typing import List, Optional
 import functools
 from tqdm import tqdm
-import copy
+from IPython.display import display
 
-import itertools
-from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
-from dataclasses import dataclass
-import datasets
-from IPython.display import HTML, display
-
-import transformer_lens
-from transformer_lens.hook_points import HookedRootModule, HookPoint
+from transformer_lens.hook_points import HookPoint
 from transformer_lens import utils, HookedTransformer, HookedTransformerConfig, FactoredMatrix, ActivationCache
-
-import plot_utils
-
 import circuitsvis as cv
 
+import tests
+import plot_utils
+
+# Saves computation time, since we don't need it for the contents of this notebook
+t.set_grad_enabled(False)
+
+MAIN = __name__ == "__main__"
+
 def imshow(tensor, renderer=None, xaxis="", yaxis="", caxis="", **kwargs):
-    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
+    return px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
 def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
+    return px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs)
 
 def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
     x = utils.to_numpy(x)
     y = utils.to_numpy(y)
-    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
-
-t.set_grad_enabled(False)
-
-MAIN = __name__ == "__main__"
+    return px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
 device = t.device("cuda" if t.cuda.is_available() else "cpu")
 ```
@@ -621,7 +607,7 @@ if MAIN:
     display(cv.attention.attention_patterns(tokens=gpt2_str_tokens, attention=attention_pattern))
 ```
 
-Hover over heads to see the attention patterns; click on a head to lock it. Hover over each token to see which other tokens it attends to (or which othher tokens attend to it - you can see this by changing the dropdown to `Destination <- Source`).
+Hover over heads to see the attention patterns; click on a head to lock it. Hover over each token to see which other tokens it attends to (or which other tokens attend to it - you can see this by changing the dropdown to `Destination <- Source`).
 """)
     # with open("images/cv_attn.html") as f:
     #     text = f.read()
@@ -2451,7 +2437,7 @@ The dropdown below contains a diagram explaining how the three sections relate t
 
     with st.expander("Diagram"):
         st.markdown("")
-        st_image(r"kcomp_diagram_described_2.png", 1800)
+        st_image(r"kcomp_diagram_described_2.png", 1400)
         st.markdown("")
 
     st.markdown(r"""
@@ -3436,7 +3422,8 @@ $$
 where we used the cyclicity of trace, and the fact that $U$ is orthogonal so $U^TU=I$ (and same for $V$). We finish by observing that $\|S\|_F^2$ is precisely the sum of the squared singular values.
 """)
     st.markdown(r"""
-So if $W_A=U_AS_AV_A^T$, $W_B=U_BS_BV_B^T$, then $\|W_A\|_F=\|S_A\|_F$, $\|W_B\|_F=\|S_B\|_F$ and $\|W_AW_B\|_F=\|S_AV_A^TU_BS_B\|_F$. In some sense, $V_A^TU_B$ represents how aligned the subspaces written to and read from are, and the $S_A$ and $S_B$ terms weights by the importance of those subspaces.""")
+So if $W_A=U_AS_AV_A^T$, $W_B=U_BS_BV_B^T$, then $\|W_A\|_F=\|S_A\|_F$, $\|W_B\|_F=\|S_B\|_F$ and $\|W_AW_B\|_F=\|S_AV_A^TU_BS_B\|_F$. In some sense, $V_A^TU_B$ represents how aligned the subspaces written to and read from are, and the $S_A$ and $S_B$ terms weights by the importance of those subspaces.
+""")
 
     with st.expander("Click here, if this explanation still seems confusing."):
         st.markdown(r"""
@@ -3632,7 +3619,8 @@ Look at the singular value decomposition `t.svd` and plot the principal componen
 - Try replicating some of Kevin's work on indirect object identification.
 - Inspired by the [ROME paper](https://rome.baulab.info/), use the causal tracing technique of patching in the residual stream - can you analyse how the network answers different facts?
 
-Note: I apply several simplifications to the resulting transformer - these leave the model mathematically equivalent and doesn't change the output log probs, but does somewhat change the structure of the model and one change translates the output logits by a constant.""")
+Note: I apply several simplifications to the resulting transformer - these leave the model mathematically equivalent and doesn't change the output log probs, but does somewhat change the structure of the model and one change translates the output logits by a constant.
+""")
 
     with st.expander("Model simplifications"):
         st.markdown(r"""
@@ -3665,14 +3653,12 @@ A fun exercise is training models on the minimal task that'll produce induction 
 * It works best with several repeats of the same sequence rather than just one.
 * If you do things right, and give it finite data + weight decay, you *should* be able to get it to grok - this may take some hyper-parameter tuning though.
 * When I've done this I get weird franken-induction heads, where each head has 1/3 of an induction stripe, and together cover all tokens.
-* It'll work better if you only let the queries and keys access the positional embeddings, but *should* work either way
+* It'll work better if you only let the queries and keys access the positional embeddings, but *should* work either way.
 """)
     st.markdown(r"""
-
 ### Interpreting Induction Heads During Training
 
 A particularly striking result about induction heads is that they consistently [form very abruptly in training as a phase change](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html#argument-phase-change), and are such an important capability that there is a [visible non-convex bump in the loss curve](https://wandb.ai/mechanistic-interpretability/attn-only/reports/loss_ewma-22-08-24-22-08-00---VmlldzoyNTI2MDM0?accessToken=r6v951q0e1l4q4o70wb2q67wopdyo3v69kz54siuw7lwb4jz6u732vo56h6dr7c2) (in this model, approx 2B to 4B tokens). I have a bunch of checkpoints for this model, you can try re-running the induction head detection techniques on intermediate checkpoints and see what happens. (Bonus points if you have good ideas for how to efficiently send a bunch of 300MB checkpoints from Wandb lol)
-
 """)
 
 

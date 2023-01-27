@@ -1,12 +1,4 @@
 # %%
-import circuitsvis as cv
-cv.examples.hello("Bob")
-
-import plotly.io as pio
-pio.renderers.default = "notebook_connected" # or use "browser" if you want plots to open with browser
-
-import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
-# os.chdir(r"C:\Users\calsm\Documents\AI Alignment\ARENA\TRANSFORMERLENS_AND_MI\exercises\transformerlens_and_induction_circuits")
 
 from IPython import get_ipython
 ipython = get_ipython()
@@ -14,35 +6,25 @@ ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
 
+import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
+import plotly.express as px
+import plotly.io as pio
+pio.renderers.default = "notebook_connected" # or use "browser" if you want plots to open with browser
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import numpy as np
 import einops
 from fancy_einsum import einsum
-import random
-from pathlib import Path
-import plotly.express as px
-from torch.utils.data import DataLoader
-
 from torchtyping import TensorType as TT
-from torchtyping import patch_typeguard
-from typeguard import typechecked
-from typing import List, Union, Optional, Tuple
+from typing import List, Optional
 import functools
 from tqdm import tqdm
-import copy
+from IPython.display import display
 
-import itertools
-from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
-import dataclasses
-import datasets
-from IPython.display import HTML, display
-
-import transformer_lens
-from transformer_lens.hook_points import HookedRootModule, HookPoint  # Hooking utilities
+from transformer_lens.hook_points import HookPoint
 from transformer_lens import utils, HookedTransformer, HookedTransformerConfig, FactoredMatrix, ActivationCache
+import circuitsvis as cv
 
 import tests
 import plot_utils
@@ -51,11 +33,6 @@ import plot_utils
 t.set_grad_enabled(False)
 
 MAIN = __name__ == "__main__"
-
-# import sys, os
-# f = r"C:\Users\calsm\Documents\AI Alignment\ARENA\TRANSFORMERLENS_AND_MI\exercises"
-# sys.path.append(f)
-# os.chdir(f)
 
 def imshow(tensor, renderer=None, xaxis="", yaxis="", caxis="", **kwargs):
     return px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
@@ -68,7 +45,7 @@ def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
     y = utils.to_numpy(y)
     return px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
-device = "cuda" if t.cuda.is_available() else "cpu"
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
 # %%
 

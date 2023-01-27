@@ -780,30 +780,3 @@ if MAIN:
     prob_balanced = t.softmax(logits, dim=1)[:, 1]
     print("\n".join([f"{ex:{m}} -> {p:.4%} balanced confidence" for (ex, p) in zip(examples, prob_balanced)]))
 
-# %%
-from transformer_lens import FactoredMatrix
-A = t.randn(5, 2)
-B = t.randn(2, 5)
-AB = A @ B
-AB_factor = FactoredMatrix(A, B)
-print("Norms:")
-print(AB.norm())
-print(AB_factor.norm())
-# %%
-
-print("Eigenvalues:")
-print(t.linalg.eig(AB).eigenvalues)
-print(AB_factor.eigenvalues)
-print()
-print("Singular Values:")
-print(t.linalg.svd(AB).S)
-print(AB_factor.S.shape)
-print(AB_factor.U.shape)
-print(AB_factor.Vh.shape)
-# %%
-
-for mm in AB_factor.svd():
-    print(mm.shape)
-
-print(AB_factor.Vh.shape)
-# %%
