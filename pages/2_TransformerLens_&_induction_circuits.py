@@ -81,12 +81,17 @@ def section_home():
 ## Table of Contents
 
 <ul class="contents">
+    <li><a class="contents-el" href="#introduction">Introduction</a></li>
     <li><a class="contents-el" href="#imports">Imports</a></li>
-    <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
+    <li><a class="contents-el" href="#overview-of-content">Overview of content</a></li>
 </ul>
 """, unsafe_allow_html=True)
     st.markdown(r"""
+Links to Colab: [**exercises**](https://colab.research.google.com/drive/17i8LctAgVLTJ883Nyo8VIEcCNeKNCYnr?usp=share_link), [**solutions**](https://colab.research.google.com/drive/15p2TgU7RLaVjLVJFpwoMhxOWoAGmTlI3?usp=share_link)
+
 # TransformerLens & induction circuits
+
+## Introduction
 
 These pages are designed to get you introduced to Neel's **TransformerLens** library.
 
@@ -112,6 +117,7 @@ import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 import plotly.express as px
 import plotly.io as pio
 pio.renderers.default = "notebook_connected" # or use "browser" if you want plots to open with browser
+import plotly.graph_objects as go
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
@@ -119,7 +125,7 @@ import numpy as np
 import einops
 from fancy_einsum import einsum
 from torchtyping import TensorType as TT
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import functools
 from tqdm import tqdm
 from IPython.display import display
@@ -150,13 +156,17 @@ def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
 device = t.device("cuda" if t.cuda.is_available() else "cpu")
 ```
 
-## Learning Objectives
+## Overview of content
 
-We've included the learning objectives for each section, so you can get a sense of what the general flow of the material is. You can also return here to check that you've understood all the material.
+We've included a summary of each section, as well as the learning objectives, so you can get a sense of what the general flow of the material is. You can also return here to check that you've understood all the material.
+
+## 1️⃣ TransformerLens: Introduction
+
+This section is designed to get you up to speed with the TransformerLens library. You'll learn how to load and run models, and learn about the shared architecture template for all of these models.
 """)
 
     st.info(r"""
-## 1️⃣ TransformerLens: Introduction
+### Learning Objectives
 
 * Load and run a `HookedTransformer` model.
 * Understand the basic architecture of these models.
@@ -165,25 +175,39 @@ We've included the learning objectives for each section, so you can get a sense 
 * Use `circuitsvis` to visualise attention heads.
 
 """)
-    st.info(r"""
+    st.markdown(r"""
 ## 2️⃣ Finding induction heads
+
+Here, you'll learn about induction heads, how they work and why they are important. You'll also learn how to identify them from the characteristic induction head stripe in their attention patterns when the model input is a repeating sequence.
+""")
+    st.info(r"""
+### Learning Objectives
 
 * Understand what induction heads are, and the algorithm they are implementing.
 * Inspect activation patterns to identify basic attention head patterns, and write your own functions to detect attention heads for you.
 * Identify induction heads by looking at the attention patterns produced from a repeating random sequence.
 
 """)
-    st.info(r"""
+    st.markdown(r"""
 ## 3️⃣ TransformerLens: Hooks
 
-* Understand what hooks are, and how TransformerLens uses them
-* Use hooks to access activations, process the results, and write them to an external tensor.
-* Build tools to perform attribution, i.e. detecting which components of your model are responsible for performance on a given task.
-* Use hooks to intervene on activations, specifically to perform **ablation** and **activation patching**.
-    * Understand the importance of both these approaches for interpretability.
+Next, you'll learn about hooks, which are a great feature of TransformerLens allowing you to access and intervene on activations within the model. We will mainly focus on the basics of hooks and using them to access activations (we'll mainly save the causal interventions for the later IOI exercises). You will also build some tools to perform logit attribution within your model, so you can identify which components are responsible for your model's performance on certain tasks.
 """)
     st.info(r"""
+### Learning Objectives
+
+* Understand what hooks are, and how TransformerLens uses them.
+* Use hooks to access activations, process the results, and write them to an external tensor.
+* Build tools to perform attribution, i.e. detecting which components of your model are responsible for performance on a given task.
+* Understand how hooks can be used to perform basic interventions like **ablation**.
+""")
+    st.markdown(r"""
 ## 4️⃣ Reverse-engineering induction circuits
+
+Lastly, these exercises show you how you can reverse-engineer a circuit by looking directly at a transformer's weights (which can be considered a "gold standard" of interpretability, although it won't be possible in every situation). You'll examine QK and OV circuits by multiplying through matrices (and learn how the FactoredMatrix class makes matrices like these much easier to analyse). You'll also look for evidence of composition between two induction heads, and once you've found it then you'll investigate the functionality of the full circuit formed from this composition.
+""")
+    st.info(r"""
+### Learning Objectives
 
 * Understand the difference between investigating a circuit by looking at activtion patterns, and reverse-engineering a circuit by looking directly at the weights.
 * Use the factored matrix class to inspect the QK and OV circuits within an induction circuit.
@@ -294,7 +318,7 @@ Models can be run on a single string or a tensor of tokens (shape: `[batch, posi
 if MAIN:
     model_description_text = '''## Loading Models
 
-HookedTransformer comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. See my explainer for documentation of all supported models, and this table for hyper-parameters and the name used to load them. Each model is loaded into the consistent HookedTransformer architecture, designed to be clean, consistent and interpretability-friendly. 
+HookedTransformer comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. Each model is loaded into the consistent HookedTransformer architecture, designed to be clean, consistent and interpretability-friendly. 
 
 For this demo notebook we'll look at GPT-2 Small, an 80M parameter model. To try the model the model out, let's find the loss on this paragraph!'''
 
@@ -422,7 +446,7 @@ Examples of use:
 ```python
 gpt2_small.to_str_tokens("gpt2")             # --> ['<|endoftext|>', 'g', 'pt', '2']
 gpt2_small.to_tokens("gpt2")                 # --> tensor([[50256, 70, 457, 17]], device='cuda:0')
-gpt2_small.to_string([50256, 70, 457, 17]))  # --> '<|endoftext|>gpt2'
+gpt2_small.to_string([50256, 70, 457, 17])   # --> '<|endoftext|>gpt2'
 ```""")
 
     with st.expander("Aside - <|endoftext|> (optional - don't worry about fully understanding this)"):
@@ -471,11 +495,11 @@ print(f"Correct words: {gpt2_small.to_str_tokens(prediction[prediction == true_t
 The output from this code is:
 
 ```
-Model accuracy: 22/85
-Correct words: ['\n', '\n', 'former', ' with', ' models', '.', ' can', ' of', 'ooked', 'Trans', 'former', '_', 'NAME', '`.', '\n', ' at', 'PT', '-', ',', ',', "'s", ' the']
+Model accuracy: 32/112
+Correct words: ['\n', '\n', 'former', ' with', ' models', '.', ' can', ' of', 'ooked', 'Trans', 'former', '_', 'NAME', '`.', ' model', ' the', 'Trans', 'former', ' to', ' be', ' and', '-', '.', '\n', ' at', 'PT', '-', ',', ' model', ',', "'s", ' the']
 ```
 
-So the model got 22 out of 85 words correct. Not bad!""")
+So the model got 32 out of 112 words correct. Not bad!""")
 
         st.markdown(r"""
 **Induction heads** are a special kind of attention head which we'll examine a lot more in coming exercises. They allow a model to perform in-context learning of a specific form: generalising from one observation that token `B` follows token `A`, to predict that token `B` will follow `A` in future occurrences of `A`, even if these two tokens had never appeared together in the model's training data. **Can you see evidence of any induction heads at work?**
@@ -508,7 +532,6 @@ Every activation inside the model begins with a batch dimension. Here, because w
 if MAIN:
     gpt2_text = "Natural language processing tasks, such as question answering, machine translation, reading comprehension, and summarization, are typically approached with supervised learning on taskspecific datasets."
     gpt2_tokens = gpt2_small.to_tokens(gpt2_text)
-    print(gpt2_tokens.device)
     gpt2_logits, gpt2_cache = gpt2_small.run_with_cache(gpt2_tokens, remove_batch_dim=True)
 ```
 
@@ -703,7 +726,6 @@ if MAIN:
     WEIGHT_PATH = "attn_only_2L_half.pth"
 
     model = HookedTransformer(cfg)
-    raw_weights = model.state_dict()
     pretrained_weights = t.load(WEIGHT_PATH, map_location=device)
     model.load_state_dict(pretrained_weights)
 ```
@@ -962,7 +984,7 @@ def generate_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int 
     pass
 
 
-def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> tuple[t.Tensor, t.Tensor, ActivationCache]:
+def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> Tuple[t.Tensor, t.Tensor, ActivationCache]:
     '''
     Generates a sequence of repeated random tokens, and runs the model on it, returning logits, tokens and cache
 
@@ -1012,23 +1034,31 @@ Then you can concatenate together your prefix and two copies of the repeated tok
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
-def run_and_cache_model_repeated_tokens(
-    model: HookedTransformer, 
-    seq_len: int, 
-    batch: int = 1
-) -> tuple[t.Tensor, t.Tensor, ActivationCache]:
+def generate_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> t.Tensor:
+    '''
+    Generates a sequence of repeated random tokens
+
+    Outputs are:
+        rep_tokens: [batch, 1+2*seq_len]
+    '''
+    prefix = (t.ones(batch, 1) * model.tokenizer.bos_token_id).long()
+    rep_tokens_half = t.randint(0, model.cfg.d_vocab, (batch, seq_len), dtype=t.int64)
+    rep_tokens = t.cat([prefix, rep_tokens_half, rep_tokens_half], dim=-1).to(device)
+    return rep_tokens
+
+def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> Tuple[t.Tensor, t.Tensor, ActivationCache]:
     '''
     Generates a sequence of repeated random tokens, and runs the model on it, returning logits, tokens and cache
 
+    Should use the `generate_repeated_tokens` function above
+
     Outputs are:
-    rep_tokens: [batch, 1+2*seq_len]
-    rep_logits: [batch, 1+2*seq_len, d_vocab]
-    rep_cache: The cache of the model run on rep_tokens
+        rep_tokens: [batch, 1+2*seq_len]
+        rep_logits: [batch, 1+2*seq_len, d_vocab]
+        rep_cache: The cache of the model run on rep_tokens
     '''
-    prefix = t.ones((batch, 1), dtype=t.long) * model.tokenizer.bos_token_id
-    rep_tokens_half = t.randint(0, model.cfg.d_vocab, (batch, seq_len), dtype=t.long)
-    rep_tokens = t.concat([prefix, rep_tokens_half, rep_tokens_half], dim=1).to(device)
-    rep_logits, rep_cache = model.run_with_cache(rep_tokens, remove_batch_dim=True)
+    rep_tokens = generate_repeated_tokens(model, seq_len, batch)
+    rep_logits, rep_cache = model.run_with_cache(rep_tokens)
     return rep_tokens, rep_logits, rep_cache
 ```
 """)
@@ -1162,11 +1192,10 @@ def section_hooks():
     st.info(r"""
 ## Learning Objectives
 
-* Understand what hooks are, and how TransformerLens uses them
+* Understand what hooks are, and how TransformerLens uses them.
 * Use hooks to access activations, process the results, and write them to an external tensor.
 * Build tools to perform attribution, i.e. detecting which components of your model are responsible for performance on a given task.
-* Use hooks to intervene on activations, specifically to perform **ablation** and **activation patching**.
-    * Understand the importance of both these approaches for interpretability.
+* Understand how hooks can be used to perform basic interventions like **ablation**.
 """)
     st.markdown(r"""
 ## What are hooks?
@@ -1421,7 +1450,12 @@ def induction_score_hook(
     with st.columns(1)[0]:
         st.markdown(r"""        
 #### Exercise - find induction heads in GPT2-small
+""")
 
+        st.error(r"""
+*This is your first opportunity to investigate a larger and more extensively trained model, rather than the simple 2-layer model we've been using so far. None of the code required is new (you can copy most of it from previous sections), so these exercises shouldn't take very long.*
+""")
+        st.markdown(r"""
 Perform the same analysis on your `gpt2_small`. You should observe that some heads, particularly in a couple of the middle layers, have high induction scores. Use CircuitsVis to plot the attention patterns for these heads when run on the repeated token sequences, and verify that they look like induction heads.
 
 Note - you can make CircuitsVis plots (and other visualisations) using hooks rather than plotting directly from the cache. For example, to plot the average attention over the batch dimension, you can use `model.run_with_hooks` with the following hook function:
@@ -1438,6 +1472,8 @@ def visualize_pattern_hook(
             attention=pattern.mean(0)
         )
     )
+
+# Your code here - find attention patterns in gpt2_small
 ```
 """)
         with st.expander("Solution"):
@@ -1587,6 +1623,19 @@ If you're stuck, you can look at the solution below.""")
             st.markdown(r"""
 ```python
 def logit_attribution(embed, l1_results, l2_results, W_U, tokens) -> t.Tensor:
+    '''
+    Inputs:
+        embed (seq_len, d_model): the embeddings of the tokens (i.e. token + position embeddings)
+        l1_results (seq_len, n_heads, d_model): the outputs of the attention heads at layer 1 (with head as one of the dimensions)
+        l2_results (seq_len, n_heads, d_model): the outputs of the attention heads at layer 2 (with head as one of the dimensions)
+        W_U (d_model, d_vocab): the unembedding matrix
+    Returns:
+        Tensor of shape (seq_len-1, n_components)
+        represents the concatenation (along dim=-1) of logit attributions from:
+            the direct path (position-1,1)
+            layer 0 logits (position-1, n_heads)
+            and layer 1 logits (position-1, n_heads)
+    '''
     W_U_correct_tokens = W_U[:, tokens[1:]]
 
     direct_attributions = einsum("emb seq, seq emb -> seq", W_U_correct_tokens, embed[:-1])
@@ -1879,13 +1928,12 @@ if MAIN:
             st.markdown(r"""
 ```python
 def head_ablation_hook(
-    value: TT["batch", "pos", "head_index", "d_head"],
+    attn_result: TT["batch", "seq", "n_heads", "d_model"],
     hook: HookPoint,
-    head_index_to_ablate: int,
-) -> TT["batch", "pos", "head_index", "d_head"]:
-    print(f"Shape of the value tensor: {value.shape}")
-    value[:, :, head_index_to_ablate, :] = 0.0
-    return value
+    head_index_to_ablate: int
+) -> TT["batch", "seq", "n_heads", "d_model"]:
+    attn_result[:, :, head_index_to_ablate, :] = 0.0
+    return attn_result
 ```
 """)
 
@@ -2181,9 +2229,12 @@ This is all possible because knowing the factorisation of a matrix gives us a mu
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - deriving properties of a factored matrix
+""")
 
+        st.error(r"""
 *Note - if you're less interested in the maths, you can skip these exercises.*
-
+""")
+        st.markdown(r"""
 To give you an idea of what kinds of properties you can easily compute if you have a factored matrix, let's try and derive some ourselves.
 
 Suppose we have $M=AB$, where $A$ has shape $(m, n)$, $B$ has shape $(n, m)$, and $m > n$. So $M$ is a size-$(m, m)$ matrix with rank at most $n$.
@@ -2516,8 +2567,15 @@ If this still seems confusing, let's break it down bit by bit. We have:
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - compute the full OV circuit for head `1.4`
+""")
+        st.error(r"""
+*This is the first of several similar exercises where you calculate a circuit by multiplying matrices. This exercise is pretty important (in particular, you should make sure you understand what this matrix represents and why we're interested in it), but the actual calculation shouldn't take very long.*
+""")
 
+        st.markdown(r"""
 You should compute it as a `FactoredMatrix` object.
+
+Remember, you can access the model's weights directly e.g. using `model.W_E` or `model.W_Q` (the latter gives you all the `W_Q` matrices, indexed by layer and head).
 
 ```python
 if MAIN:
@@ -2561,6 +2619,12 @@ if MAIN:
 
         st.markdown(r"""
 #### Exercise - verify this matrix is the identity
+""")
+
+        st.error(r"""
+This exercise should be very short; it only requires 2 lines of code.
+""")
+        st.markdown(r"""
 
 Now we want to check that this matrix is the identity. Since it's in factored matrix form, this is a bit tricky, but there are still things we can do.
 
@@ -2630,7 +2694,7 @@ def top_1_acc(full_OV_circuit: FactoredMatrix) -> float:
     pass
 
 if MAIN:
-    print(f"Fraction of the time that the best logit is on the diagonal: {top_1_acc_iteration(full_OV_circuit):.4f}")
+    print(f"Fraction of the time that the best logit is on the diagonal: {top_1_acc(full_OV_circuit):.4f}")
 ```
 """)
 
@@ -2689,7 +2753,11 @@ This should return about 30.79% - pretty underwhelming. It goes up to 47.73% for
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - compute circuit for both induction heads
-
+""")
+        st.error(r"""
+*Again, this is a conceptually important exercise involving matrix products, which should be very quick (~5-10 mins) once you understand what you're being asked to calculate. Make sure you understand what this matrix represents, and why we get the results we do.*
+""")
+        st.markdown(r"""
 Now we return to why we have *two* induction heads. If both have the same attention pattern, the effective OV circuit is actually $W_U(W_O^{1.4}W_V^{1.4}+W_O^{1.10}W_V^{1.10})W_E$, and this is what matters. So let's re-run our analysis on this!
 """)
         
@@ -2718,7 +2786,7 @@ if MAIN:
 
     W_OV_eff = W_E @ FactoredMatrix(W_V_both, W_O_both) @ W_U
 
-    print(f"Fraction of the time that the best logit is on the diagonal: {top_1_acc_iteration(W_OV_eff):.4f}")
+    print(f"Fraction of the time that the best logit is on the diagonal: {top_1_acc(W_OV_eff):.4f}")
 ```
 
 You should get an accuracy of greater than 95% - much better!
@@ -2759,7 +2827,11 @@ Why is it justified to ignore token encodings? In this case, it turns out that t
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - compute and plot the full QK-circuit
-
+""")
+        st.error(r"""
+*This is another relatively simple matrix multiplication, although it's a bit fiddly on account of the  masking and scaling steps. If you understand what you're being asked to do but still not passing the tests, you should probably look at the solution.*
+""")
+        st.markdown(r"""
 Now, you should compute and plot the matrix.
 
 Remember, you're calculating the attention pattern (i.e. probabilites) not the scores. You'll need to mask the scores (you can use the `mask_scores` function we've provided you with), and scale them.
@@ -2768,21 +2840,42 @@ Remember, you're calculating the attention pattern (i.e. probabilites) not the s
 def mask_scores(attn_scores: TT["query_d_model", "key_d_model"]):
     '''Mask the attention scores so that tokens don't attend to previous tokens.'''
     mask = t.tril(t.ones_like(attn_scores)).bool()
-    neg_inf = t.tensor(-1.0e6).to(attn_scores.device)
-    masked_attn_scores = t.where(mask, attn_scores, neg_inf)
-    return masked_attn_scores
+    return attn_scores.masked_fill(~mask, attn_scores.new_tensor(-1.0e6))
+
+if MAIN:
+    layer = 0
+    head_index = 7
+
+    "YOUR CODE HERE - define pos_by_pos_pattern"
+
+    tests.test_pos_by_pos_pattern(pos_by_pos_pattern, model, layer, head_index)
 ```
 
 Once the tests pass, you can plot a corner of your matrix:
 
 ```python
 if MAIN:
-    "YOUR CODE HERE - define pos_by_pos_pattern"
-
     print(f"Avg lower-diagonal value: {pos_by_pos_pattern.diag(-1).mean():.4f}")
     imshow(utils.to_numpy(pos_by_pos_pattern[:100, :100]), xaxis="Key", yaxis="Query")
 ```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+if MAIN:
+    layer = 0
+    head_index = 7
+    
+    W_pos = model.W_pos
+    W_QK = model.W_Q[0, 7] @ model.W_K[0, 7].T
+    pos_by_pos_scores = W_pos @ W_QK @ W_pos.T
+    masked_scaled = mask_scores(pos_by_pos_scores / model.cfg.d_head ** 0.5)
+    pos_by_pos_pattern = t.softmax(masked_scaled, dim=-1)
 
+    print(f"Avg lower-diagonal value: {pos_by_pos_pattern.diag(-1).mean():.4f}")
+    imshow(utils.to_numpy(pos_by_pos_pattern[:100, :100]), xaxis="Key", yaxis="Query")
+""")
+
+        st.markdown(r"""
 #### Your output
 """)
         button10 = st.button("Show my output", key="button10")
@@ -2816,12 +2909,20 @@ For ease of notation, I'll refer to the 14 inputs as $(y_0, y_1, ..., y_{13})$ r
 $$
 x W^h_Q = \sum_{i=0}^{13} y_i W^h_Q
 $$
+
+with each $y_i$ having shape `[seq, d_model]`, and the sum of $y_i$s being the full residual stream $x$. Here is a diagram to illustrate:
 """)
+    st_image("components.png", 550)
+
 
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - analyse the relative importance
-
+""")
+        st.error(r"""
+*Most of these functions just involve indexing and einsums, but figuring out exactly what the question is asking for is the hard part! If you're confused, you should definitely look at the solutions for these exercise, because understanding what you're calculating is much more important than the actual exercise of writing these functions.*
+""")
+        st.markdown(r"""
 We can now analyse the relative importance of these 14 terms! A very crude measure is to take the norm of each term (by component and position).
 
 Note that this is a pretty dodgy metric - q and k are not inherently interpretable! But it can be a good and easy-to-compute proxy.
@@ -3163,7 +3264,7 @@ if MAIN:
 
     tests.test_find_K_comp_full_circuit(find_K_comp_full_circuit, model)
 
-    print(f"Fraction of tokens where the highest activating key is the same token: {top_1_acc_iteration(K_comp_circuit.T):.4f}")
+    print(f"Fraction of tokens where the highest activating key is the same token: {top_1_acc(K_comp_circuit.T):.4f}")
 ```
 """)
 
@@ -3232,7 +3333,11 @@ How do we formalise overlap? This is basically an open question, but a surprisin
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Excercise - calculate composition scores
-
+""")
+        st.error(r"""
+*The exercise of writing the composition score should be very easy (~5 mins). To fill in the composition score tensors, the main difficulty is figuring out exactly which matrices to use in your functions, but again this should be relatively straightforward (~5-10 mins).*
+""")
+        st.markdown(r"""
 Let's calculate this metric for all pairs of heads in layer 0 and layer 1 for each of K, Q and V composition and plot it.
 
 We'll start by implementing this using plain old tensors (later on we'll see how this can be sped up using the `FactoredMatrix` class). We also won't worry about batching our calculations yet; we'll just do one matrix at a time.
@@ -3291,7 +3396,7 @@ def get_comp_score(
     W_B_norm = W_B.pow(2).sum().sqrt()
     W_AB_norm = (W_A @ W_B).pow(2).sum().sqrt()
 
-    return (W_AB_norm / (W_A_norm * W_B_norm)).item() ** 0.5
+    return (W_AB_norm / (W_A_norm * W_B_norm)).item()
 
 
 if MAIN:
@@ -3311,7 +3416,7 @@ if MAIN:
         for j in range(model.cfg.n_heads):
             q_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_QK[1, j])
             k_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_QK[1, j].T)
-            v_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_QK[1, j])
+            v_comp_scores[i, j] = get_comp_score(W_OV[0, i], W_OV[1, j])
 ```
 """)
         st.markdown(r"""
@@ -3341,7 +3446,7 @@ if MAIN:
     comp_scores_baseline = np.zeros(n_samples)
     for i in tqdm(range(n_samples)):
         comp_scores_baseline[i] = generate_single_random_comp_score()
-    print("Mean:", comp_scores_baseline.mean())
+    print("\nMean:", comp_scores_baseline.mean())
     print("Std:", comp_scores_baseline.std())
     px.histogram(comp_scores_baseline, nbins=50).show()
 ```
@@ -3368,6 +3473,28 @@ if MAIN:
                 st.plotly_chart(fig_dict["k_comp_scores"])
                 st.plotly_chart(fig_dict["v_comp_scores"])
                 st.session_state["got_q_comp_scores"] = True
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def generate_single_random_comp_score() -> float:
+    '''
+    Write a function which generates a single composition score for random matrices
+    '''
+
+    W_A_left = t.empty(model.cfg.d_model, model.cfg.d_head)
+    W_B_left = t.empty(model.cfg.d_model, model.cfg.d_head)
+    W_A_right = t.empty(model.cfg.d_model, model.cfg.d_head)
+    W_B_right = t.empty(model.cfg.d_model, model.cfg.d_head)
+
+    for W in [W_A_left, W_B_left, W_A_right, W_B_right]:
+        nn.init.kaiming_uniform_(W, a=np.sqrt(5))
+
+    W_A = W_A_left @ W_A_right.T
+    W_B = W_B_left @ W_B_right.T
+
+    return get_comp_score(W_A, W_B)
+```
+""")
         with st.expander("Some interesting things to observe:"):
             st.markdown(r"""
 The most obvious thing that jumps out (when considered in the context of all the analysis we've done so far) is the K-composition scores. `0.7` (the prev token head) is strongly composing with `1.4` and `1.10` (the two attention heads). This is what we expect, and is a good indication that our composition scores are working as intended.
@@ -3450,17 +3577,21 @@ To build intuition, let's consider a couple of extreme examples.
 
 * If there was no overlap between the spaces being written to and read from, then $V_A^T U_B$ would be a matrix of zeros (since every $v_i^A \cdot u_j^B$ would be zero). This would mean that the composition score would be zero.
 * If there was perfect overlap, i.e. the span of the $v_i^A$ vectors and $u_j^B$ vectors is the same, then the composition score is large. It is as large as possible when the most important input directions and most important output directions line up (i.e. when the singular values $\sigma_i^A$ and $\sigma_j^B$ are in the same order).
-* If our matrices $W_A$ and $W_B$ were just rank 1 (i.e. $W_A = \sigma_A u_A v_A^T$, and $W_B = \sigma_B u_B v_B^T$), then the composition score is $|v_A^T u_B|$, in other words just the cosine similarity of the output direction of $W_A$ and the input direction of $W_B$.
+* If our matrices $W_A$ and $W_B$ were just rank 1 (i.e. $W_A = \sigma_A u_A v_A^T$, and $W_B = \sigma_B u_B v_B^T$), then the composition score is $|v_A^T u_B|$, in other words just the cosine similarity of the single output direction of $W_A$ and the single input direction of $W_B$.
 """)
         st.markdown(r"")
 
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - batching, and using the `FactoredMatrix` class
-
+""")
+        st.error(r"""
+*Note - this exercise is optional, and not a vitally important conceptual part  of this section. It's also quite difficult (figuring out exactly how to rearrange the tensors to allow for vectorised multiplication is messy!). You can skip this exercise if you don't find it interesting.*
+""")
+        st.markdown(r"""
 We can also use this insight to write a more efficient way to calculate composition scores - this is extremely useful if you want to do this analysis at scale! The key is that we know that our matrices have a low rank factorisation, and it's much cheaper to calculate the SVD of a narrow matrix than one that's large in both dimensions. See the [algorithm described at the end of the paper](https://transformer-circuits.pub/2021/framework/index.html#induction-heads:~:text=Working%20with%20Low%2DRank%20Matrices) (search for SVD).
 
-So we can work with the `FactoredMatrix` class. This also provides the method `.norm()` which returns the Frobenium norm. This is also a good opportunity to bring back baching - this will sometimes be useful in our analysis, e.g. if we thought one of the final-layer heads was being used in Q-composition and the number of layers was more than two, then we might want to efficiently compute a 3D array with `[i, j, k]`th element equal to the Q-composition score between head `i.j` and the `k`th head in the final layer.
+So we can work with the `FactoredMatrix` class. This also provides the method `.norm()` which returns the Frobenium norm. This is also a good opportunity to bring back baching - this will sometimes be useful in our analysis. In the function below, `W_As` and `W_Bs` are both >2D factored matrices (e.g. they might represent the OV circuits for all heads in a particular layer, or across multiple layers), and the function's output should be a tensor of composition scores for each pair of matrices `(W_A, W_B)` in the >2D tensors `(W_As, W_Bs)`.
 
 ```python
 def get_batched_comp_scores(
@@ -3581,7 +3712,7 @@ if MAIN:
     for i in range(model.cfg.n_heads):
         new_induction_score = ablation_induction_score(i, 4)
         induction_score_change = new_induction_score - baseline_induction_score
-        print(f"Ablation score change for head {i}:", induction_score_change)
+        print(f"Ablation score change for head {i:02}: {induction_score_change:+.5f}")
 ```
 """)
 

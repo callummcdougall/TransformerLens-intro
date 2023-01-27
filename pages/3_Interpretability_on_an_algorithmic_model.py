@@ -41,7 +41,7 @@ def read_from_html(filename):
 
     return fig
 
-WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
+WIP = r"../images/written_images"
 NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "attn_probs_red", "attn_qpos1"]
 def get_fig_dict():
     return {name: read_from_html(name) for name in NAMES}
@@ -79,8 +79,21 @@ fig_dict = update_fig_dict(fig_dict)
 
 
 def section_home():
+    st.sidebar.markdown("""
+## Table of Contents
+
+<ul class="contents">
+    <li><a class="contents-el" href="#introduction-why-should-we-care">Introduction - why should we care?</a></li>
+    <li><a class="contents-el" href="#imports">Imports</a></li>
+    <li><a class="contents-el" href="#overview-of-content">Overview of content</a></li>
+</ul>
+""", unsafe_allow_html=True)
     st.markdown(r"""
-# Interpretability on an algorithmic model - why should we care?
+Links to Colab: coming soon! (If you've reached this section and you'd like to be able to access the Colab, please [send me a message](mailto:cal.s.mcdougall@gmail.com).
+
+# Interpretability on an algorithmic model
+
+## Introduction - why should we care?
 
 When models are trained on synthetic, algorithmic tasks, they often learn to do some clean, interpretable computation inside. Choosing a suitable task and trying to reverse engineer a model can be a rich area of interesting circuits to interpret! In some sense, this is interpretability on easy mode - the model is normally trained on a single task (unlike language models, which need to learn everything about language!), we know the exact ground truth about the data and optimal solution, and the models are tiny. So why care?
 
@@ -92,6 +105,54 @@ Working on algorithmic problems gives us the opportunity to:
 * Take the insights you've learned from reverse-engineering small models, and investigate which results will generalise, or whether any of the techniques you used to identify circuits can be automated and used at scale.
 
 The algorithmic problem we'll work on in these exercises is **bracket classification**, i.e. taking a string of parentheses like `"(())()"` and trying to output a prediction of "balanced" or "unbalanced". We will find an algorithmic solution for solving this problem, and reverse-engineer one of the circuits in our model that is responsible for implementing one part of this algorithm.
+
+## Imports
+
+```python
+import functools
+import json
+from typing import List, Tuple, Union, Optional
+import torch as t
+from fancy_einsum import einsum
+from sklearn.linear_model import LinearRegression
+import plotly.express as px
+import plotly.graph_objects as go
+import einops
+from tqdm import tqdm
+from torchtyping import TensorType as TT
+
+MAIN = __name__ == "__main__"
+device = t.device("cpu")
+
+t.set_grad_enabled(False)
+
+from IPython import get_ipython
+ipython = get_ipython()
+# Code to automatically update the HookedTransformer code as its edited without restarting the kernel
+ipython.magic("load_ext autoreload")
+ipython.magic("autoreload 2")
+
+from transformer_lens import utils, ActivationCache, HookedTransformer, HookedTransformerConfig
+from transformer_lens.hook_points import HookPoint
+from transformer_lens.components import LayerNorm
+
+from brackets_datasets import SimpleTokenizer, BracketsDataset
+import tests
+import plot_utils
+
+def imshow(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
+    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
+
+def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
+    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
+
+def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
+    x = utils.to_numpy(x)
+    y = utils.to_numpy(y)
+    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
+```
+
+## Overview of content
 
 ## 1️⃣ Bracket classifier
 
@@ -129,7 +190,7 @@ In this section (which is the meat of the exercises), we'll hone in on a particu
 
 * Identify the path through the model which is responsible for implementing the **net elevation** circuit (i.e. identifying whether the number of left and right brackets match).
 * Interpret different attention patterns, as doing things like "copying information from sequence position $i$ to $j$", or as "averaging information over all sequence positions".
-* Understand the role of **MLPs** as taking a linear function of the sequence (e.g. difference between number of left and right brackets) and converting it into a nonlinear function (e.g. the boolean information `num_left == num_right`).
+* Understand the role of **MLPs** as taking a linear function of the sequence (e.g. difference between number of left and right brackets) and converting it into a nonlinear function (e.g. the boolean information `num_left_brackets == num_right_brackets`).
 """)
 
     st.markdown(r"""
@@ -147,17 +208,26 @@ def section_1():
 ## Table of Contents
 
 <ul class="contents">
-   <li><a class="contents-el" href="#life-on-the-frontier">Life On The Frontier</a></li>
-   <li><a class="contents-el" href="#today-s-toy-model">Today's Toy Model</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#model-architecture">Model architecture</a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#tokenizer">Tokenizer</a></li>
-   <li><a class="contents-el" href="#dataset">Dataset</a></li>
-   <li><a class="contents-el" href="#hand-written-solution">Hand-Written Solution</a></li>
-   <li><a class="contents-el" href="#hand-written-solution-vectorized">Hand-Written Solution - Vectorized</a></li>
-   <li><a class="contents-el" href="#the-model-s-solution">The Model's Solution</a></li>
-   <li><a class="contents-el" href="#running-the-model">Running the Model</a></li>
+    <li><a class="contents-el" href="#life-on-the-frontier">Life On The Frontier</a></li>
+    <li><a class="contents-el" href="#today-s-toy-model">Today's Toy Model</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#causal-vs-bidirectional-attention">Causal vs bidirectional attention</a></li>
+        <li><a class="contents-el" href="#using-transformers-for-classification">Using transformers for classification</a></li>
+        <li><a class="contents-el" href="#a-note-on-softmax">A note on softmax</a></li>
+        <li><a class="contents-el" href="#masking-padding-tokens">Masking padding tokens</a></li>
+        <li><a class="contents-el" href="#other-details">Other details</a></li>
+        <li><a class="contents-el" href="#some-useful-diagrams">Some useful diagrams</a></li>
+        <li><a class="contents-el" href="#defining-the-model">Defining the model</a></li>
+    </ul></li>
+    <li><a class="contents-el" href="#tokenizer">Tokenizer</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#implementing-our-masking">Implementing our masking</a></li>
+    </ul></li>
+    <li><a class="contents-el" href="#dataset">Dataset</a></li>
+    <li><a class="contents-el" href="#hand-written-solution">Hand-Written Solution</a></li>
+    <li><a class="contents-el" href="#hand-written-solution-vectorized">Hand-Written Solution - Vectorized</a></li>
+    <li><a class="contents-el" href="#the-model-s-solution">The Model's Solution</a></li>
+    <li><a class="contents-el" href="#running-the-model">Running the Model</a></li>
 </ul>
 """, unsafe_allow_html=True)
     st.markdown(r"""
@@ -185,15 +255,13 @@ Feel free to go "off-road" and follow your curiosity - you might discover unchar
 
 Today we'll study a small transformer that is trained to only classify whether a sequence of parentheses is balanced or not. It's small so we can run experiments quickly, but big enough to perform well on the task. The weights and architecture are provided for you.
 
-### Model architecture
-
-#### Causal vs bidirectional attention
+### Causal vs bidirectional attention
 
 The key difference between this and the GPT-style models you will have implemented already is the attention mechanism. 
 
 GPT uses **causal attention**, where the attention scores get masked wherever the source token comes after the destination token. This means that information can only flow forwards in a model, never backwards (which is how we can train our model in parallel - our model's output is a series of distributions over the next token, where each distribution is only able to use information from the tokens that came before). This model uses **bidirectional attention**, where the attention scores aren't masked based on the relative positions of the source and destination tokens. This means that information can flow in both directions, and the model can use information from the future to predict the past.
 
-#### Using transformers for classification
+### Using transformers for classification
 
 GPT is trained via gradient descent on the cross-entropy loss between its predictions for the next token and the actual next tokens. Models designed to perform classification are trained in a very similar way, but instead of outputting probability distributions over the next token, they output a distribution over class labels. We do this by having an unembedding matrix of size `[d_model, num_classifications]`, and only using a single sequence position (usually the 0th position) to represent our classification probabilities.
 
@@ -206,11 +274,11 @@ Below is a schematic to compare the model architectures and how they're used:
     st.markdown(r"""
 Note that, just because the outputs at all other sequence positions are discarded, doesn't mean those sequence positions aren't useful. They will almost certainly be the sites of important intermediate calculations. But it does mean that the model will always have to move the information from those positions to the 0th position in order for the information to be used for classification.
 
-#### A note on softmax
+### A note on softmax
 
-We use the softmax function to convert our logits 
+For each bracket sequence, our (important) output is a vector of two values: `(l0, l1)`, representing the model's logit distribution over (unbalanced, balanced). Our model was trained by minimizing the cross-entropy loss between these logits and the true labels. Interestingly, since logits are translation invariant, the only value we actually care about is the difference between our logits, `l0 - l1`. This is the model's log likelihood ratio of the sequence being unbalanced vs balanced. Later on, we'll be able to use this `logit_diff` to perform logit attribution in our model.
 
-#### Masking padding tokens
+### Masking padding tokens
 
 The image on the top-right is actually slightly incomplete. It doesn't show how our model handles sequences of differing lengths. After all, during training we need to have all sequences be of the same length so we can batch them together in a single tensor. The model manages this via two new tokens: the end token and the padding token.
 
@@ -243,7 +311,7 @@ If you're interested in reading more on this, you can check out [this link](http
     st.markdown(r"""
 We've implemented this type of masking for you, using TransformerLens's **permanent hooks** feature. We will discuss the details of this below (permanent hooks are a recent addition to TransformerLens which we havent' covered yet, and they're useful to understand).
 
-#### Other details
+### Other details
 
 Here is a summary of all the relevant architectural details:
 
@@ -263,7 +331,7 @@ Here is a summary of all the relevant architectural details:
 
 To refer to attention heads, we'll again use the shorthand `layer.head` where both layer and head are zero-indexed. So `2.1` is the second attention head (index 1) in the third layer (index 2).
 
-#### Some useful diagrams
+### Some useful diagrams
 
 Below, you can see the architecture of the model, side by side with a diagram of the activation names for the layers in the model (and how you reference them).""")
 
@@ -290,7 +358,7 @@ Below, you can see the architecture of the model, side by side with a diagram of
 #     end
 # ```
     st.markdown(r"""
-And here is a diagram showing the internal parts of your model, as well as a cheat sheet for getting activation hook names and model parameters:""")
+And here is a diagram showing the internal parts of your model, as well as a cheat sheet for getting activation hook names and model parameters.""")
 
     with st.expander("Cheat sheet"):
         st_image("diagram-tl.png", 1600)
@@ -314,58 +382,7 @@ And here is a diagram showing the internal parts of your model, as well as a che
     st.markdown(r"""
 I'd recommend opening both these images in a different tab.
 
-## Imports
-
-Run the code below for all necessary imports.
-
-```python
-import functools
-import json
-import os
-import sys
-from typing import Dict, List, Tuple, Union, Optional
-import torch as t
-import torch.nn.functional as F
-from fancy_einsum import einsum
-from sklearn.linear_model import LinearRegression
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import matplotlib.pyplot as plt
-import einops
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-from IPython import get_ipython
-ipython = get_ipython()
-ipython.run_line_magic("load_ext", "autoreload")
-ipython.run_line_magic("autoreload", "2")
-
-MAIN = __name__ == "__main__"
-
-t.set_grad_enabled(False)
-device = t.device("cpu")
-
-import transformer_lens.utils as utils
-from transformer_lens.hook_points import HookPoint
-from transformer_lens import HookedTransformer, HookedTransformerConfig
-from torchtyping import TensorType as TT
-
-from brackets_datasets import SimpleTokenizer, BracketsDataset
-
-def imshow(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
-
-def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
-
-def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
-    x = utils.to_numpy(x)
-    y = utils.to_numpy(y)
-    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
-```
-
-## Defining the model
+### Defining the model
 
 Here, we define the model according to the description we gave above.
 
@@ -397,7 +414,7 @@ if MAIN:
 
 ## Tokenizer
 
-There are only five tokens in our vocabulary: `[start]`, `[pad]`, `[end]`, `(`, and `)` in that order.
+There are only five tokens in our vocabulary: `[start]`, `[pad]`, `[end]`, `(`, and `)` in that order. See earlier sections for a reminder of what these tokens represent.
 
 You have been given a tokenizer `SimpleTokenizer("()")` which will give you some basic functions. Try running the following to see what they do:
 
@@ -418,10 +435,14 @@ if MAIN:
     print(tokenizer.decode(t.tensor([[0, 3, 4, 2, 1, 1]])))
 ```
 
-## Masking padding tokens
+### Implementing our masking
 
 Now that we have the tokenizer, we can use it to write hooks that mask the padding tokens. If you understand how the padding works, then don't worry if you don't follow all the implementational details of this code.
+""")
+    with st.expander("Click to see a diagram explaining how this masking works."):
+        st_image("masking-padding-tokens.png", 700)
 
+    st.markdown(r"""
 ```python
 def add_hooks_for_masking_PAD(model: HookedTransformer) -> model:
 

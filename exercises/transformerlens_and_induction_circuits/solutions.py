@@ -10,6 +10,7 @@ import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 import plotly.express as px
 import plotly.io as pio
 pio.renderers.default = "notebook_connected" # or use "browser" if you want plots to open with browser
+import plotly.graph_objects as go
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +18,7 @@ import numpy as np
 import einops
 from fancy_einsum import einsum
 from torchtyping import TensorType as TT
-from typing import List, Optional
+from typing import List, Optional, Tuple, Callable
 import functools
 from tqdm import tqdm
 from IPython.display import display
@@ -88,7 +89,6 @@ if MAIN:
 if MAIN:
     gpt2_text = "Natural language processing tasks, such as question answering, machine translation, reading comprehension, and summarization, are typically approached with supervised learning on taskspecific datasets."
     gpt2_tokens = gpt2_small.to_tokens(gpt2_text)
-    print(gpt2_tokens.device)
     gpt2_logits, gpt2_cache = gpt2_small.run_with_cache(gpt2_tokens, remove_batch_dim=True)
 
 # %%
@@ -114,13 +114,6 @@ if MAIN:
     gpt2_str_tokens = gpt2_small.to_str_tokens(gpt2_text)
 
     display(cv.attention.attention_patterns(tokens=gpt2_str_tokens, attention=attention_pattern))
-
-# %%
-
-if MAIN:
-    html = cv.attention.attention_patterns(tokens=gpt2_str_tokens, attention=attention_pattern)
-    with open("layer0_head_attn_patterns_2.html", "w") as f:
-        f.write(str(html))
 
 
 # %%
@@ -148,7 +141,6 @@ if MAIN:
     WEIGHT_PATH = "attn_only_2L_half.pth"
 
     model = HookedTransformer(cfg)
-    raw_weights = model.state_dict()
     pretrained_weights = t.load(WEIGHT_PATH, map_location=device)
     model.load_state_dict(pretrained_weights)
 
@@ -227,15 +219,15 @@ def generate_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int 
     rep_tokens = t.cat([prefix, rep_tokens_half, rep_tokens_half], dim=-1).to(device)
     return rep_tokens
 
-def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> tuple[t.Tensor, t.Tensor, ActivationCache]:
+def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, batch: int = 1) -> Tuple[t.Tensor, t.Tensor, ActivationCache]:
     '''
     Generates a sequence of repeated random tokens, and runs the model on it, returning logits, tokens and cache
 
     Should use the `generate_repeated_tokens` function above
 
     Outputs are:
-        rep_logits: [batch, 1+2*seq_len, d_vocab]
         rep_tokens: [batch, 1+2*seq_len]
+        rep_logits: [batch, 1+2*seq_len, d_vocab]
         rep_cache: The cache of the model run on rep_tokens
     '''
     rep_tokens = generate_repeated_tokens(model, seq_len, batch)
@@ -498,7 +490,7 @@ def head_ablation_hook(
     hook: HookPoint,
     head_index_to_ablate: int
 ) -> TT["batch", "seq", "n_heads", "d_model"]:
-    attn_result[:, :, head_index_to_ablate] = 0.0
+    attn_result[:, :, head_index_to_ablate, :] = 0.0
     return attn_result
 
 def cross_entropy_loss(logits, tokens):
@@ -647,9 +639,7 @@ if MAIN:
 def mask_scores(attn_scores: TT["query_d_model", "key_d_model"]):
     '''Mask the attention scores so that tokens don't attend to previous tokens.'''
     mask = t.tril(t.ones_like(attn_scores)).bool()
-    neg_inf = t.tensor(-1.0e6).to(attn_scores.device)
-    masked_attn_scores = t.where(mask, attn_scores, neg_inf)
-    return masked_attn_scores
+    return attn_scores.masked_fill(~mask, attn_scores.new_tensor(-1.0e6))
 
 if MAIN:
     layer = 0
@@ -669,7 +659,7 @@ if MAIN:
 if MAIN:
     fig = imshow(utils.to_numpy(pos_by_pos_pattern[:100, :100]), xaxis="Key", yaxis="Query")
     fig.show()
-    plot_utils.save_fig(fig, "pos_by_pos_pattern")
+    # plot_utils.save_fig(fig, "pos_by_pos_pattern")
 
     print(f"Average lower-diagonal value: {pos_by_pos_pattern.diag(-1).mean():.4f}")
 
@@ -815,7 +805,7 @@ def get_comp_score(
     W_B_norm = W_B.pow(2).sum()
     W_AB_norm = (W_A @ W_B).pow(2).sum()
 
-    return (W_AB_norm / (W_A_norm * W_B_norm)).item() ** 0.5
+    return (W_AB_norm / (W_A_norm * W_B_norm)).item()
 
 if MAIN:
     tests.test_get_comp_score(get_comp_score)
@@ -866,7 +856,7 @@ if MAIN:
     comp_scores_baseline = np.zeros(n_samples)
     for i in tqdm(range(n_samples)):
         comp_scores_baseline[i] = generate_single_random_comp_score()
-    print("Mean:", comp_scores_baseline.mean())
+    print("\nMean:", comp_scores_baseline.mean())
     print("Std:", comp_scores_baseline.std())
     px.histogram(comp_scores_baseline, nbins=50).show()
 
@@ -989,7 +979,7 @@ if MAIN:
     for i in range(model.cfg.n_heads):
         new_induction_score = ablation_induction_score(i, 4)
         induction_score_change = new_induction_score - baseline_induction_score
-        print(f"Ablation score change for head {i}:", induction_score_change)
+        print(f"Ablation score change for head {i:02}: {induction_score_change:+.5f}")
 
 # %%
 

@@ -2,18 +2,13 @@
 
 import functools
 import json
-import os
-import sys
-from typing import Dict, List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional
 import torch as t
 from fancy_einsum import einsum
 from sklearn.linear_model import LinearRegression
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import einops
-import pandas as pd
-import numpy as np
 from tqdm import tqdm
 from torchtyping import TensorType as TT
 
@@ -28,15 +23,11 @@ ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
 
-# %%
-
-from transformer_lens import utils, ActivationCache
+from transformer_lens import utils, ActivationCache, HookedTransformer, HookedTransformerConfig
 from transformer_lens.hook_points import HookPoint
-from transformer_lens import HookedTransformer, HookedTransformerConfig
 from transformer_lens.components import LayerNorm
 
 from brackets_datasets import SimpleTokenizer, BracketsDataset
-import solutions
 import tests
 import plot_utils
 
@@ -50,10 +41,6 @@ def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
     x = utils.to_numpy(x)
     y = utils.to_numpy(y)
     px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
-
-# f = r"C:\Users\calsm\Documents\AI Alignment\ARENA\TRANSFORMERLENS_AND_MI\exercises\interp_on_algorithmic_model_TL\transcribed"
-# sys.path.append(f)
-# os.chdir(f)
 
 # %%
 
@@ -623,13 +610,6 @@ def get_q_and_k_for_given_input(
     
     return activations[q_name][0, :, head, :], activations[k_name][0, :, head, :]
 
-def write_to_html(fig, filename):
-    r = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
-    with open(f"{r}/{filename}.html", "w") as f:
-        f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
-
-import circuitsvis as cv
-from IPython.display import display
 
 if MAIN:
 
