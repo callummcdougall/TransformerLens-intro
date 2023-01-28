@@ -10,6 +10,37 @@ From the description in Neel Nanda's repo:
 > 
 > TransformerLens lets you load in an open source language model, like GPT-2, and exposes the internal activations of the model to you. You can cache any internal activation in the model, and add in functions to edit, remove or replace these activations as the model runs. The core design principle I've followed is to enable exploratory analysis. One of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. Part of what I aimed for is to make my experience of doing research easier and more fun, hopefully this transfers to you!
 
+## How you should use this material
+
+### Option 1: Colab
+
+The simplest way to get these exercises up and running is to use Colab. This guarantees good GPU support, and means you'll spend less time messing around with environments and IDEs. Each set of exercises will have a link to the accompanying Colab notebook, which you should make a copy of and work through. The Colabs have essentially the same structure as the Streamlit pages.
+
+Each of the pages on the left hand sidebar corresponds to a different Colab notebook. You can work through them, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells.
+
+### Option 2: Your own IDE
+
+An alternative way to use this material is to run it on an IDE of your own choice (we strongly recommend VSCode). The vast majority of the exercises will not require a particularly good GPU, and where there are exceptions we will give some advice for how to get the most out of the exercises regardless.
+
+Full instructions for running the exercises in this way:
+
+* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
+* Open in your choice of IDE (we recommend VSCode).
+* Make & activate a virtual environment
+    * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
+* Install requirements.
+    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
+    * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
+* While in the directory, run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
+    * This should open up a local copy of the page you're reading right now, and you're good to go!
+
+To complete one of the exercise pages, you should:
+
+* Navigate to the appropriate directory in the repo (e.g. `exercises/transformer_from_scratch`)
+* Create a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks)
+* Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
+    * For each page, this will always start with some basic imports (including libraries like `transformer_lens`, as well as local files like `tests.py` and `solutions.py`).
+
 ## Glossary
 
 Neel recently released a [Mechanistic Interpretability Glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J), which I highly recommend you check out. It's a great resource for understanding the terminology and concepts that are used in the following pages. Don't worry if you don't understand much of the material right now; hopefully much of it will become clearer as you go through the exercises.
