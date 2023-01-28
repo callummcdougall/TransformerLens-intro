@@ -122,7 +122,7 @@ This material starts with a guided implementation of transformers, so you don't 
 This is probably the most important prerequisite. You should be comfortable with the following concepts:
 
 - [Linear transformations](https://www.youtube.com/watch?v=kYB8IZa5AuE) - what they are, and why they matter
-- How [http://mlwiki.org/index.php/Matrix-Matrix_Multiplication](matrix multiplication) works
+- How [matrix multiplication](http://mlwiki.org/index.php/Matrix-Matrix_Multiplication) works
 - Basic matrix properties: rank, trace, determinant, transpose, inverse
 - Bases, and basis transformations
 
@@ -338,5 +338,5 @@ To complete one of the exercise pages, you should:
 """)
     
 
-if is_local or check_password():
-    page()
+# if is_local or check_password():
+page()

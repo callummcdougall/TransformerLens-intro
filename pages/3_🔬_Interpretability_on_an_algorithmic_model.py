@@ -16,7 +16,7 @@ def st_image(name, width):
     st.markdown(img_to_html(name, width=width), unsafe_allow_html=True)
 
 def read_from_html(filename):
-    filename = f"images/{filename}.html"
+    filename = f"images/{filename}.html" if "written_images" in filename else f"images/page_images/{filename}.html"
     with open(filename) as f:
         html = f.read()
     try:
