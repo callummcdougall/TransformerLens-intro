@@ -6,7 +6,7 @@ import platform
 is_local = (platform.processor() != "")
 
 def st_image(name, width):
-    with open("images/" + name, "rb") as file:
+    with open("images/page_images/" + name, "rb") as file:
         img_bytes = file.read()
     encoded = base64.b64encode(img_bytes).decode()
     img_html = f"<img style='width:{width}px;max-width:100%;margin-bottom:25px' src='data:image/png;base64,{encoded}' class='img-fluid'>"

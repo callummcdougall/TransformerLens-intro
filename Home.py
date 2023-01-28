@@ -1,7 +1,4 @@
 import os
-if not os.path.exists("./images"):
-    os.chdir("./ch6")
-
 from st_dependencies import *
 st.set_page_config(layout="wide")
 
@@ -97,7 +94,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 def page():
-    st_image("magnifying-glass-2.png", width=350)
+    st_image("magnifying-glass-2.png", width=600)
     st.title("Mechanistic Interpretability & TransformerLens")
 
     st.markdown(r"""
@@ -170,7 +167,8 @@ The main prerequisite we assume in these pages is a working understanding of tra
 
 You are also strongly recommended to read the paper [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html), or watch Neel's walkthrough of the paper [here](https://www.youtube.com/watch?v=KV5gbOmHbjU). Much of this material will be re-covered in the following pages (e.g. as we take a deeper dive into induction heads in the first set of exercises), but it will still probably be useful.
 
-Below are a collection of unstructured notes from Neel, to help better understand the Mathematical Frameworks paper. Several of these are also addressed in his glossary and video walkthrough. There's a lot here, so don't worry about understanding every last point!""")
+Below are a collection of unstructured notes from Neel, to help better understand the Mathematical Frameworks paper. Several of these are also addressed in his glossary and video walkthrough. There's a lot here, so don't worry about understanding every last point!
+""")
 
     with st.expander("Tips & Insights for the Paper"):
         st.markdown(r"""
