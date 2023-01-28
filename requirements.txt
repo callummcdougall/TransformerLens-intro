@@ -1,7 +1,6 @@
 # Make sure to install the torch dependencies with conda:
 # conda install pytorch=1.11.0 torchdata torchvision -c pytorch -y
 
-gym==0.23.1
 fancy_einsum
 einops
 requests
