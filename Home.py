@@ -64,14 +64,6 @@ st.sidebar.markdown("""
 
 <ul class="contents">
     <li><a class="contents-el" href="#about-transformerlens">About TransformerLens</a></li>
-    <li><a class="contents-el" href="#glossary">Glossary</a></li>
-    <li><a class="contents-el" href="#prerequisites">Prerequisites</a></li>
-    <li><ul class="contents">
-        <li><a class="contents-el" href="#linear-algebra">Linear algebra</a></li>
-        <li><a class="contents-el" href="#neural-networks">Neural Networks</a></li>
-        <li><a class="contents-el" href="#basic-python">Basic Python</a></li>
-        <li><a class="contents-el" href="#other-topics">Other topics</a></li>
-    </ul></li>
     <li><a class="contents-el" href="#about-these-pages">About these pages</a></li>
     <li><ul class="contents">
         <li><a class="contents-el" href="#transformer-from-scratch">Transformer from scratch</a></li>
@@ -80,15 +72,18 @@ st.sidebar.markdown("""
         <li><a class="contents-el" href="#grokking">Grokking</a></li>
         <li><a class="contents-el" href="#indirect-obbjct-identification">Indirect Objct Identification</a></li>
     </ul></li>
-    <li><a class="contents-el" href="#page-structure">Page Structure</a></li>
-    <li><ul class="contents">
-        <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
-        <li><a class="contents-el" href="#exercises">Exercises</a></li>
-    </ul></li>
     <li><a class="contents-el" href="#how-you-should-use-this-material">How you should use this material</a></li>
     <li><ul class="contents">
         <li><a class="contents-el" href="#option-1-colab">Option 1: Colab</a></li>
         <li><a class="contents-el" href="#option-2-your-own-ide">Option 2: Your own IDE</a></li>
+    </ul></li>
+    <li><a class="contents-el" href="#prerequisites">Prerequisites</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#linear-algebra">Linear algebra</a></li>
+        <li><a class="contents-el" href="#neural-networks">Neural Networks</a></li>
+        <li><a class="contents-el" href="#basic-python">Basic Python</a></li>
+        <li><a class="contents-el" href="#transformer-circuits">Transformer Circuits</a></li>
+        <li><a class="contents-el" href="#other-topics">Other topics</a></li>
     </ul></li>
 </ul>
 """, unsafe_allow_html=True)
@@ -109,9 +104,62 @@ From the description in Neel Nanda's repo:
 > 
 > TransformerLens lets you load in an open source language model, like GPT-2, and exposes the internal activations of the model to you. You can cache any internal activation in the model, and add in functions to edit, remove or replace these activations as the model runs. The core design principle I've followed is to enable exploratory analysis. One of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. Part of what I aimed for is to make my experience of doing research easier and more fun, hopefully this transfers to you!
 
-## Glossary
+## About these pages
 
-Neel recently released a [Mechanistic Interpretability Glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J), which I highly recommend you check out. It's a great resource for understanding the terminology and concepts that are used in the following pages. Don't worry if you don't understand much of the material right now; hopefully much of it will become clearer as you go through the exercises.
+Here is a rundown of all the pages in the Streamlit app, and what to expect from each of them: 
+
+### Transformer from scratch
+
+This shows you how to build a transformer from scratch, which mirrors the prototypical transformers used in the `transformer_lens` library. Even if you're familiar with transformers I'd recommend at least skimming this page, to get an idea of how this library works. This page is a lot shorter than most of the other pages.
+
+### TransformerLens & induction circuits
+
+* Sections 1️⃣ and 2️⃣ demonstrate the core features of TransformerLens, and walk you through identifying induction circuits in models. There is a stronger focus on introducing concepts and laying groundwork here, rather than coding and exercises.
+* Section 3️⃣ shows you how to use hooks to access a model's activations (and intervene on them). It has a stronger focus on coding.
+* Section 4️⃣ shows you how to reverse-engineer induction circuits directly from the model's weights. It is much more conceptual rather than coding-focused, and is based heavily on Anthropic's [Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) paper.
+
+### Interpretability on an algorithmic model
+
+These exercises take you through the application of TransformerLens features to an algorithmic task - interpreting a model trained to classify bracket strings as balanced or unbalanced. There are fewer new concepts here than in the previous section; instead there's more of a focus on forming and testing hypotheses about a model's behaviour in a small, relatively easy-to-understand domain.
+
+### Grokking
+
+Coming soon!
+
+### Indirect Objct Identification
+
+Coming soon!
+
+## How you should use this material
+
+### Option 1: Colab
+
+The simplest way to get these exercises up and running is to use Colab. This guarantees good GPU support, and means you'll spend less time messing around with environments and IDEs. Each set of exercises will have a link to the accompanying Colab notebook, which you should make a copy of and work through. The Colabs have essentially the same structure as the Streamlit pages.
+
+Each of the pages on the left hand sidebar corresponds to a different Colab notebook. You can work through them, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells.
+
+### Option 2: Your own IDE
+
+An alternative way to use this material is to run it on an IDE of your own choice (we strongly recommend VSCode). The vast majority of the exercises will not require a particularly good GPU, and where there are exceptions we will give some advice for how to get the most out of the exercises regardless.
+
+Full instructions for running the exercises in this way:
+
+* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
+* Open in your choice of IDE (we recommend VSCode).
+* Make & activate a virtual environment
+    * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
+* Install requirements.
+    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
+    * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
+* While in the directory, run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
+    * This should open up a local copy of the page you're reading right now, and you're good to go!
+
+To complete one of the exercise pages, you should:
+
+* Navigate to the appropriate directory in the repo (e.g. `exercises/transformer_from_scratch`)
+* Create a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks)
+* Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
+    * For each page, this will always start with some basic imports (including libraries like `transformer_lens`, as well as local files like `tests.py` and `solutions.py`).
 
 ## Prerequisites
 
@@ -142,7 +190,6 @@ It would be very helpful to understand the basics of what neural networks are, a
 * [Gradient descent, how neural networks learn | Chapter 2, Deep learning](https://www.youtube.com/watch?v=IHZwWFHWa-w)
 * [What is backpropagation really doing? | Chapter 3, Deep learning](https://www.youtube.com/watch?v=Ilg3gGewQ5U)
 
-
 ### Basic Python
 
 It's important to be able to code at a reasonably proficient level in Python. As a rough guide, you should:
@@ -152,22 +199,16 @@ It's important to be able to code at a reasonably proficient level in Python. As
 * Know what vectorisation is, and how to use languages like NumPy or PyTorch to perform vectorised array operations.
     * In particular, these exercises are all based in PyTorch, so going through a tutorial like [this one](https://pytorch.org/tutorials/beginner/blitz/tensor_tutorial.html) might be a good idea (the tensors section is very important; most of the following sections would have diminishing returns from studying but might still be useful).
 
-### Other topics
+### Transformer Circuits
 
-Here are a few other topics that would probably be useful to have some familiarity with. They are listed in approximately descending order of importance (and none of them are as important as the three sections above):
+This isn't a prerequisite for the first set of exercises (and in fact, if you haven't come across transformers before, you're recommended to do the exercises **Transformers from scratch** before attempting to read this paper). However, after you've done those exercises, you will need to understand the material in the paper [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) before moving on to the later exercises. 
 
-* Basic probability & statistics (e.g. normal and uniform distributions, independent random variables, estimators)
-* Calculus (and how it relates to backpropagation and gradient descent)
-* Information theory (e.g. what is cross entropy, and what does it mean for a predictive model to minimise cross entropy loss between its predictions and the true labels)
-* Familiarity with other useful Python libraries (e.g. `einops` for rearranging tensors, `typing` for typechecking, `plotly` for interactive visualisations)
-* Working with VSCode, and basic Git (this will be useful if you're doing these exercises from VSCode rather than from Colab)
+The paper is highly technical, so don't worry if it takes you a few passes to understand it. Here are a few things you can do to help build up to a full understanding of the core parts of the paper:
 
-
-The main prerequisite we assume in these pages is a working understanding of transformers. In particular, you are strongly recommended to go through Neel's [Colab & video tutorial](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/clean-transformer-demo/Clean_Transformer_Demo_Template.ipynb#scrollTo=SKVxRKXVsgO6).
-
-You are also strongly recommended to read the paper [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html), or watch Neel's walkthrough of the paper [here](https://www.youtube.com/watch?v=KV5gbOmHbjU). Much of this material will be re-covered in the following pages (e.g. as we take a deeper dive into induction heads in the first set of exercises), but it will still probably be useful.
-
-Below are a collection of unstructured notes from Neel, to help better understand the Mathematical Frameworks paper. Several of these are also addressed in his glossary and video walkthrough. There's a lot here, so don't worry about understanding every last point!
+* Watch Neel's [video walkthrough](https://www.youtube.com/watch?v=KV5gbOmHbjU) instead, which does a great job highlighting which parts of the paper are the most conceptually important.
+* Read Neel's [Mechanistic Interpretability Glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J), which is a great resource for understanding the terminology and concepts that are used in the following pages.
+* Read [this LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated), which uses a series of diagrams to explain induction heads and how they work (these are at the core of the second set of exercises).
+* When it comes to reading the actual paper, the set of tips below should help you get the most out of it (these were written by Neel, and many of them overlap with the points he makes in his video walkthrough).
 """)
 
     with st.expander("Tips & Insights for the Paper"):
@@ -186,9 +227,6 @@ Below are a collection of unstructured notes from Neel, to help better understan
 * One of the key insights of the framework is that there are only a few activations of the network that are intrinsically meaningful and interpretable - the input tokens, the output logits and attention patterns (and neuron activations in non-attention-only models). Everything else (the residual stream, queries, keys, values, etc) are just intermediate states on a calculation between two intrinsically meaningful things, and you should instead try to understand the start and the end. Our main goal is to decompose the network into many paths between interpretable start and end states
     * We can get away with this because transformers are really linear! The composition of many linear components is just one enormous matrix
 * A really key thing to grok about attention heads is that the QK and OV circuits act semi-independently. The QK circuit determines which previous tokens to attend to, and the OV circuit determines what to do to tokens *if* they are attended to. In particular, the residual stream at the destination token *only* determines the query and thus what tokens to attend to - what the head does *if* it attends to a position is independent of the destination token residual stream (other than being scaled by the attention pattern).
-    <p align="center">
-        <img src="w2d4_Attn_Head_Pic.png" width="400" />
-    </p>
 * Skip trigram bugs are a great illustration of this - it's worth making sure you really understand them. The key idea is that the destination token can *only* choose what tokens to pay attention to, and otherwise not mediate what happens *if* they are attended to. So if multiple destination tokens want to attend to the same source token but do different things, this is impossible - the ability to choose the attention pattern is insufficient to mediate this.
     * Eg, keep...in -> mind is a legit skip trigram, as is keep...at -> bay, but keep...in -> bay is an inherent bug from this pair of skip trigrams
 * The tensor product notation looks a lot more complicated than it is. $A \otimes W$ is shorthand for "the function $f_{A,W}$ st $f_{A,W}(x)=AxW$" - I recommend mentally substituting this in in your head everytime you read it.
@@ -225,116 +263,18 @@ Attention heads are harder because they map the input tensor $x$ (shape: `[posit
 
 The key point to remember is that if you ever get confused about what a tensor product means, explicitly represent it as a function of some input and see if things feel clearer.
 """)
-    st.markdown(r"""
-
-## About these pages
-
-Here is a rundown of all the pages in the Streamlit app, and what to expect from each of them: 
-
-### Transformer from scratch
-
-* This shows you how to build a transformer from scratch, which mirrors the prototypical transformers used in the `transformer_lens` library.
-* Even if you're familiar with transformers I'd recommend at least skimming this page, to get an idea of how this library works.
-* This page is a lot shorter than most of the other pages.
-
-### TransformerLens & induction circuits
-
-* The first two sections demonstrate the core features of TransformerLens, and walk you through identifying induction circuits in models. It's relatively introductory in tone, and is quite light on exercises.
-* The third section shows you how to use hooks to access a model's activations (and intervene on them). It has a stronger focus on coding.
-* The fourth section shows you how to reverse-engineer induction circuits directly from the model's weights. It is much more conceptual rather than coding-focused, and is based heavily on Anthropic's [Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) paper.
-
-### Interpretability on an algorithmic model
-
-* These exercises take you through the application of TransformerLens features to an algorithmic task - interpreting a model trained to classify bracket strings as balanced or unbalanced.
-* This is less conceptually difficult, with more of a focus on forming and testing hypotheses about a model's behaviour in a small, relatively easy-to-understand domain.
-
-### Grokking
-
-Coming soon!
-
-### Indirect Objct Identification
-
-Coming soon!
-
-## Page structure
-
-Each page is split into several sub-pages. Each subpage starts with a list of learning objectives. For example, here's the learning objectives for the first subpage of the TransformerLens & induction circuits page:
-""")
-
-    st.info(r"""
-### Learning objectives
-
-* Load and run a `HookedTransformer` model.
-* Understand the basic architecture of these models.
-* Use the model's tokenizer to convert text to tokens, and vice versa.
-* Know how to cache activations, and to access activations from the cache.
-* Use `circuitsvis` to visualise attention heads.""")
 
     st.markdown(r"""
-Additionally, each subpage will have exercises for you to complete. These are denoted by a purple box. For example, here's a short exercise from the first subpage of the TransformerLens & induction circuits page:
-""")
+### Other topics
 
-    with st.columns(1)[0]:
-        st.markdown(r"""
-#### Exercise - verify activations
+Here are a few other topics that would probably be useful to have some familiarity with. They are listed in approximately descending order of importance (and none of them are as important as the three sections above):
 
-Verify that `hook_q`, `hook_k` and hook_pattern are related to each other in the way implied by the diagram. Do this by computing `layer0_pattern_from_cache` (the attention pattern taken directly from the cache, for layer 0) and `layer0_pattern_from_q_and_k` (the attention pattern calculated from `hook_q` and `hook_k`, for layer 0).
+* Basic probability & statistics (e.g. normal and uniform distributions, independent random variables, estimators)
+* Calculus (and how it relates to backpropagation and gradient descent)
+* Information theory (e.g. what is cross entropy, and what does it mean for a predictive model to minimise cross entropy loss between its predictions and the true labels)
+* Familiarity with other useful Python libraries (e.g. `einops` for rearranging tensors, `typing` for typechecking, `plotly` for interactive visualisations)
+* Working with VSCode, and basic Git (this will be useful if you're doing these exercises from VSCode rather than from Colab)
 
-```python
-layer0_pattern_from_cache = None    # You should replace this!
-layer0_pattern_from_q_and_k = None  # You should replace this!
-
-t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
-```
-""")
-        with st.expander("Solution"):
-            st.markdown(r"""
-```python
-layer0_pattern_from_cache = gpt2_cache["pattern", 0]
-
-seq, nhead, headsize = gpt2_cache["q", 0].shape
-layer0_attn_scores = einsum("seqQ n h, seqK n h -> n seqQ seqK", gpt2_cache["q", 0], gpt2_cache["k", 0])
-mask = t.tril(t.ones((seq, seq), device=device, dtype=bool))
-layer0_attn_scores = t.where(mask, layer0_attn_scores, -1e9)
-layer0_pattern_from_q_and_k = (layer0_attn_scores / headsize**0.5).softmax(-1)
-
-t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
-```
-""")
-
-    st.markdown(r"""
-Some of these exercises will be very directed, and will just require you to fill in a few lines of code. Others will be more challenging. All the exercises have solutions available to view, so you can use them if you get stuck.
-
-## How you should use this material
-
-### Option 1: Colab
-
-The simplest way to get these exercises up and running is to use Colab. This guarantees good GPU support, and means you'll spend less time messing around with environments and IDEs. Each set of exercises will have a link to the accompanying Colab notebook, which you should make a copy of and work through. The Colabs have essentially the same structure as the Streamlit pages.
-
-Each of the pages on the left hand sidebar corresponds to a different Colab notebook. You can work through them, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells.
-
-### Option 2: Your own IDE
-
-An alternative way to use this material is to run it on an IDE of your own choice (we strongly recommend VSCode). The vast majority of the exercises will not require a particularly good GPU, and where there are exceptions we will give some advice for how to get the most out of the exercises regardless.
-
-Full instructions for running the exercises in this way:
-
-* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
-* Open in your choice of IDE (we recommend VSCode).
-* Make & activate a virtual environment
-    * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
-* Install requirements.
-    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
-    * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
-* While in the directory, run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
-    * This should open up a local copy of the page you're reading right now, and you're good to go!
-
-To complete one of the exercise pages, you should:
-
-* Navigate to the appropriate directory in the repo (e.g. `exercises/transformer_from_scratch`)
-* Create a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks)
-* Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
-    * For each page, this will always start with some basic imports (including libraries like `transformer_lens`, as well as local files like `tests.py` and `solutions.py`).
 """)
     
 

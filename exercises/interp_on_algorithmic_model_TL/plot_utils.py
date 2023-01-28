@@ -10,7 +10,7 @@ from transformer_lens import utils, HookedTransformer
 import einops
 import torch as t
 
-WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
+WIP = r"images/written_images"
 def save_fig(fig, filename):
     with open(f"{WIP}/{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
@@ -73,11 +73,6 @@ def plot_contribution_vs_open_proportion(unbalanced_component: TT["batch"], titl
     save_fig(fig, f"failure_types_scatter_20{title.replace('.', '')}")
     fig.show()
 
-WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
-def write_to_html(fig, filename):
-    with open(f"{WIP}/{filename}.html", "w") as f:
-        f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
-
 def mlp_attribution_scatter(
     out_by_component_in_pre_20_unbalanced_dir: TT["comp", "batch"], 
     data: BracketsDataset, failure_types_dict: Dict
@@ -97,7 +92,7 @@ def mlp_attribution_scatter(
             template="simple_white", height=500, width=800,
             labels={"x": "Open-proportion", "y": "Head 2.0 contribution"}
         ).update_traces(marker_size=4, opacity=0.5).update_layout(legend_title_text='Failure type')
-        write_to_html(fig, f"mlp_attribution_{layer}")
+        save_fig(fig, f"mlp_attribution_{layer}")
         fig.show()
 
 def plot_neurons(neurons_in_unbalanced_dir: TT["batch", "neurons"], model: HookedTransformer, data: BracketsDataset, failure_types_dict: Dict, layer: int):

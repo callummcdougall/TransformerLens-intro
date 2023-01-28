@@ -1,35 +1,20 @@
 # %%
-import functools
-import json
-import os
-import sys
-from typing import Dict, List, Tuple, Union, Optional, Callable
+from typing import Callable
 import torch as t
-from fancy_einsum import einsum
-from sklearn.linear_model import LinearRegression
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import einops
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
 from torchtyping import TensorType as TT
 
-from transformer_lens import utils, ActivationCache
-from transformer_lens.hook_points import HookPoint
-from transformer_lens import HookedTransformer, HookedTransformerConfig
-from transformer_lens.components import LayerNorm
-from brackets_datasets import SimpleTokenizer, BracketsDataset
+from transformer_lens import ActivationCache
+from transformer_lens import HookedTransformer
+from brackets_datasets import BracketsDataset
 
-from IPython import get_ipython
-ipython = get_ipython()
-# Code to automatically update the HookedTransformer code as its edited without restarting the kernel
-ipython.magic("load_ext autoreload")
-ipython.magic("autoreload 2")
+# from IPython import get_ipython
+# ipython = get_ipython()
+# # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
+# ipython.magic("load_ext autoreload")
+# ipython.magic("autoreload 2")
 
 MAIN = __name__ == "__main__"
-device = t.device("cuda")
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
 t.set_grad_enabled(False)
 
