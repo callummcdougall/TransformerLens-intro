@@ -3,28 +3,25 @@
 import einops
 from fancy_einsum import einsum
 from dataclasses import dataclass
-import torch
+import torch as t
 import torch.nn as nn
-import numpy as np
 import math
-from transformer_lens import EasyTransformer
-from transformer_lens.utils import get_corner, gelu_new, tokenize_and_concatenate
+from transformer_lens import HookedTransformer
+from transformer_lens.utils import gelu_new, tokenize_and_concatenate
 import tqdm.auto as tqdm
-
+import datasets
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
-from IPython import get_ipython
-ipython = get_ipython()
-# Code to automatically update the HookedTransformer code as its edited without restarting the kernel
-ipython.magic("load_ext autoreload")
-ipython.magic("autoreload 2")
-
-import tests
+# # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
+# from IPython import get_ipython
+# ipython = get_ipython()
+# ipython.magic("load_ext autoreload")
+# ipython.magic("autoreload 2")
 
 MAIN = __name__ == "__main__"
 
 if MAIN:
-    reference_gpt2 = EasyTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+    reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 
 # %%
 
@@ -54,7 +51,7 @@ if MAIN:
 def rand_float_test(cls, shape):
     cfg = Config(debug=True)
     layer = cls(cfg).cuda()
-    random_input = torch.randn(shape).cuda()
+    random_input = t.randn(shape).cuda()
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
@@ -62,7 +59,7 @@ def rand_float_test(cls, shape):
 def rand_int_test(cls, shape):
     cfg = Config(debug=True)
     layer = cls(cfg).cuda()
-    random_input = torch.randint(100, 1000, shape).cuda()
+    random_input = t.randint(100, 1000, shape).cuda()
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
@@ -77,7 +74,7 @@ def load_gpt2_test(cls, gpt2_layer, input):
     reference_output = gpt2_layer(input)
     print("Reference output shape:", reference_output.shape, "\n")
 
-    comparison = torch.isclose(output, reference_output, atol=1e-4, rtol=1e-3)
+    comparison = t.isclose(output, reference_output, atol=1e-4, rtol=1e-3)
     print(f"{comparison.sum()/comparison.numel():.2%} of the values are correct\n")
 
 # %%
@@ -86,8 +83,8 @@ class LayerNorm(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.w = nn.Parameter(torch.ones(cfg.d_model))
-        self.b = nn.Parameter(torch.zeros(cfg.d_model))
+        self.w = nn.Parameter(t.ones(cfg.d_model))
+        self.b = nn.Parameter(t.zeros(cfg.d_model))
 
     def forward(self, residual):
         # residual: [batch, position, d_model]
@@ -107,7 +104,7 @@ class Embed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_E = nn.Parameter(torch.empty((cfg.d_vocab, cfg.d_model)))
+        self.W_E = nn.Parameter(t.empty((cfg.d_vocab, cfg.d_model)))
         nn.init.normal_(self.W_E, std=self.cfg.init_range)
 
     def forward(self, tokens):
@@ -124,7 +121,7 @@ class PosEmbed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_pos = nn.Parameter(torch.empty((cfg.n_ctx, cfg.d_model)))
+        self.W_pos = nn.Parameter(t.empty((cfg.n_ctx, cfg.d_model)))
         nn.init.normal_(self.W_pos, std=self.cfg.init_range)
 
     def forward(self, tokens):
@@ -142,23 +139,23 @@ class Attention(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
-        self.W_Q = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-        self.b_Q = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-        self.W_K = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.W_K = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_K, std=self.cfg.init_range)
-        self.b_K = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-        self.W_V = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_V, std=self.cfg.init_range)
-        self.b_V = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
 
-        self.W_O = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
+        self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
         nn.init.normal_(self.W_O, std=self.cfg.init_range)
-        self.b_O = nn.Parameter(torch.zeros((cfg.d_model)))
+        self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
 
-        self.register_buffer("IGNORE", torch.tensor(-1e5, dtype=torch.float32, device="cuda"))
+        self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
 
-    def forward(self, normalized_resid_pre: torch.Tensor):
+    def forward(self, normalized_resid_pre: t.Tensor):
         # normalized_resid_pre: [batch, position, d_model]
 
         # Calculate query, key and value vectors
@@ -188,7 +185,7 @@ class Attention(nn.Module):
 
         return out
 
-    def apply_causal_mask(self, attn_scores: torch.Tensor):
+    def apply_causal_mask(self, attn_scores: t.Tensor):
         # attn_scores: [batch, n_heads, query_pos, key_pos]
         seq_len = attn_scores.shape[-1]
         q_posn = einops.repeat(attn_scores.new_tensor(range(seq_len)), "q -> q k", k=seq_len)
@@ -207,12 +204,12 @@ class MLP(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_in = nn.Parameter(torch.empty((cfg.d_model, cfg.d_mlp)))
+        self.W_in = nn.Parameter(t.empty((cfg.d_model, cfg.d_mlp)))
         nn.init.normal_(self.W_in, std=self.cfg.init_range)
-        self.b_in = nn.Parameter(torch.zeros((cfg.d_mlp)))
-        self.W_out = nn.Parameter(torch.empty((cfg.d_mlp, cfg.d_model)))
+        self.b_in = nn.Parameter(t.zeros((cfg.d_mlp)))
+        self.W_out = nn.Parameter(t.empty((cfg.d_mlp, cfg.d_model)))
         nn.init.normal_(self.W_out, std=self.cfg.init_range)
-        self.b_out = nn.Parameter(torch.zeros((cfg.d_model)))
+        self.b_out = nn.Parameter(t.zeros((cfg.d_model)))
 
     def forward(self, normalized_resid_mid):
         # normalized_resid_mid: [batch, position, d_model]
@@ -254,9 +251,9 @@ class Unembed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_U = nn.Parameter(torch.empty((cfg.d_model, cfg.d_vocab)))
+        self.W_U = nn.Parameter(t.empty((cfg.d_model, cfg.d_vocab)))
         nn.init.normal_(self.W_U, std=self.cfg.init_range)
-        self.b_U = nn.Parameter(torch.zeros((cfg.d_vocab), requires_grad=False))
+        self.b_U = nn.Parameter(t.zeros((cfg.d_vocab), requires_grad=False))
 
     def forward(self, normalized_resid_final):
         # normalized_resid_final [batch, position, d_model]
@@ -306,7 +303,7 @@ if MAIN:
     test_tokens = reference_gpt2.to_tokens(test_string).cuda()
     demo_logits = demo_gpt2(test_tokens)
 
-def lm_cross_entropy_loss(logits: torch.Tensor, tokens: torch.Tensor):
+def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
     # Measure next token loss
     # Logits have shape [batch, position, d_vocab]
     # Tokens have shape [batch, position]
@@ -325,18 +322,11 @@ if MAIN:
 
 if MAIN:
     test_string = "There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that"
-    for i in tqdm.tqdm(range(100)):
+    for i in tqdm(range(100)):
         test_tokens = reference_gpt2.to_tokens(test_string).cuda()
         demo_logits = demo_gpt2(test_tokens)
         test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
     print(test_string)
-
-# %%
-
-import datasets
-import transformers
-import plotly.express as px
-
 
 # %%
 
@@ -353,6 +343,6 @@ if MAIN:
     print(dataset)
     print(dataset[0]['text'][:100])
     tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
-    data_loader = torch.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
 # %%

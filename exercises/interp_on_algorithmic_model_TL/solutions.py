@@ -31,16 +31,16 @@ from brackets_datasets import SimpleTokenizer, BracketsDataset
 import tests
 import plot_utils
 
-def imshow(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
+def imshow(tensor, xaxis="", yaxis="", **kwargs):
+    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs)
 
-def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
+def line(tensor, xaxis="", yaxis="", **kwargs):
+    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs)
 
-def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
+def scatter(x, y, xaxis="", yaxis="", caxis="", **kwargs):
     x = utils.to_numpy(x)
     y = utils.to_numpy(y)
-    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
+    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
 # %%
 

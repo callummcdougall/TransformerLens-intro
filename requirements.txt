@@ -36,3 +36,4 @@ torchtyping
 typeguard
 transformer_lens
 streamlit
+datasets

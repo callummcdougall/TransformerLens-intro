@@ -35,13 +35,13 @@ t.set_grad_enabled(False)
 
 MAIN = __name__ == "__main__"
 
-def imshow(tensor, renderer=None, xaxis="", yaxis="", caxis="", **kwargs):
+def imshow(tensor, xaxis="", yaxis="", caxis="", **kwargs):
     return px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
-def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
+def line(tensor, xaxis="", yaxis="", **kwargs):
     return px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs)
 
-def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
+def scatter(x, y, xaxis="", yaxis="", caxis="", **kwargs):
     x = utils.to_numpy(x)
     y = utils.to_numpy(y)
     return px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
@@ -106,6 +106,7 @@ if MAIN:
     t.testing.assert_close(layer0_pattern_from_cache, layer0_pattern_from_q_and_k)
 
 # %%
+
 if MAIN:
 
     print(type(gpt2_cache))
@@ -114,7 +115,6 @@ if MAIN:
     gpt2_str_tokens = gpt2_small.to_str_tokens(gpt2_text)
 
     display(cv.attention.attention_patterns(tokens=gpt2_str_tokens, attention=attention_pattern))
-
 
 # %%
 

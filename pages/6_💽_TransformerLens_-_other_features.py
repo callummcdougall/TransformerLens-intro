@@ -1,6 +1,4 @@
 import os
-if not os.path.exists("./images"):
-    os.chdir("./ch6")
 import re, json
 import plotly.io as pio
 

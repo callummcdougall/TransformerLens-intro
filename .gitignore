@@ -2,3 +2,4 @@ attn_only_2L_half.pth
 __pycache__/
 *.pyc
 *.pyo
+grokking

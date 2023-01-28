@@ -8,7 +8,7 @@ from st_dependencies import *
 styling()
 
 def img_to_html(img_path, width):
-    with open("images/" + img_path, "rb") as file:
+    with open("images/page_images/" + img_path, "rb") as file:
         img_bytes = file.read()
     encoded = base64.b64encode(img_bytes).decode()
     return f"<img style='width:{width}px;max-width:100%;st-bottom:25px' src='data:image/png;base64,{encoded}' class='img-fluid'>"
@@ -139,17 +139,6 @@ from transformer_lens.components import LayerNorm
 from brackets_datasets import SimpleTokenizer, BracketsDataset
 import tests
 import plot_utils
-
-def imshow(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
-
-def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
-
-def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
-    x = utils.to_numpy(x)
-    y = utils.to_numpy(y)
-    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs).show(renderer)
 ```
 
 ## Overview of content

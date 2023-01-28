@@ -1,6 +1,4 @@
 import os
-if not os.path.exists("./images"):
-    os.chdir("./ch6")
 import re, json
 import plotly.io as pio
 
@@ -8,7 +6,7 @@ from st_dependencies import *
 styling()
 
 def img_to_html(img_path, width):
-    with open("images/" + img_path, "rb") as file:
+    with open("images/page_images/" + img_path, "rb") as file:
         img_bytes = file.read()
     encoded = base64.b64encode(img_bytes).decode()
     return f"<img style='width:{width}px;max-width:100%;st-bottom:25px' src='data:image/png;base64,{encoded}' class='img-fluid'>"
@@ -16,7 +14,7 @@ def st_image(name, width):
     st.markdown(img_to_html(name, width=width), unsafe_allow_html=True)
 
 def read_from_html(filename):
-    filename = f"images/{filename}.html"
+    filename = f"images/{filename}.html" if "written_images" in filename else f"images/page_images/{filename}.html"
     with open(filename) as f:
         html = f.read()
     call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
@@ -73,7 +71,7 @@ def update_fig_dict(fig_dict):
 
 fig_dict = update_fig_dict(fig_dict)
 
-with open("images/layer0_head_attn_patterns.html") as f:
+with open("images/page_images/layer0_head_attn_patterns.html") as f:
     layer0_head_attn_patterns = f.read()
 
 def section_home():
@@ -142,13 +140,13 @@ t.set_grad_enabled(False)
 
 MAIN = __name__ == "__main__"
 
-def imshow(tensor, renderer=None, xaxis="", yaxis="", caxis="", **kwargs):
+def imshow(tensor, xaxis="", yaxis="", caxis="", **kwargs):
     return px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
-def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
+def line(tensor, xaxis="", yaxis="", **kwargs):
     return px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs)
 
-def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, **kwargs):
+def scatter(x, y, xaxis="", yaxis="", caxis="", **kwargs):
     x = utils.to_numpy(x)
     y = utils.to_numpy(y)
     return px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
@@ -635,7 +633,7 @@ Hover over heads to see the attention patterns; click on a head to lock it. Hove
     # with open("images/cv_attn.html") as f:
     #     text = f.read()
     # st.components.v1.html(text, height=400)
-    st.components.v1.html(layer0_head_attn_patterns, height=450)
+    st.components.v1.html(layer0_head_attn_patterns, height=550)
     # st.markdown(layer0_head_attn_patterns, unsafe_allow_html=True)
 
     st.info(r"""

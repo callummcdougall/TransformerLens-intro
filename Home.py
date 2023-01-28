@@ -69,6 +69,12 @@ st.sidebar.markdown("""
     <li><a class="contents-el" href="#about-transformerlens">About TransformerLens</a></li>
     <li><a class="contents-el" href="#glossary">Glossary</a></li>
     <li><a class="contents-el" href="#prerequisites">Prerequisites</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#linear-algebra">Linear algebra</a></li>
+        <li><a class="contents-el" href="#neural-networks">Neural Networks</a></li>
+        <li><a class="contents-el" href="#basic-python">Basic Python</a></li>
+        <li><a class="contents-el" href="#other-topics">Other topics</a></li>
+    </ul></li>
     <li><a class="contents-el" href="#about-these-pages">About these pages</a></li>
     <li><ul class="contents">
         <li><a class="contents-el" href="#transformer-from-scratch">Transformer from scratch</a></li>
@@ -91,7 +97,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 def page():
-    st_image("magnifying-glass.png", width=350)
+    st_image("magnifying-glass-2.png", width=350)
     st.title("Mechanistic Interpretability & TransformerLens")
 
     st.markdown(r"""
@@ -100,15 +106,65 @@ This page contains a collation of resources and exercises on interpretability. T
 
 ## About TransformerLens
 
-TransformerLens is a library for doing [mechanistic interpretability](https://distill.pub/2020/circuits/zoom-in/) of GPT-2 Style language models. The goal of mechanistic interpretability is to take a trained model and reverse engineer the algorithms the model learned during training from its weights. It is a fact about the world today that we have computer programs that can essentially speak English at a human level (GPT-3, PaLM, etc), yet we have no idea how they work nor how to write one ourselves. This offends me greatly, and I would like to solve this!*
+From the description in Neel Nanda's repo:
 
-*TransformerLens lets you load in an open source language model, like GPT-2, and exposes the internal activations of the model to you. You can cache any internal activation in the model, and add in functions to edit, remove or replace these activations as the model runs. The core design principle I've followed is to enable exploratory analysis. One of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. Part of what I aimed for is to make my experience of doing research easier and more fun, hopefully this transfers to you!*
+> TransformerLens is a library for doing [mechanistic interpretability](https://distill.pub/2020/circuits/zoom-in/) of GPT-2 Style language models. The goal of mechanistic interpretability is to take a trained model and reverse engineer the algorithms the model learned during training from its weights. It is a fact about the world today that we have computer programs that can essentially speak English at a human level (GPT-3, PaLM, etc), yet we have no idea how they work nor how to write one ourselves. This offends me greatly, and I would like to solve this!
+> 
+> TransformerLens lets you load in an open source language model, like GPT-2, and exposes the internal activations of the model to you. You can cache any internal activation in the model, and add in functions to edit, remove or replace these activations as the model runs. The core design principle I've followed is to enable exploratory analysis. One of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. Part of what I aimed for is to make my experience of doing research easier and more fun, hopefully this transfers to you!
 
 ## Glossary
 
-Neel recently released a [Mechanistic Interpretability Glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J), which I highly recommend you check out. It's a great resource for understanding the terminology and concepts that are used in the following pages. 
+Neel recently released a [Mechanistic Interpretability Glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J), which I highly recommend you check out. It's a great resource for understanding the terminology and concepts that are used in the following pages. Don't worry if you don't understand much of the material right now; hopefully much of it will become clearer as you go through the exercises.
 
 ## Prerequisites
+
+This material starts with a guided implementation of transformers, so you don't need to understand how they work before starting. However, there are a few things we do recommend:
+
+### Linear algebra
+
+This is probably the most important prerequisite. You should be comfortable with the following concepts:
+
+- [Linear transformations](https://www.youtube.com/watch?v=kYB8IZa5AuE) - what they are, and why they matter
+- How [http://mlwiki.org/index.php/Matrix-Matrix_Multiplication](matrix multiplication) works
+- Basic matrix properties: rank, trace, determinant, transpose, inverse
+- Bases, and basis transformations
+
+[This video series](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) by 3B1B provides a good overview of these core topics (although you can probably skip it if you already have a reasonably strong mathematical background).
+""")
+    st.markdown(r"""
+<img src="https://imgs.xkcd.com/comics/machine_learning_2x.png" alt="xkcd" width="300"/>
+""", unsafe_allow_html=True)
+    st.markdown("")
+    st.markdown(r"""
+
+### Neural Networks
+
+It would be very helpful to understand the basics of what neural networks are, and how they work. The best introductory resources here are 3B1B's videos on neural networks:
+
+* [But what is a neural network? | Chapter 1, Deep learning](https://www.youtube.com/watch?v=aircAruvnKk)
+* [Gradient descent, how neural networks learn | Chapter 2, Deep learning](https://www.youtube.com/watch?v=IHZwWFHWa-w)
+* [What is backpropagation really doing? | Chapter 3, Deep learning](https://www.youtube.com/watch?v=Ilg3gGewQ5U)
+
+
+### Basic Python
+
+It's important to be able to code at a reasonably proficient level in Python. As a rough guide, you should:
+
+* Understand most (e.g. >75%) of the material [here](https://book.pythontips.com/en/latest/), up to and including chapter 21. Not all of this will be directly useful for these exercises, but reading through this should give you a rough idea of the kind of level that is expcted of you.
+* Be comfortable with easy or medium [LeetCode problems](https://leetcode.com/).
+* Know what vectorisation is, and how to use languages like NumPy or PyTorch to perform vectorised array operations.
+    * In particular, these exercises are all based in PyTorch, so going through a tutorial like [this one](https://pytorch.org/tutorials/beginner/blitz/tensor_tutorial.html) might be a good idea (the tensors section is very important; most of the following sections would have diminishing returns from studying but might still be useful).
+
+### Other topics
+
+Here are a few other topics that would probably be useful to have some familiarity with. They are listed in approximately descending order of importance (and none of them are as important as the three sections above):
+
+* Basic probability & statistics (e.g. normal and uniform distributions, independent random variables, estimators)
+* Calculus (and how it relates to backpropagation and gradient descent)
+* Information theory (e.g. what is cross entropy, and what does it mean for a predictive model to minimise cross entropy loss between its predictions and the true labels)
+* Familiarity with other useful Python libraries (e.g. `einops` for rearranging tensors, `typing` for typechecking, `plotly` for interactive visualisations)
+* Working with VSCode, and basic Git (this will be useful if you're doing these exercises from VSCode rather than from Colab)
+
 
 The main prerequisite we assume in these pages is a working understanding of transformers. In particular, you are strongly recommended to go through Neel's [Colab & video tutorial](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/clean-transformer-demo/Clean_Transformer_Demo_Template.ipynb#scrollTo=SKVxRKXVsgO6).
 
@@ -184,14 +240,15 @@ Here is a rundown of all the pages in the Streamlit app, and what to expect from
 * This page is a lot shorter than most of the other pages.
 
 ### TransformerLens & induction circuits
-* The first half shows you the core features of TransformerLens, and walks you through identifying induction circuits in models. It's relatively introductory in tone, and is quite coding-heavy.
-* The second half shows you how to reverse-engineer induction circuits directly from the model's weights. It is much more conceptual, with heavy use of linear algebra.
-* This page (the latter half in particular) draws heavily from Anthropic's [Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) paper.
+
+* The first two sections demonstrate the core features of TransformerLens, and walk you through identifying induction circuits in models. It's relatively introductory in tone, and is quite light on exercises.
+* The third section shows you how to use hooks to access a model's activations (and intervene on them). It has a stronger focus on coding.
+* The fourth section shows you how to reverse-engineer induction circuits directly from the model's weights. It is much more conceptual rather than coding-focused, and is based heavily on Anthropic's [Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) paper.
 
 ### Interpretability on an algorithmic model
 
 * These exercises take you through the application of TransformerLens features to an algorithmic task - interpreting a model trained to classify bracket strings as balanced or unbalanced.
-* This is less conceptually difficult, with more of a focus on forming and testing hypotheses about a model's behaviour.
+* This is less conceptually difficult, with more of a focus on forming and testing hypotheses about a model's behaviour in a small, relatively easy-to-understand domain.
 
 ### Grokking
 

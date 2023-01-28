@@ -1,6 +1,6 @@
 import os
-if not os.path.exists("./images"):
-    os.chdir("./ch6")
+# if not os.path.exists("./images"):
+#     os.chdir("./ch6")
 import re, json
 import plotly.io as pio
 
@@ -8,7 +8,7 @@ from st_dependencies import *
 styling()
 
 def img_to_html(img_path, width):
-    with open("images/" + img_path, "rb") as file:
+    with open("images/page_images/" + img_path, "rb") as file:
         img_bytes = file.read()
     encoded = base64.b64encode(img_bytes).decode()
     return f"<img style='width:{width}px;max-width:100%;st-bottom:25px' src='data:image/png;base64,{encoded}' class='img-fluid'>"
@@ -50,13 +50,16 @@ def section_home():
 ## Table of contents
 
 <ul class="contents">
-    <li><a class="contents-el" href="#setup">Setup</a></li>
+    <li><a class="contents-el" href="#introduction">Introduction</a></li>
+    <li><a class="contents-el" href="#imports">Imports</a></li>
     <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
 </ul>""", unsafe_allow_html=True)
     st.markdown(r"""
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
 
-# Introduction
+# Transformer from scratch
+
+## Introduction
 
 This is a clean, first principles implementation of GPT-2 in PyTorch. This is an accompaniment to [my video tutorial on implementing GPT-2](https://neelnanda.io/transformer-tutorial-2). If you want to properly understand how to implement GPT-2, you'll need to do it yourself! There's a [template version of this notebook here](https://neelnanda.io/transformer-template), go and fill in the blanks (no copying and pasting!) and see if you can pass the tests. **I recommend filling out the template *as* you watch the video, and seeing how far you can get with each section before watching me do it**.
 
@@ -78,16 +81,28 @@ Check out these other intros to transformers for another perspective:
 
 If you've found this useful, I'd love to hear about it! Positive and negative feedback also very welcome. You can reach me via [email](mailto:neelnanda27@gmail.com)
 
-## Instructions
+## Imports
 
-You have two options for how to go through these exercises:
+If you're using Colab, you can just go straight to the page (scroll to the top for the link). If you're using your own IDE such as VSCode, and you've already gone through the setup steps described in **Home**, then you just need to create a file called `answers.py` (or `.ipynb` if you prefer notebooks) in the directory `exercises/transformer_from_scratch`, and run the following code at the top:
 
-1. Use this streamlit page, and your own choice of IDE (e.g. VSCode). The code you'll need to run can all be copied from the page, and the solutions will be available in dropdowns.
-2. Use the [template Google Colab](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/clean-transformer-demo/Clean_Transformer_Demo_Template.ipynb#scrollTo=JZ-9yQIulqJr), and compare your solutions to the [filled-in Colab](https://colab.research.google.com/github/neelnanda-io/Easy-Transformer/blob/clean-transformer-demo/Clean_Transformer_Demo.ipynb#scrollTo=bEYvLhXVAfRP).
+```python
+import einops
+from fancy_einsum import einsum
+from dataclasses import dataclass
+import torch as t
+import torch.nn as nn
+import math
+from transformer_lens import HookedTransformer
+from transformer_lens.utils import gelu_new, tokenize_and_concatenate
+import tqdm.auto as tqdm
+import datasets
+import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
-In either case, you will want to follow along with Neel's [video walkthrough](https://www.youtube.com/watch?v=VMvpQhNkm8w&list=PL7m7hLIqA0hoIUPhC26ASCVs_VrqcDpAz&index=1). The advantage of using Colab is that you'll have to spend less time setting up your environment, and it may be easier to follow along with his video. The advantages of using your own IDE are that you'll have more control over your environment, and future exercises may be easier to set up (since not all future exercises have a corresponding notebook yet).
+MAIN = __name__ == "__main__"
 
-As you go through the material, there will be exercises for you to try, and tests you can run to verify your solutions are correct. You get bonus points if you can do the exercises without looking at the solutions, and before I do it in the video!
+if MAIN:
+    reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+```
 
 ## Learning objectives
 
@@ -143,7 +158,7 @@ Here are the learning objectives for each section of the tutorial. At the end of
 # from fancy_einsum import einsum
 # from dataclasses import dataclass
 # import torch
-# import torch.nn as nn
+# import t.nn as nn
 # import numpy as np
 # import math
 # from transformer_lens import utils, HookedTransformer
@@ -160,18 +175,15 @@ def section_intro():
    <li><a class="contents-el" href="#what-is-the-point-of-a-transformer">What is the point of a transformer?</a></li>
    <li><ul class="contents">
        <li><a class="contents-el" href="#how-is-the-model-trained">How is the model trained?</a></li>
-       <li><a class="contents-el" href="#key-takeaway">Key takeaway:</a></li>
    </ul></li>
    <li><a class="contents-el" href="#tokens-transformer-inputs">Tokens - Transformer Inputs</a></li>
    <li><ul class="contents">
        <li><a class="contents-el" href="#how-do-we-convert-language-to-vectors">How do we convert language to vectors?</a></li>
-       <li><a class="contents-el" href="#tokens-language-to-sequence-of-integers">Tokens: Language to sequence of integers</a></li>
-       <li><a class="contents-el" href="#rant-tokenization-is-a-headache">Rant: Tokenization is a Headache</a></li>
-       <li><a class="contents-el" href="#key-takeaway">Key Takeaway:</a></li>
+       <li><a class="contents-el" href="#idea-integers-to-vectors">Idea: integers to vectors</a></li>
+       <li><a class="contents-el" href="#tokens-language-to-sequence-of-integers">Tokens: language to sequence of integers</a></li>
    </ul></li>
    <li><a class="contents-el" href="#logits-transformer-outputs">Logits - Transformer Outputs</a></li>
    <li><a class="contents-el" href="#generation">Generation!</a></li>
-   <li><a class="contents-el" href="#key-takeaways">Key takeaways:</a></li>
 </ul>
 """, unsafe_allow_html=True)
 
@@ -196,7 +208,7 @@ import einops
 from fancy_einsum import einsum
 from dataclasses import dataclass
 import torch
-import torch.nn as nn
+import t.nn as nn
 import numpy as np
 import math
 from transformer_lens import EasyTransformer
@@ -226,29 +238,31 @@ No! We make the transformer have *causal attention*. The core thing is that it c
 
     st_image("transformer-overview.png", 1000)
     st.markdown("")
+    st.success(r"""
+#### Key takeaways
+
+Transformers are *sequence modelling engines*. They perform the same processing in parallel at each sequence position, can move information between positions with attention, and conceptually can take a sequence of arbitrary length.\*
+""")
     st.markdown(r"""
-
-### Key takeaway:
-
-Transformers are *sequence modelling engines*. They the same processing in parallel at each sequence position, can move information between positions with attention, and conceptually can take a sequence of arbitrary length (not actually true, see later)
+\* In practice this isn't exactly true - see positional encodings later.
 
 ## Tokens - Transformer Inputs
 
-Core point: Input is language (ie a sequence of characters, strings, etc)
+Core point: Input is language (ie a sequence of characters, strings, etc).
 
 ### How do we convert language to vectors?
 
 ML models take in vectors, not weird stuff like language. How do we convert between the two?
 
-#### Idea: integers to vectors
+### Idea: integers $\to$ vectors
 
 We basically make a massive lookup table, which is called an **embedding**. It has one vector for each word in our vocabulary. We label every word in our vocabulary with an integer (this labelling never changes), and we use this integer to index into the embedding.
 
-This is usually represented as a matrix $W_E$ (e.g. with shape `[vocab_size, d_model]`). We can represent words with a **one-hot encoding**, i.e. a vector of length `vocab_size` with zeros everywhere except for a 1 in the position corresponding to the word. This means that if $v$ is a one-hot encoding of a word, then $v^T W_E$ is the embedding of that word (because this is just the v-th row of $W_E$). This framing is exactly equivalent to thinking of $W_E$ as a lookup table.
+We sometimes think about **one-hot encodings** of words. These are vectors with zeros everywhere, except for a single one in the position corresponding to the word's index in the vocabulary. This means that indexing into the embedding is equivalent to multiplying the **embedding matrix** by the one-hot encoding (where the embedding matrix is the matrix we get by stacking all the embedding vectors on top of each other).
 
 A key intuition is that one-hot encodings let you think about each integer independently. We don't bake in any relation between words when we perform our embedding, because every word has a completely separate embedding vector.
 
-### Tokens: Language to sequence of integers
+### Tokens: language $\to$ sequence of integers
 
 Core idea: We need a model that can deal with arbitrary text. We want to convert this into integers, *and* we want these integers to be in a bounded range. 
 
@@ -405,12 +419,12 @@ next_char = reference_gpt2.to_string(next_token)
 print(repr(next_char))
 ```
 
-### **Step 5:** Add this to the end of the input, re-run
+#### **Step 5:** Add this to the end of the input, re-run
 
 There are more efficient ways to do this (e.g. where we cache some of the values each time we run our input, so we don't have to do as much calculation each time we generate a new value), but this doesn't matter conceptually right now.
 
 ```python
-next_tokens = torch.cat([tokens, torch.tensor(next_token, device='cuda', dtype=torch.int64)[None, None]], dim=-1)
+next_tokens = t.cat([tokens, t.tensor(next_token, device='cuda', dtype=t.int64)[None, None]], dim=-1)
 new_logits = reference_gpt2(next_tokens)
 print("New Input:", next_tokens)
 print(next_tokens.shape)
@@ -424,9 +438,9 @@ print(reference_gpt2.tokenizer.decode(new_logits[-1, -1].argmax(-1)))
 """)
 
     st.success(r"""
-## Key takeaways:
+### Key takeaways
 
-* Takes in language, predicts next token (for *each* token in a causal way)
+* Transformer takes in language, predicts next token (for *each* token in a causal way)
 * We convert language to a sequence of integers with a tokenizer.
 * We convert integers to vectors with a lookup table.
 * Output is a vector of logits (one for each input token), we convert to a probability distn with a softmax, and can then convert this to a token (eg taking the largest logit, or sampling).
@@ -554,7 +568,7 @@ Importantly, **the MLP operates on positions in the residual stream independentl
 
 Intuition - once attention has moved relevant information to a single position in the residual stream, MLPs can actually do computation, reasoning, lookup information, etc. *What the hell is going on inside MLPs* is a pretty big open problem in transformer mechanistic interpretability - see the [Toy Model of Superposition Paper](https://transformer-circuits.pub/2022/toy_model/index.html) for more on why this is hard.
 
-Another important intuition - `linear map -> non-linearity -> linear map` basically [just works](https://xkcd.com/1838/), and can approximate arbitrary functions.
+Another important intuition - `linear map -> non-linearity -> linear map` is pretty much the most powerful force in the universe! It basically [just works](https://xkcd.com/1838/), and can approximate arbitrary functions.
 """)
     st_image("transformer-mlp.png", 720)
     st.markdown(r"""
@@ -693,7 +707,7 @@ Tests are great, write lightweight ones to use as you go!
 def rand_float_test(cls, shape):
     cfg = Config(debug=True)
     layer = cls(cfg).cuda()
-    random_input = torch.randn(shape).cuda()
+    random_input = t.randn(shape).cuda()
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
@@ -701,7 +715,7 @@ def rand_float_test(cls, shape):
 def rand_int_test(cls, shape):
     cfg = Config(debug=True)
     layer = cls(cfg).cuda()
-    random_input = torch.randint(100, 1000, shape).cuda()
+    random_input = t.randint(100, 1000, shape).cuda()
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
@@ -716,7 +730,7 @@ def load_gpt2_test(cls, gpt2_layer, input):
     reference_output = gpt2_layer(input)
     print("Reference output shape:", reference_output.shape, "\n")
 
-    comparison = torch.isclose(output, reference_output, atol=1e-4, rtol=1e-3)
+    comparison = t.isclose(output, reference_output, atol=1e-4, rtol=1e-3)
     print(f"{comparison.sum()/comparison.numel():.2%} of the values are correct\n")
 ```
 
@@ -731,7 +745,7 @@ Your LayerNorm should do the following:
 * Scale with learned weights
 * Translate with learned bias
 
-You can use the PyTorch [LayerNorm documentation](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) as a reference. A few more notes:
+You can use the PyTorch [LayerNorm documentation](https://pyt.org/docs/stable/generated/t.nn.LayerNorm.html) as a reference. A few more notes:
 
 * Your layernorm implementation always has `affine=True`, i.e. you do learn parameters `w` and `b` (which are represented as $\gamma$ and $\beta$ respectively in the PyTorch documentation).
 * Remember that, after the centering and normalization, each vector of length `d_model` in your input should have mean 0 and variance 1.
@@ -744,8 +758,8 @@ class LayerNorm(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.w = nn.Parameter(torch.ones(cfg.d_model))
-        self.b = nn.Parameter(torch.zeros(cfg.d_model))
+        self.w = nn.Parameter(t.ones(cfg.d_model))
+        self.b = nn.Parameter(t.zeros(cfg.d_model))
     
     def forward(self, residual):
         # residual: [batch, position, d_model]
@@ -759,8 +773,8 @@ class LayerNorm(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.w = nn.Parameter(torch.ones(cfg.d_model))
-        self.b = nn.Parameter(torch.zeros(cfg.d_model))
+        self.w = nn.Parameter(t.ones(cfg.d_model))
+        self.b = nn.Parameter(t.zeros(cfg.d_model))
 
     def forward(self, residual):
         # residual: [batch, position, d_model]
@@ -788,7 +802,7 @@ class Embed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_E = nn.Parameter(torch.empty((cfg.d_vocab, cfg.d_model)))
+        self.W_E = nn.Parameter(t.empty((cfg.d_vocab, cfg.d_model)))
         nn.init.normal_(self.W_E, std=self.cfg.init_range)
 
     def forward(self, tokens):
@@ -806,7 +820,7 @@ class Embed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_E = nn.Parameter(torch.empty((cfg.d_vocab, cfg.d_model)))
+        self.W_E = nn.Parameter(t.empty((cfg.d_vocab, cfg.d_model)))
         nn.init.normal_(self.W_E, std=self.cfg.init_range)
     
     def forward(self, tokens):
@@ -829,7 +843,7 @@ class PosEmbed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_pos = nn.Parameter(torch.empty((cfg.n_ctx, cfg.d_model)))
+        self.W_pos = nn.Parameter(t.empty((cfg.n_ctx, cfg.d_model)))
         nn.init.normal_(self.W_pos, std=self.cfg.init_range)
     
     def forward(self, tokens):
@@ -846,7 +860,7 @@ class PosEmbed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_pos = nn.Parameter(torch.empty((cfg.n_ctx, cfg.d_model)))
+        self.W_pos = nn.Parameter(t.empty((cfg.n_ctx, cfg.d_model)))
         nn.init.normal_(self.W_pos, std=self.cfg.init_range)
 
     def forward(self, tokens):
@@ -946,21 +960,21 @@ class Attention(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_Q = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-        self.b_Q = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-        self.W_K = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.W_K = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_K, std=self.cfg.init_range)
-        self.b_K = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-        self.W_V = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_V, std=self.cfg.init_range)
-        self.b_V = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         
-        self.W_O = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
+        self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
         nn.init.normal_(self.W_O, std=self.cfg.init_range)
-        self.b_O = nn.Parameter(torch.zeros((cfg.d_model)))
+        self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
         
-        self.register_buffer("IGNORE", torch.tensor(-1e5, dtype=torch.float32, device="cuda"))
+        self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
     
     def forward(self, normalized_resid_pre):
         # normalized_resid_pre: [batch, position, d_model]
@@ -980,21 +994,21 @@ class Attention(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_Q = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-        self.b_Q = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-        self.W_K = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.W_K = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_K, std=self.cfg.init_range)
-        self.b_K = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
-        self.W_V = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
+        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_V, std=self.cfg.init_range)
-        self.b_V = nn.Parameter(torch.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         
-        self.W_O = nn.Parameter(torch.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
+        self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
         nn.init.normal_(self.W_O, std=self.cfg.init_range)
-        self.b_O = nn.Parameter(torch.zeros((cfg.d_model)))
+        self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
         
-        self.register_buffer("IGNORE", torch.tensor(-1e5, dtype=torch.float32, device="cuda"))
+        self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
     
     def forward(self, normalized_resid_pre):
         # normalized_resid_pre: [batch, position, d_model]
@@ -1018,7 +1032,7 @@ class Attention(nn.Module):
 
     def apply_causal_mask(self, attn_scores):
         # attn_scores: [batch, n_heads, query_pos, key_pos]
-        mask = torch.triu(torch.ones(attn_scores.size(-2), attn_scores.size(-1), device=attn_scores.device), diagonal=1).bool()
+        mask = t.triu(t.ones(attn_scores.size(-2), attn_scores.size(-1), device=attn_scores.device), diagonal=1).bool()
         attn_scores.masked_fill_(mask, self.IGNORE)
         return attn_scores
 
@@ -1035,12 +1049,12 @@ class MLP(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_in = nn.Parameter(torch.empty((cfg.d_model, cfg.d_mlp)))
+        self.W_in = nn.Parameter(t.empty((cfg.d_model, cfg.d_mlp)))
         nn.init.normal_(self.W_in, std=self.cfg.init_range)
-        self.b_in = nn.Parameter(torch.zeros((cfg.d_mlp)))
-        self.W_out = nn.Parameter(torch.empty((cfg.d_mlp, cfg.d_model)))
+        self.b_in = nn.Parameter(t.zeros((cfg.d_mlp)))
+        self.W_out = nn.Parameter(t.empty((cfg.d_mlp, cfg.d_model)))
         nn.init.normal_(self.W_out, std=self.cfg.init_range)
-        self.b_out = nn.Parameter(torch.zeros((cfg.d_model)))
+        self.b_out = nn.Parameter(t.zeros((cfg.d_model)))
     
     def forward(self, normalized_resid_mid):
         # normalized_resid_mid: [batch, position, d_model]
@@ -1057,12 +1071,12 @@ class MLP(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_in = nn.Parameter(torch.empty((cfg.d_model, cfg.d_mlp)))
+        self.W_in = nn.Parameter(t.empty((cfg.d_model, cfg.d_mlp)))
         nn.init.normal_(self.W_in, std=self.cfg.init_range)
-        self.b_in = nn.Parameter(torch.zeros((cfg.d_mlp)))
-        self.W_out = nn.Parameter(torch.empty((cfg.d_mlp, cfg.d_model)))
+        self.b_in = nn.Parameter(t.zeros((cfg.d_mlp)))
+        self.W_out = nn.Parameter(t.empty((cfg.d_mlp, cfg.d_model)))
         nn.init.normal_(self.W_out, std=self.cfg.init_range)
-        self.b_out = nn.Parameter(torch.zeros((cfg.d_model)))
+        self.b_out = nn.Parameter(t.zeros((cfg.d_model)))
     
     def forward(self, normalized_resid_mid):
         # normalized_resid_mid: [batch, position, d_model]
@@ -1135,9 +1149,9 @@ class Unembed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_U = nn.Parameter(torch.empty((cfg.d_model, cfg.d_vocab)))
+        self.W_U = nn.Parameter(t.empty((cfg.d_model, cfg.d_vocab)))
         nn.init.normal_(self.W_U, std=self.cfg.init_range)
-        self.b_U = nn.Parameter(torch.zeros((cfg.d_vocab), requires_grad=False))
+        self.b_U = nn.Parameter(t.zeros((cfg.d_vocab), requires_grad=False))
     
     def forward(self, normalized_resid_final):
         # normalized_resid_final [batch, position, d_model]
@@ -1155,9 +1169,9 @@ class Unembed(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.W_U = nn.Parameter(torch.empty((cfg.d_model, cfg.d_vocab)))
+        self.W_U = nn.Parameter(t.empty((cfg.d_model, cfg.d_vocab)))
         nn.init.normal_(self.W_U, std=self.cfg.init_range)
-        self.b_U = nn.Parameter(torch.zeros((cfg.d_vocab), requires_grad=False))
+        self.b_U = nn.Parameter(t.zeros((cfg.d_vocab), requires_grad=False))
     
     def forward(self, normalized_resid_final):
         # normalized_resid_final [batch, position, d_model]
@@ -1296,7 +1310,7 @@ For our purposes, we'll train 2L 4 heads per layer model, with context length 25
 """)
 
     st.error(r"""
-You should use the Colab to run this code, since it will put quite a strain on your GPU otherwise! You can access a complete version of the Colab [here](https://colab.research.google.com/drive/1kP27XsoJsPeCyVtzeolNMlVAsLFEmxZ6?usp=sharing#scrollTo=QfeyG6NZm4SC).
+You should use the Colab to run this code, since it will put quite a strain on your GPU otherwise! You can access a complete version of the Colab (with solutions for all the earlier exercises filled in) [here](https://colab.research.google.com/drive/1kP27XsoJsPeCyVtzeolNMlVAsLFEmxZ6?usp=sharing#scrollTo=QfeyG6NZm4SC).
 """)
 
 # ```python
@@ -1331,7 +1345,7 @@ You should use the Colab to run this code, since it will put quite a strain on y
 # print(dataset)
 # print(dataset[0]['text'][:100])
 # tokens_dataset = utils.tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
-# data_loader = torch.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+# data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 # ```
 
 # ## Create Model
@@ -1369,7 +1383,7 @@ You should use the Colab to run this code, since it will put quite a strain on y
 # We use AdamW - it's a pretty standard optimizer.
 
 # ```python
-# optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+# optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 # ```
 
 # ## Run Training Loop

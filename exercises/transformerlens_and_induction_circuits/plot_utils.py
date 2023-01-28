@@ -1,15 +1,11 @@
 import plotly.express as px
-from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from torchtyping import TensorType as TT
-from typing import Dict, Optional
-import numpy as np
-import pandas as pd
+from typing import Optional
 from transformer_lens import utils, HookedTransformer
-import einops
 import torch as t
 
-WIP = r"C:/Users/calsm/Documents/AI Alignment/ARENA/TRANSFORMERLENS_AND_MI/images/written_images"
+WIP = r"images/written_images"
 def save_fig(fig, filename):
     with open(f"{WIP}/{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
