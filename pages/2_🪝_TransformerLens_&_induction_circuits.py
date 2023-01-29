@@ -3814,6 +3814,6 @@ def page():
         radio = st.radio("Section", page_list)
         st.markdown("---")
     func_list[page_dict[radio]]()
-
-if is_local or check_password():
-    page()
+ 
+# if is_local or check_password():
+page()

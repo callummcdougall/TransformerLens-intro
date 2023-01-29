@@ -3,12 +3,6 @@ from torchtyping import TensorType as TT
 from typing import Callable
 from transformer_lens import HookedTransformer, FactoredMatrix
 
-from IPython import get_ipython
-ipython = get_ipython()
-# Code to automatically update the HookedTransformer code as its edited without restarting the kernel
-ipython.magic("load_ext autoreload")
-ipython.magic("autoreload 2")
-
 def test_get_ablation_scores(ablation_scores: TT["layer", "head"], model: HookedTransformer, rep_tokens: TT["batch", "seq"]):
 
     import solutions

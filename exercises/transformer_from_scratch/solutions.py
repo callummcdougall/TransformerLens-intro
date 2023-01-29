@@ -11,6 +11,7 @@ from transformer_lens.utils import gelu_new, tokenize_and_concatenate
 import tqdm.auto as tqdm
 import datasets
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
+os.chdir("../transformer_from_scratch")
 
 # # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
 # from IPython import get_ipython

@@ -394,7 +394,7 @@ if MAIN:
         d_vocab_out=2, # 2 because we're doing binary classification
         use_attn_result=True, 
         device="cpu",
-        hook_tokens=True
+        use_hook_tokens=True
     )
 
     model = HookedTransformer(cfg).eval()
@@ -1413,6 +1413,7 @@ If we make the simplification that the vector moved to sequence position 0 by he
 Here is an annotated diagram to help better explain exactly what we're doing.""")
 
     st_image("bracket_transformer-elevation-circuit-1.png", 1000)
+    st.markdown("")
 
     st.markdown(r""" 
 Below, you'll be asked to calculate this `pre_20_dir`, which is the unbalanced direction for inputs into head 2.0 at sequence position 1 (based on the fact that vectors at this sequence position are copied to position 0 by head `2.0`, and then used in prediction).
@@ -1496,7 +1497,7 @@ More interestingly, we can see that `mlp0` and especially `mlp1` are very import
 
 For example, the sum $\operatorname{ReLU}(x-0.5) + \operatorname{ReLU}(0.5-x)$ evaluates to the nonlinear function $|x-0.5|$, which is zero if and only if $x=0.5$. This is one way our model might be able to classify all bracket strings as unbalanced unless they had exactly 50% open parens.""")
 
-        st_image("relu2-light.png", 550)
+        st_image("relu2.png", 550)
 
         # st.markdown(r"*We can even add together more ReLUs to get even sharper discontinuities or more complex functions. For instance:*")
         # st_excalidraw("relu", 600)
@@ -1566,7 +1567,7 @@ where $f(\vec x^T W^{in})_i$ is a scalar, and $W^{out}_{[;,i]}$ is a vector.
 We can actually simplify further. The $i$ th element of the row vector $\vec x^T W^{in}$ is $x^T W^{in}_{[:, i]}$, i.e. the dot product of $\vec x$ and the $i$-th **column** of $W_{in}$. This is because:
 
 $$
-W^{in} = \left[W^{in}_{[:,0]} \;\bigg|\; W^{in}_{[:,1]} \;\bigg|\; ... \;\bigg|\; W^{in}_{[:,n-1]}\right], \quad \vec x^T W^{in} = \left(\vec x^T W^{in}_{[:,0]} \,, \; \vec x^T W^{in}_{[:,1]} \,, \; ... \; \vec x^T W^{in}_{[:,n-1]}\right)
+W^{in} = \left[W^{in}_{[:,0]} \;\bigg|\; W^{in}_{[:,1]} \;\bigg|\; \ldots \;\bigg|\; W^{in}_{[:,n-1]}\right], \quad \vec x^T W^{in} = \left(\vec x^T W^{in}_{[:,0]} \,, \; \vec x^T W^{in}_{[:,1]} \,, \; \ldots \; \vec x^T W^{in}_{[:,n-1]}\right)
 $$
 
 Since the activation function $f$ is applied elementwise, this gives us:
@@ -1988,7 +1989,7 @@ $$
 
 where $L$ is the linear approximation for the layernorm before the first attention layer, and $x$ is the `(seq_len, d_model)`-size residual stream consisting of vectors ${\color{orange}x}_i$ for each sequence position $i$.
 
-We can write $x_j = {\color{orange}pos}_j + {\color{orange}tok}_j$, where ${\color{orange}pos}_j$ and ${\color{orange}tok}_j$ stand for the positional and token embeddings respectively. So this gives us:
+We can write ${\color{orange}x}_j = {\color{orange}pos}_j + {\color{orange}tok}_j$, where ${\color{orange}pos}_j$ and ${\color{orange}tok}_j$ stand for the positional and token embeddings respectively. So this gives us:
 
 $$
 \begin{aligned}
@@ -2020,7 +2021,7 @@ If head `0.0` is performing some kind of aggregation, then **we should see that 
     st.markdown(r"""
 **Exercise - show that $\boldsymbol{\color{orange}\vec v_L}$ and $\boldsymbol{\color{orange}\vec v_R}$ do indeed have opposite directions (i.e. cosine similarity close to -1), demonstrating that this head is "tallying" the open and close parens that come after it.**
 
-You can fill in the function `embedding` (to return the token embedding vector corresponding to a particular character), which will help when computing these vectors.
+You can fill in the function `embedding` (to return the token embedding vector corresponding to a particular character, i.e. the vectors we've called ${\color{orange}LeftParen}$ and ${\color{orange}RightParen}$ above), which will help when computing these vectors.
 
 ```python
 def embedding(model: HookedTransformer, tokenizer: SimpleTokenizer, char: str) -> TT["d_model"]:
@@ -2055,7 +2056,7 @@ if MAIN:
 ```
 """)
     st.markdown(r"""
-Note - we don't actually require $\boldsymbol{\color{orange}\vec v_L}$ and $\boldsymbol{\color{orange}\vec v_R}$ to have the same magnitude for this idea to work. This is because, if we have $\boldsymbol{\color{orange}\vec v_L} \approx -\alpha \boldsymbol{\color{orange}\vec v_R}$ for some $\alpha > 0$, then when projecting along the $\boldsymbol{\color{orange}\vec v_L}$ direction we will get $\|\boldsymbol{\color{orange}\vec v_L}\| (n_L - \alpha n_R) / n$. This always equals $\|\boldsymbol{\color{orange}\vec v_L}\| (1 - \alpha) / 2$ when the number of left and right brackets match, regardless of the sequence length. It doesn't matter that this value isn't zero; the MLPs' neurons can still learn to detect when the proportion is more or less than this value by adding a bias term.
+Note - we don't actually require $\boldsymbol{\color{orange}\vec v_L}$ and $\boldsymbol{\color{orange}\vec v_R}$ to have the same magnitude for this idea to work. This is because, if we have $\boldsymbol{\color{orange}\vec v_L} \approx -\alpha \boldsymbol{\color{orange}\vec v_R}$ for some $\alpha > 0$, then when projecting along the $\boldsymbol{\color{orange}\vec v_L}$ direction we will get $\|\boldsymbol{\color{orange}\vec v_L}\| (n_L - \alpha n_R) / n$. This always equals $\|\boldsymbol{\color{orange}\vec v_L}\| (1 - \alpha) / 2$ when the number of left and right brackets match, regardless of the sequence length. It doesn't matter that this value isn't zero; the MLPs' neurons can still learn to detect when the vector's component in this direction is more or less than this value by adding a bias term.
 
 #### Cosine similarity of input directions (optional)
 
@@ -2162,18 +2163,18 @@ When we looked at our grid of attention patterns, we saw that not only did the f
 
 $$
 \begin{aligned}
-h(x)_i &\approx \frac{1}{n-i+1} \sum_{j=i}^n x_j^T L^T W_{OV}^{0.0} \\
+h(x)_i &\approx \frac{1}{n-i+1} \sum_{j=i}^n {\color{orange}x}_j^T L^T W_{OV}^{0.0} \\
 &= \frac{1}{n} \left( \sum_{i=1}^n {\color{orange}pos}_i^T L^T W_{OV}^{0.0} + n_L^{(i)} \boldsymbol{\color{orange}\vec v_L} + n_R^{(i)} \boldsymbol{\color{orange}\vec v_R}\right)
 \end{aligned}
 $$
 
-where $n_L^{(i)}$ and $n_R^{(i)}$ are the number of left and right brackets respectively in the substring $x_i \dots x_n$ (i.e. this matches our definition of $n_L$ and $n_R$ when $i=1$).
+where $n_L^{(i)}$ and $n_R^{(i)}$ are the number of left and right brackets respectively in the substring formed from `brackets[i: n]` (i.e. this matches our definition of $n_L$ and $n_R$ when $i=1$).
 
 Given what we've seen so far (that sequence position 1 stores tally information for all the brackets in the sequence), we can guess that each sequence position stores a similar tally, and is used to determine whether the substring consisting of all brackets to the right of this one has any elevation failures (i.e. making sure the total number of ***right*** brackets is at least as great as the total number of ***left*** brackets - recall it's this way around because our model learned the equally valid right-to-left solution).
 
 Recall that the destination token only determines how much to pay attention to the source; the vector that is moved from the source to destination conditional on attention being paid to it is the same for all destination tokens. So the result about left-paren and right-paren vectors having cosine similarity of -1 also holds for all later sequence positions.
 
-**Head 2.1 turns out to be the head for detecting anywhere-negative failures** (i.e. it  detects whether any sequence $x_i, ..., x_n$ has strictly more right than left parentheses, and writes to the residual stream in the unbalanced direction if this is the case). Can you find evidence for this behaviour?
+**Head 2.1 turns out to be the head for detecting anywhere-negative failures** (i.e. it  detects whether any sequence `brackets[i: n]` has strictly more right than left parentheses, and writes to the residual stream in the unbalanced direction if this is the case). Can you find evidence for this behaviour?
 
 One way you could investigate this is to construct a parens string which "goes negative" at some points, and look at the attention probabilities for head 2.0 at destination position 0. Does it attend most strongly to those source tokens where the bracket goes negative, and is the corresponding vector written to the residual stream one which points in the unbalanced direction?
 

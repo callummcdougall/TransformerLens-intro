@@ -66,7 +66,7 @@ pre code {
 .st-ae code {
     padding: 4px;
 }
-.css-ffhzg2 .st-ae code {
+.css-ffhzg2 .st-ae code: not(stCodeBlock) {
     background-color: black;
 }
 code:not(h1 code):not(h2 code):not(h3 code):not(h4 code) {

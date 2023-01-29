@@ -13,7 +13,7 @@ from tqdm import tqdm
 from torchtyping import TensorType as TT
 
 MAIN = __name__ == "__main__"
-device = t.device("cpu")
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
 t.set_grad_enabled(False)
 
@@ -27,20 +27,23 @@ from transformer_lens import utils, ActivationCache, HookedTransformer, HookedTr
 from transformer_lens.hook_points import HookPoint
 from transformer_lens.components import LayerNorm
 
+import os
+os.chdir("../interp_on_algorithmic_model")
+
 from brackets_datasets import SimpleTokenizer, BracketsDataset
 import tests
 import plot_utils
 
 def imshow(tensor, xaxis="", yaxis="", **kwargs):
-    px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs)
+    return px.imshow(utils.to_numpy(tensor), color_continuous_midpoint=0.0, color_continuous_scale="RdBu", labels={"x":xaxis, "y":yaxis}, **kwargs)
 
 def line(tensor, xaxis="", yaxis="", **kwargs):
-    px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs)
+    return px.line(utils.to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs)
 
 def scatter(x, y, xaxis="", yaxis="", caxis="", **kwargs):
     x = utils.to_numpy(x)
     y = utils.to_numpy(y)
-    px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
+    return px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 
 # %%
 
@@ -60,7 +63,7 @@ if MAIN:
         d_vocab_out=2, # 2 because we're doing binary classification
         use_attn_result=True, 
         device="cpu",
-        hook_tokens=True
+        use_hook_tokens=True
     )
 
     model = HookedTransformer(cfg).eval()
@@ -650,7 +653,10 @@ if MAIN:
     )
 
 # %%
+
 if MAIN:
+
+    A = []
 
     def hook_fn_display_attn_patterns_for_single_query(
         pattern: TT["batch", "heads", "seqQ", "seqK"],
@@ -658,6 +664,7 @@ if MAIN:
         head_idx: int = 0,
         query_idx: int = 1
     ):
+        A.append(pattern[:, head_idx, query_idx].mean(0))
         fig = px.bar(
             pattern[:, head_idx, query_idx].mean(0), 
             title=f"Average attn probabilities on data at posn 1, with query token = '('",
@@ -686,6 +693,7 @@ def embedding(model: HookedTransformer, tokenizer: SimpleTokenizer, char: str) -
     idx = tokenizer.t_to_i[char]
     return model.W_E[idx]
 
+
 if MAIN:
 
     W_OV = model.W_V[0, 0] @ model.W_O[0, 0]
@@ -696,8 +704,8 @@ if MAIN:
     v_L = embedding(model, tokenizer, "(") @ layer0_ln_coefs.T @ W_OV
     v_R = embedding(model, tokenizer, ")") @ layer0_ln_coefs.T @ W_OV
     
-    v_L = model.blocks[0].ln1(embedding(model, tokenizer, "(")) @ W_OV
-    v_R = model.blocks[0].ln1(embedding(model, tokenizer, ")")) @ W_OV
+    # v_L = model.blocks[0].ln1(embedding(model, tokenizer, "(")) @ W_OV
+    # v_R = model.blocks[0].ln1(embedding(model, tokenizer, ")")) @ W_OV
 
     print("Cosine similarity: ", t.cosine_similarity(v_L, v_R, dim=0).item())
     print("Norms: ", v_L.norm().item(), v_R.norm().item())

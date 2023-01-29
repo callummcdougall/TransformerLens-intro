@@ -7,6 +7,7 @@ ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
 
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
+os.chdir("../transformerlens_and_induction_circuits")
 import plotly.express as px
 import plotly.io as pio
 pio.renderers.default = "notebook_connected" # or use "browser" if you want plots to open with browser

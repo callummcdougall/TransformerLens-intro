@@ -33,6 +33,6 @@ diffusers
 circuitsvis
 torchtyping
 typeguard
-transformer_lens
+git+https://github.com/callummcdougall/TransformerLens.git@main
 streamlit
 datasets

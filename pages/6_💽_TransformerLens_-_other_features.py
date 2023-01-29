@@ -493,5 +493,5 @@ line(induction_losses, x=tokens_trained_on, xaxis="Tokens Trained On", yaxis="In
 ```
 """)
 
-if is_local or check_password():
-    section_other_features()
+# if is_local or check_password():
+section_other_features()

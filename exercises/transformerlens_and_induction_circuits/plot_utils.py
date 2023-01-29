@@ -5,7 +5,7 @@ from typing import Optional
 from transformer_lens import utils, HookedTransformer
 import torch as t
 
-WIP = r"images/written_images"
+WIP = r"../../images/written_images"
 def save_fig(fig, filename):
     with open(f"{WIP}/{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
