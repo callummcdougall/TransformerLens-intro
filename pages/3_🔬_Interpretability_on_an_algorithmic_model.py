@@ -141,6 +141,7 @@ from transformer_lens.components import LayerNorm
 from brackets_datasets import SimpleTokenizer, BracketsDataset
 import tests
 import plot_utils
+from solutions import LN_hook_names
 ```
 
 ## Overview of content
@@ -215,10 +216,8 @@ def section_1():
         <li><a class="contents-el" href="#implementing-our-masking">Implementing our masking</a></li>
     </ul></li>
     <li><a class="contents-el" href="#dataset">Dataset</a></li>
-    <li><a class="contents-el" href="#hand-written-solution">Hand-Written Solution</a></li>
-    <li><a class="contents-el" href="#hand-written-solution-vectorized">Hand-Written Solution - Vectorized</a></li>
+    <li><a class="contents-el" href="#algorithmic-solutions">Algorithmic Solutions</a></li>
     <li><a class="contents-el" href="#the-model-s-solution">The Model's Solution</a></li>
-    <li><a class="contents-el" href="#running-the-model">Running the Model</a></li>
 </ul>
 """, unsafe_allow_html=True)
     st.markdown(r"""
@@ -238,7 +237,7 @@ If we treat the model as a black box function and only consider the input/output
 
 ## Life On The Frontier
 
-Unlike many of the days in the curriculum which cover classic papers and well-trodden topics, today you're at the research frontier, covering current research at Redwood. This is pretty cool, but also means you should expect that things will be more confusing and complicated than other days. TAs might not know answers because in fact nobody knows the answer yet, or might be hard to explain because nobody knows how to explain it properly yet.
+Unlike many of the days in the curriculum which cover classic papers and well-trodden topics, today you're at the research frontier. This is pretty cool, but also means you should expect that things will be more confusing and complicated than other days. TAs might not know answers because in fact nobody knows the answer yet, or might be hard to explain because nobody knows how to explain it properly yet.
 
 Feel free to go "off-road" and follow your curiosity - you might discover uncharted lands 🙂
 
@@ -286,7 +285,7 @@ When we calculate the attention scores, we mask them at all (query, key) positio
     st.markdown("")
 
     st.markdown(r"""
-Note that the attention scores aren't masked when the query is a padding token and the key isn't. In theory, this means that information can be stored in the padding token positions. However, because the padding token key positions are always masked, this information can't flow back into the rest of the sequence, so it never affects the final output. (Also, note that if we masked query positions as well, we'd get numerical errors, since we'd be taking softmax across a row where every element is minus infinity, which is not well-defined!)
+
 """)
 
     with st.expander("Aside on how this relates to BERT"):
@@ -324,7 +323,7 @@ To refer to attention heads, we'll again use the shorthand `layer.head` where bo
 
 ### Some useful diagrams
 
-Below, you can see the architecture of the model, side by side with a diagram of the activation names for the layers in the model (and how you reference them).""")
+Here is a high-level diagram of your model's architecture:""")
 
     with st.expander("Your transformer's architecture"):
         st_image("bracket-transformer-entire-model.png", 300)
@@ -371,7 +370,7 @@ And here is a diagram showing the internal parts of your model, as well as a che
 
 
     st.markdown(r"""
-I'd recommend opening both these images in a different tab.
+I'd recommend having both these images open in a different tab.
 
 ### Defining the model
 
@@ -393,13 +392,13 @@ if MAIN:
         d_vocab=len(VOCAB)+3, # plus 3 because of end and pad and start token
         d_vocab_out=2, # 2 because we're doing binary classification
         use_attn_result=True, 
-        device="cpu",
+        device=device,
         use_hook_tokens=True
     )
 
     model = HookedTransformer(cfg).eval()
 
-    state_dict = t.load("state_dict.pt")
+    state_dict = t.load("brackets_model_state_dict.pt")
     model.load_state_dict(state_dict)
 ```
 
@@ -430,19 +429,16 @@ if MAIN:
 
 Now that we have the tokenizer, we can use it to write hooks that mask the padding tokens. If you understand how the padding works, then don't worry if you don't follow all the implementational details of this code.
 """)
-    with st.expander("Click to see a diagram explaining how this masking works."):
+    with st.expander("Click to see a diagram explaining how this masking works (should help explain the code below)"):
         st_image("masking-padding-tokens.png", 700)
 
     st.markdown(r"""
 ```python
-def add_hooks_for_masking_PAD(model: HookedTransformer) -> model:
+def add_perma_hooks_to_mask_pad_tokens(model: HookedTransformer, pad_token: int) -> HookedTransformer:
 
     # Hook which operates on the tokens, and stores a mask where tokens equal [pad]
-    def cache_padding_tokens_mask(
-        tokens: TT["batch", "seq"],
-        hook: HookPoint,
-    ) -> None:
-        hook.ctx["padding_tokens_mask"] = einops.rearrange(tokens == tokenizer.PAD_TOKEN, "b sK -> b 1 1 sK")
+    def cache_padding_tokens_mask(tokens: TT["batch", "seq"], hook: HookPoint) -> None:
+        hook.ctx["padding_tokens_mask"] = einops.rearrange(tokens == pad_token, "b sK -> b 1 1 sK")
 
     # Apply masking, by referencing the mask stored in the `hook_tokens` hook context
     def apply_padding_tokens_mask(
@@ -464,7 +460,7 @@ def add_hooks_for_masking_PAD(model: HookedTransformer) -> model:
 
 if MAIN:
     model.reset_hooks(including_permanent=True)
-    model = add_hooks_for_masking_PAD(model)
+    model = add_perma_hooks_to_mask_pad_tokens(model, tokenizer.PAD_TOKEN)
 ```
 
 ## Dataset
@@ -485,16 +481,23 @@ if MAIN:
 ```
 
 You are encouraged to look at the code for `BracketsDataset` (right click -> "Go to Definition") to see what methods and properties the `data` object has.
+""")
+
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - plot the dataset
 
 As is good practice, examine the dataset and plot the distribution of sequence lengths (e.g. as a histogram). What do you notice?
+
+*(Note - if you're not comfortable with using plotting libraries, you can just take the example code and run it)*
 
 ```python
 if MAIN:
     # YOUR CODE HERE: plot the distribution of sequence lengths
 ```
 """)
-    with st.expander("Example code to plot dataset"):
-        st.markdown(r"""
+        with st.expander("Example code to plot dataset"):
+            st.markdown(r"""
 ```python
 if MAIN:
     fig = go.Figure(
@@ -504,15 +507,16 @@ if MAIN:
     fig.show()
 ```
 """)
-    with st.expander("Features of dataset"):
-        st.markdown(r"""
+        with st.expander("Features of dataset"):
+            st.markdown(r"""
 The most striking feature is that all bracket strings have even length. We constructed our dataset this way because if we had odd-length strings, the model would presumably have learned the heuristic "if the string is odd-length, it's unbalanced". This isn't hard to learn, and we want to focus on the more interesting question of how the transformer is learning the structure of bracket strings, rather than just their length.
 
-**Bonus exercise - can you describe an algorithm involving a single attention head which the model could use to distinguish between even and odd-length bracket strings?**
+**Bonus exercise (optional) - can you describe an algorithm involving a single attention head which the model could use to distinguish between even and odd-length bracket strings?**
 """)
 
     st.markdown(r"""
 Now that we have all the pieces in place, we can try running our model on the data and generating some predictions.
+
 ```python
 if MAIN:
     # Define and tokenize examples
@@ -550,7 +554,12 @@ if MAIN:
     print(f"\nModel got {n_correct} out of {len(data)} training examples correct!")
 ```
 
-## Hand-Written Solution
+## Algorithmic Solutions
+""")
+
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - handwritten solution (for loop)
 
 A nice property of using such a simple problem is we can write a correct solution by hand. Take a minute to implement this using a for loop and if statements.
 
@@ -563,15 +572,15 @@ def is_balanced_forloop(parens: str) -> bool:
     pass
 
 if MAIN:
-for (tokens, expected) in zip(tokenizer.tokenize(examples), labels):
-        actual = is_balanced_forloop(tokens)
-        assert expected == actual, f"{tokens}: expected {expected} got {actual}"
+    for (parens, expected) in zip(examples, labels):
+        actual = is_balanced_forloop(parens)
+        assert expected == actual, f"{parens}: expected {expected} got {actual}"
     print("is_balanced_forloop ok!")
 ```
 """)
 
-    with st.expander("Solution"):
-        st.markdown(r"""
+        with st.expander("Solution"):
+            st.markdown(r"""
 ```python
 def is_balanced_forloop(parens: str) -> bool:
 
@@ -582,35 +591,46 @@ def is_balanced_forloop(parens: str) -> bool:
             return False
     
     return cumsum == 0
-```""")
+```
+""")
 
-    st.markdown(r"""
+    with st.columns(1)[0]:
+        st.markdown(r"""
 
-## Hand-Written Solution - Vectorized
+#### Exercise -  handwritten solution (vectorized)
 
-A transformer has an inductive bias towards vectorized operations, because at each sequence position the same weights "execute", just on different data. So if we want to "think like a transformer", we want to get away from procedural for/if statements and think about what sorts of solutions can be represented in a small number of transformer weights.
+A transformer has an **inductive bias** towards vectorized operations, because at each sequence position the same weights "execute", just on different data. So if we want to "think like a transformer", we want to get away from procedural for/if statements and think about what sorts of solutions can be represented in a small number of transformer weights.
 
 Being able to represent a solutions in matrix weights is necessary, but not sufficient to show that a transformer could learn that solution through running SGD on some input data. It could be the case that some simple solution exists, but a different solution is an attractor when you start from random initialization and use current optimizer algorithms.
 
 ```python
-def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
+def is_balanced_vectorized(tokens: t.Tensor) -> bool:
     '''
     Return True if the parens are balanced.
 
     tokens is a vector which has start/pad/end indices (0/1/2) as well as left/right brackets (3/4)
     '''
     pass
+
+if MAIN:
+    for (tokens, expected) in zip(tokenizer.tokenize(examples), labels):
+        actual = is_balanced_vectorized(tokens)
+        assert expected == actual, f"{tokens}: expected {expected} got {actual}"
+    print("is_balanced_vectorized ok!")
 ```
 """)
-    with st.expander("Hint - Vectorized"):
-        st.markdown(r"""
-One solution is to map begin, pad, and end tokens to zero, map open paren to 1 and close paren to -1. Then take the cumulative sum, and check the two conditions which are necessary and sufficient for the bracket string to be balanced.""")
-    with st.expander("Solution - Vectorized"):
-        st.markdown(r"""
+        with st.expander("Hint"):
+            st.markdown(r"""
+One solution is to map begin, pad, and end tokens to zero, map open paren to 1 and close paren to -1. Then take the cumulative sum, and check the two conditions which are necessary and sufficient for the bracket string to be balanced.
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
 ```python
 def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
     '''
-    tokens: sequence of tokens including begin, end and pad tokens - recall that 3 is '(' and 4 is ')'
+    Return True if the parens are balanced.
+
+    tokens is a vector which has start/pad/end indices (0/1/2) as well as left/right brackets (3/4)
     '''
     # Convert start/end/padding tokens to zero, and left/right brackets to +1/-1
     table = t.tensor([0, 0, 0, 1, -1])
@@ -622,24 +642,9 @@ def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
     no_negative_failure = altitude.min() >= 0
 
     return no_total_elevation_failure & no_negative_failure
-```""")
-        st.markdown("")
-
-    st.markdown(r"""
-```python
-def is_balanced_vectorized(tokens: t.Tensor) -> bool:
-    '''
-    tokens: sequence of tokens including begin, end and pad tokens - recall that 3 is '(' and 4 is ')'
-    '''
-    pass
-
-if MAIN:
-    for (tokens, expected) in zip(tokenizer.tokenize(examples), labels):
-        actual = is_balanced_vectorized(tokens)
-        assert expected == actual, f"{tokens}: expected {expected} got {actual}"
-    print("is_balanced_vectorized ok!")
 ```
-
+""")
+    st.markdown(r"""
 ## The Model's Solution
 
 It turns out that the model solves the problem like this:
@@ -692,7 +697,8 @@ We now want some way to tell which parts of the model are doing something meanin
 
 We'll do this by starting from the model outputs and working backwards, finding the unbalanced direction at each stage.
 
-The final part of the model is the classification head, which has three stages - the final layernorm, the unembedding, and softmax, at the end of which we get our probabilities.""")
+The final part of the model is the classification head, which has three stages - the final layernorm, the unembedding, and softmax, at the end of which we get our probabilities.
+""")
 
     st_image("bracket-transformer-first-attr-0.png", 550)
 
@@ -728,12 +734,17 @@ We can now put the difference in logits as a function of $W$ and $x_{\text{linea
 ```
 logit_diff = (final_LN_output @ W_U)[0, 0] - (final_LN_output @ W_U)[0, 1]
 
-           = final_LN_output[0, :] @ (W_U[:, 0] - W_U[:, 0])
+           = final_LN_output[0, :] @ (W_U[:, 0] - W_U[:, 1])
 ```
 
 (recall that the `(i, j)`th element of matrix `AB` is `A[i, :] @ B[:, j]`)
 
 So a high difference in the logits follows from a high dot product of the output of the LayerNorm with the vector `W_U[0, :] - W_U[1, :]`. We can call this the **unbalanced direction** for inputs to the unembedding matrix. We can now ask, "What leads to LayerNorm's output having high dot product with this vector?".
+""")
+
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - get the `post_final_ln_dir`
 
 In the function below, you should compute this vector (this should just be a one-line function).
 
@@ -744,19 +755,17 @@ def get_post_final_ln_dir(model: HookedTransformer) -> TT["d_model"]:
     '''
     pass
 ```
-
 """)
-
-    with st.expander("Solution"):
-        st.markdown(r"""
+        with st.expander("Solution"):
+            st.markdown(r"""
 ```python
 def get_post_final_ln_dir(model: HookedTransformer) -> TT["d_model"]:
     '''
     Returns the direction in which final_ln_output[0, :] should point to maximize P(unbalanced)
     '''
     return model.W_U[:, 0] - model.W_U[:, 1]
-```""")
-
+```
+""")
     st.markdown(r"""
 
 ### Step 3: Translating through LayerNorm
@@ -770,7 +779,6 @@ final_ln_output[0, :] = final_ln(x_linear[0, :])
 
                       ≈ L_final @ x_linear[0, :]
 ```
-
 """)
     with st.expander("An aside on layernorm"):
         st.markdown(r"""
@@ -800,23 +808,38 @@ When applying this kind of analysis to LLMs, it's sometimes harder to abstract a
 # """)
 
     st.markdown(r"""
-
-Now, we can ask 'What leads to the _input_ to the LayerNorm having a high dot-product with this new vector?'""")
-
+Now, we can ask 'What leads to the _input_ to the LayerNorm having a high dot-product with this new vector?'
+""")
     st_image("bracket-transformer-first-attr.png", 600)
     st.markdown("")
 
-    st.markdown(r"""
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - get `pre_final_ln_dir`
 
-At this point, we'll have to start using hooks again, because in order to fit our linear function we'll have to extract the inputs and outputs to the final layernorm.
+Ideally, we would calculate `pre_final_ln_dir` directly from the model's weights, like we did for `post_final_ln_dir`. Unfortunately, it's not so easy in this case, because in order to get our linear approximation `L_final`, we need to fit a linear regression with actual data that gets passed through the model.
 
-First, you should implement the function `get_activations` below. This should use `model.run_with_hooks` to return the activations corresponding to the `activation_names` parameter (recall that each activation has an associated hook).
+These exercises are split into three parts:
+
+1. Implement `get_activations` to extract activations from the model (in particular, we'll need the inputs and outputs to the final layernorm, but this function will also be useful for later exercises).
+2. Implement `get_ln_fit` to fit a linear regression to the inputs and outputs of one of your model's layernorms.
+3. Finally, estimate `L_final` using a batch of 5000 input sequences, and use it to calculate `pre_final_ln_dir`.
+
+---
+
+#### 1. Getting activations
+
+First, we'll deal with getting activations from our model. Note that we could just use a cache (particularly as this is a very small model), but it's good practice to use hooks, because for larger models they're usually much more efficient (since they waste much less memory).
+
+You should implement the function `get_activations` below. This should use `model.run_with_hooks` to return the activations corresponding to the `activation_names` parameter. For extra ease of use, we suggest you implement this function as follows:
+
+* If `activation_names` is a string, return the tensor of those activations.
+* If `activation_names` is a list of strings, return a dictionary mapping hook names to activations.
 
 ```python
 def get_activations(model: HookedTransformer, data: BracketsDataset, names: Union[str, List[str]]) -> Union[t.Tensor, Dict[str, t.Tensor]]:
     '''
     Uses hooks to return activations from the model.
-
     If names is a string, returns the activations for that hook name.
     If names is a list of strings, returns a dictionary mapping hook names to tensors of activations.
     '''
@@ -827,8 +850,8 @@ if MAIN:
 ```
 """)
 
-    with st.expander("Hint"):
-        st.markdown(r"""
+        with st.expander("Hint"):
+            st.markdown(r"""
 To record the activations, define an empty dictionary `activations_dict`, and use the hook functions:
 
 ```python
@@ -838,8 +861,8 @@ def hook_fn(value, hook):
 
 The `fwd_hooks` argument of `run_with_hooks` can be a function which takes `hook_name` and returns `True` if the hook is in hook names, else `False`.
 """)
-    with st.expander("Solution"):
-        st.markdown(r"""
+        with st.expander("Solution"):
+            st.markdown(r"""
 ```python
 def get_activations(model: HookedTransformer, data: BracketsDataset, names: Union[str, List[str]]) -> Union[t.Tensor, Dict[str, t.Tensor]]:
     '''
@@ -865,35 +888,24 @@ def get_activations(model: HookedTransformer, data: BracketsDataset, names: Unio
 ```
 """)
 
-    st.markdown(r"""
+        st.markdown(r"""
+#### 2. Fitting a linear regression
 
 Now, use these functions and the [sklearn LinearRegression class](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html) to find a linear fit to the inputs and outputs of your model's layernorms.
 
 A few notes:
 
-* We've provided you with the helper function `LN_hook_names`. This returns the names of the hooks immediately before and after a given layernorm (see the docstring for how to use it).
+* We've provided you with the helper function `LN_hook_names`.
+    * This takes one of the layernorms of your model, and outputs the full names of the hooks immediately before and after that layer. Run this code to see how it works:
+    ```python
+    pre_final_ln_name, post_final_ln_name = LN_hook_names(model.ln_final)
+    print(pre_final_ln_name, post_final_ln_name)
+    ```
 * The `get_ln_fit` function takes `seq_pos` as an input. If this is an integer, then we are fitting only for that sequence position. If `seq_pos = None`, then we are fitting for all sequence positions (we aggregate the sequence and batch dimensions before performing our regression).
     * The reason for including this parameter is that sometimes we care about how the layernorm operates on a particular sequence position (e.g. for the final layernorm, we only care about the 0th sequence position), but later on we'll also consider the behaviour of layernorm across all sequence positions.
 * You should include a fit coefficient in your linear regression (this is the default for `LinearRegression`).
 
 ```python
-def LN_hook_names(layernorm: LayerNorm) -> Tuple[str, str]:
-    '''
-    Returns the names of the hooks immediately before and after a given layernorm.
-    e.g. LN_hook_names(model.final_ln) returns ["blocks.2.hook_resid_post", "ln_final.hook_normalized"]
-    '''
-    if layernorm.name == "ln_final":
-        input_hook_name = utils.get_act_name("resid_post", 2)
-        output_hook_name = "ln_final.hook_normalized"
-    else:
-        layer, ln = layernorm.name.split(".")[1:]
-        layer = int(layer)
-        input_hook_name = utils.get_act_name("resid_pre" if ln=="ln1" else "resid_mid", layer)
-        output_hook_name = utils.get_act_name('normalized', layer, ln)
-    
-    return input_hook_name, output_hook_name
-
-
 def get_ln_fit(
     model: HookedTransformer, data: BracketsDataset, layernorm: LayerNorm, seq_pos: Optional[int] = None
 ) -> Tuple[LinearRegression, float]:
@@ -914,16 +926,23 @@ if MAIN:
 
     (final_ln_fit, r2) = get_ln_fit(model, data, layernorm=model.blocks[1].ln1, seq_pos=None)
     print(f"r^2 for LN1, layer 1, over all sequence positions: {r2:.4f}")
-```""")
+```
+""")
 
-    with st.expander("Help - I'm not sure how to fit the linear regression."):
-        st.markdown(r"""
+        with st.expander("Help - I'm not sure how to fit the linear regression."):
+            st.markdown(r"""
 If `inputs` and `outputs` are both tensors of shape `(samples, d_model)`, then `LinearRegression().fit(inputs, outputs)` returns the fit object which should be the first output of your function.
 
 You can get the Rsquared with the `.score` method of the fit object.
 """)
-    with st.expander("Solution"):
-        st.markdown(r"""
+        with st.expander("Help - I'm not sure how to interpret the seq_pos argument."):
+            st.markdown(r"""
+If `seq_pos` is an integer, you should take the vectors corresponding to just that sequence position. In other words, you should take the `[:, seq_pos, :]` slice of your `[batch, seq_pos, d_model]`-size tensors.
+
+If `seq_pos = None`, you should rearrange your tensors into `(batch seq_pos) d_model`, because you want to run the regression on all sequence positions at once.
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
 ```python
 def get_ln_fit(
     model: HookedTransformer, data: BracketsDataset, layernorm: LayerNorm, seq_pos: Optional[int] = None
@@ -953,8 +972,10 @@ def get_ln_fit(
     r2 = final_ln_fit.score(inputs, outputs)
 
     return (final_ln_fit, r2)
-```""")
-    st.markdown(r"""
+```
+""")
+        st.markdown(r"""
+#### 3. Calculating `pre_final_ln_dir`
 
 Armed with our linear fit, we can now identify the direction in the residual stream before the final layer norm that most points in the direction of unbalanced evidence.
 
@@ -964,16 +985,17 @@ def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT[
 
 
 if MAIN:
-    tests.test_pre_final_ln_dir(model, data, get_pre_final_ln_dir)
-```""")
-
-
-    st.markdown(r"""
-If you're still confused by any of this, the diagram below might help.""")
-    st_image("bracket-transformer-first-attr-soln.png", 1000)
-    st.markdown("")
-    with st.expander("Solution"):
-        st.markdown(r"""
+    tests.test_get_pre_final_ln_dir(model, data, get_pre_final_ln_dir)
+```
+""")
+        with st.expander("Help - I'm confused about how to compute this vector."):
+            st.markdown(r"""
+The diagram below should help explain the steps of the computation. The key is that we can (approximately) write the final `logit_diff` term as the dot product of the vector `x_2[0]` (i.e. the vector in the zeroth position of the residual stream, just before the final layer norm) and some fixed vector (labelled the **unbalanced direction** in the diagram below).
+""")
+            st_image("bracket-transformer-first-attr-soln.png", 1100)
+            st.markdown("")
+        with st.expander("Solution"):
+            st.markdown(r"""
 ```python
 def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT["d_model"]:
     
@@ -983,7 +1005,8 @@ def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT[
     final_ln_coefs = t.from_numpy(final_ln_fit.coef_).to(device)
 
     return final_ln_coefs.T @ post_final_ln_dir
-```""")
+```
+""")
 
     st.markdown(r"""
 

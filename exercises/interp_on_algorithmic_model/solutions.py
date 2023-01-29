@@ -62,13 +62,13 @@ if MAIN:
         d_vocab=len(VOCAB)+3, # plus 3 because of end and pad and start token
         d_vocab_out=2, # 2 because we're doing binary classification
         use_attn_result=True, 
-        device="cpu",
+        device=device,
         use_hook_tokens=True
     )
 
     model = HookedTransformer(cfg).eval()
 
-    state_dict = t.load(r"state_dict.pt")
+    state_dict = t.load(r"brackets_model_state_dict.pt")
     model.load_state_dict(state_dict)
 
 # %%
@@ -172,9 +172,9 @@ def is_balanced_forloop(parens: str) -> bool:
     return cumsum == 0
 
 if MAIN:
-    for (tokens, expected) in zip(examples, labels):
-        actual = is_balanced_forloop(tokens)
-        assert expected == actual, f"{tokens}: expected {expected} got {actual}"
+    for (parens, expected) in zip(examples, labels):
+        actual = is_balanced_forloop(parens)
+        assert expected == actual, f"{parens}: expected {expected} got {actual}"
     print("is_balanced_forloop ok!")
 
 # %%
@@ -254,7 +254,6 @@ def LN_hook_names(layernorm: LayerNorm) -> Tuple[str, str]:
         output_hook_name = "ln_final.hook_normalized"
     else:
         layer, ln = layernorm.name.split(".")[1:]
-        layer = int(layer)
         input_hook_name = utils.get_act_name("resid_pre" if ln=="ln1" else "resid_mid", layer)
         output_hook_name = utils.get_act_name('normalized', layer, ln)
     

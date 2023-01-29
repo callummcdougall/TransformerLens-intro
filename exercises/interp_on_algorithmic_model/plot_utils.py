@@ -15,24 +15,6 @@ def save_fig(fig, filename):
     with open(f"{WIP}/{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
 
-def plot_attn(v: TT["seq_Q", "seq_K"]):
-    px.imshow(
-        v, 
-        title="Estimate for avg attn probabilities when query is from '('",
-        labels={"x": "Key tokens", "y": "Query tokens"},
-        height=1200, width=1200,
-        color_continuous_scale="RdBu_r", range_color=[0, v.max().item() + 0.01]
-    ).update_layout(
-        xaxis = dict(
-            tickmode = "array", ticktext = ["[start]", *["L+R/2" for i in range(40)], "[end]"],
-            tickvals = list(range(42)), tickangle = 45,
-        ),
-        yaxis = dict(
-            tickmode = "array", ticktext = ["[start]", *["L" for i in range(40)], "[end]"],
-            tickvals = list(range(42)), 
-        ),
-    ).show(renderer="browser")
-
 color_discrete_map = dict(zip(['both failures', 'just neg failure', 'balanced', 'just total elevation failure'], px.colors.qualitative.D3))
 # names = ["balanced", "just total elevation failure", "just neg failure", "both failures"]
 # colors = ['#2CA02C', '#1c96eb', '#b300ff', '#ff4800']

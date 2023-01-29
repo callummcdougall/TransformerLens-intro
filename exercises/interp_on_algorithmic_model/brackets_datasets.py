@@ -23,7 +23,7 @@ class SimpleTokenizer:
         self.t_to_i = {**{c: i + 3 for i, c in enumerate(alphabet)}, **self.base_d}
         self.i_to_t = {i: c for c, i in self.t_to_i.items()}
 
-    def tokenize(self, strs: list[str], max_len = None) -> TT["batch", "seq"]:
+    def tokenize(self, strs: List[str], max_len = None) -> TT["batch", "seq"]:
         def c_to_int(c: str) -> int:
             if c in self.t_to_i:
                 return self.t_to_i[c]
@@ -42,7 +42,7 @@ class SimpleTokenizer:
         ]
         return t.tensor(ints)
 
-    def decode(self, tokens) -> list[str]:
+    def decode(self, tokens) -> List[str]:
         assert tokens.ndim >= 2, "Need to have a batch dimension"
         def int_to_c(c: int) -> str:
             if c < len(self.i_to_t):
