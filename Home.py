@@ -136,7 +136,12 @@ Coming soon!
 
 The simplest way to get these exercises up and running is to use Colab. This guarantees good GPU support, and means you'll spend less time messing around with environments and IDEs. Each set of exercises will have a link to the accompanying Colab notebook, which you should make a copy of and work through. The Colabs have essentially the same structure as the Streamlit pages.
 
-Each of the pages on the left hand sidebar corresponds to a different Colab notebook. You can work through them, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells.
+Here are the links to the Colabs (not all the exercises have been converted into Colab form yet):
+
+* Transformer from scratch: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
+* TransformerLens & induction circuits: [**exercises**](https://colab.research.google.com/drive/17i8LctAgVLTJ883Nyo8VIEcCNeKNCYnr?usp=share_link), [**solutions**](https://colab.research.google.com/drive/15p2TgU7RLaVjLVJFpwoMhxOWoAGmTlI3?usp=share_link)
+
+You can work through the **exercises** notebooks, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells. You can also look at the **solutions** notebooks if you're just interested in the output (since they have all the correct code filled in, and all the output on display within the notebook).
 
 ### Option 2: Your own IDE
 

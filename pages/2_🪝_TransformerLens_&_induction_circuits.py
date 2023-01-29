@@ -86,7 +86,9 @@ def section_home():
 """, unsafe_allow_html=True)
     st.markdown(r"""
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/17i8LctAgVLTJ883Nyo8VIEcCNeKNCYnr?usp=share_link), [**solutions**](https://colab.research.google.com/drive/15p2TgU7RLaVjLVJFpwoMhxOWoAGmTlI3?usp=share_link)
-
+""")
+    st_image("circuit.png", 350)
+    st.markdown(r"""
 # TransformerLens & induction circuits
 
 In order to get the most out of these exercises, you should have read the **Mathematical Framework for Transformer Circuits** paper in some form. For a few tips on how best to read it, go to the homepage (on the left hand sidebar) and scroll to the section **Prerequisites / Transformer Circuits**.
@@ -101,11 +103,10 @@ Most of the sections are constructed in the following way:
 2. You are given an exercise, in which you have to use the feature.
 
 The throughline of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.
-
 """)
 
     st.markdown("")
-    st_image("kcomp_diagram.png", 900)
+    st_image("kcomp_diagram.png", 850)
     st.markdown("")
 
     st.markdown(r"""

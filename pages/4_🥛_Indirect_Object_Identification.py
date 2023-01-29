@@ -6,6 +6,7 @@ from st_dependencies import *
 styling()
 
 if is_local or check_password():
+    st_image("leaves.png", 350)
     st.markdown("Coming soon!")
 
 

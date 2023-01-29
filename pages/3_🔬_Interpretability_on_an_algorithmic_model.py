@@ -90,7 +90,9 @@ def section_home():
 """, unsafe_allow_html=True)
     st.markdown(r"""
 Links to Colab: coming soon! (If you've reached this section and you'd like to be able to access the Colab, please [send me a message](mailto:cal.s.mcdougall@gmail.com).
-
+""")
+    st_image("gears.png", 350)
+    st.markdown(r"""
 # Interpretability on an algorithmic model
 
 ## Introduction - why should we care?

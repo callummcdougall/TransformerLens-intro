@@ -56,7 +56,9 @@ def section_home():
 </ul>""", unsafe_allow_html=True)
     st.markdown(r"""
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
-
+""")
+    st_image("transformer-building.png", 350)
+    st.markdown(r"""
 # Transformer from scratch
 
 ## Introduction
