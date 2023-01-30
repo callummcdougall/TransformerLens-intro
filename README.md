@@ -61,14 +61,14 @@ An alternative way to use this material is to run it on an IDE of your own choic
 
 Full instructions for running the exercises in this way:
 
-* Clone the [GitHub repo](https://github.com/callummcdougall/TransformerLens-intro) into your local directory.
+* Clone this GitHub repo into your local directory.
 * Open in your choice of IDE (we recommend VSCode).
 * Make & activate a virtual environment
     * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 * Install requirements.
     * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
     * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
-* While in the directory, run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
+* While in the directory, run `streamlit run Home.py` in your terminal (this should work since Streamlit is one of the libraries in `requirements.txt`).
     * This should open up a local copy of the page you're reading right now, and you're good to go!
 
 To complete one of the exercise pages, you should:

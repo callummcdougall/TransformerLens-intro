@@ -157,7 +157,7 @@ Full instructions for running the exercises in this way:
 * Install requirements.
     * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
     * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
-* While in the directory, run `streamlit run Home.py` (this should work since Streamlit is one of the libraries in `requirements.txt`).
+* While in the directory, run `streamlit run Home.py` in your terminal (this should work since Streamlit is one of the libraries in `requirements.txt`).
     * This should open up a local copy of the page you're reading right now, and you're good to go!
 
 To complete one of the exercise pages, you should:

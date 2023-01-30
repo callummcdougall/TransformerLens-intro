@@ -1,10 +1,10 @@
 # %%
 
-from IPython import get_ipython
-ipython = get_ipython()
-# Code to automatically update the HookedTransformer code as its edited without restarting the kernel
-ipython.magic("load_ext autoreload")
-ipython.magic("autoreload 2")
+# from IPython import get_ipython
+# ipython = get_ipython()
+# # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
+# ipython.magic("load_ext autoreload")
+# ipython.magic("autoreload 2")
 
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 os.chdir("../transformerlens_and_induction_circuits")
