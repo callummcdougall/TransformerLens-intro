@@ -52,7 +52,7 @@ def plot_contribution_vs_open_proportion(unbalanced_component: TT["batch"], titl
         title=f"Head {title} contribution vs proportion of open brackets '('", template="simple_white", height=500, width=800,
         labels={"x": "Open-proportion", "y": f"Head {title} contribution"}
     ).update_traces(marker_size=4, opacity=0.5).update_layout(legend_title_text='Failure type')
-    save_fig(fig, f"failure_types_scatter_20{title.replace('.', '')}")
+    save_fig(fig, f"failure_types_scatter_{title.replace('.', '')}")
     fig.show()
 
 def mlp_attribution_scatter(
@@ -61,27 +61,25 @@ def mlp_attribution_scatter(
 ) -> None:
     failure_types = np.full(out_by_component_in_pre_20_unbalanced_dir.shape[-1], "", dtype=np.dtype("U32"))
     for name, mask in failure_types_dict.items():
-        failure_types = np.where(mask, name, failure_types)
+        failure_types = np.where(utils.to_numpy(mask), name, failure_types)
     for layer in range(2):
         mlp_output = out_by_component_in_pre_20_unbalanced_dir[3+layer*3]
         fig = px.scatter(
             x=utils.to_numpy(data.open_proportion[data.starts_open]), 
             y=utils.to_numpy(mlp_output[data.starts_open]), 
             color_discrete_map=color_discrete_map,
-            color=utils.to_numpy(failure_types[data.starts_open]), 
-            # category_orders={"color": failure_types_dict.keys()},
+            color=utils.to_numpy(failure_types)[utils.to_numpy(data.starts_open)], 
             title=f"Amount MLP {layer} writes in unbalanced direction for Head 2.0", 
             template="simple_white", height=500, width=800,
             labels={"x": "Open-proportion", "y": "Head 2.0 contribution"}
         ).update_traces(marker_size=4, opacity=0.5).update_layout(legend_title_text='Failure type')
-        save_fig(fig, f"mlp_attribution_{layer}")
         fig.show()
 
 def plot_neurons(neurons_in_unbalanced_dir: TT["batch", "neurons"], model: HookedTransformer, data: BracketsDataset, failure_types_dict: Dict, layer: int):
     
     failure_types = np.full(neurons_in_unbalanced_dir.shape[0], "", dtype=np.dtype("U32"))
     for name, mask in failure_types_dict.items():
-        failure_types = np.where(mask[data.starts_open], name, failure_types)
+        failure_types = np.where(utils.to_numpy(mask[utils.to_numpy(data.starts_open)]), name, failure_types)
 
     # Get data that can be turned into a dataframe (plotly express is sometimes easier to use with a dataframe)
     # Plot a scatter plot of all the neuron contributions, color-coded according to failure type, with slider to view neurons
@@ -89,9 +87,9 @@ def plot_neurons(neurons_in_unbalanced_dir: TT["batch", "neurons"], model: Hooke
     failure_types = einops.repeat(failure_types, "s -> (s n)", n=model.cfg.d_model)
     data_open_proportion = einops.repeat(data.open_proportion[data.starts_open], "s -> (s n)", n=model.cfg.d_model)
     df = pd.DataFrame({
-        "Output in 2.0 direction": neurons_in_unbalanced_dir.flatten(),
-        "Neuron number": neuron_numbers,
-        "Open-proportion": data_open_proportion,
+        "Output in 2.0 direction": utils.to_numpy(neurons_in_unbalanced_dir.flatten()),
+        "Neuron number": utils.to_numpy(neuron_numbers),
+        "Open-proportion": utils.to_numpy(data_open_proportion),
         "Failure type": failure_types
     })
     fig = px.scatter(

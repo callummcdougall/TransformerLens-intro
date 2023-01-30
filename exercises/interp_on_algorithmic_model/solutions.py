@@ -217,7 +217,6 @@ def get_post_final_ln_dir(model: HookedTransformer) -> TT["d_model"]:
 def get_activations(model: HookedTransformer, toks: TT["batch", "seq"], names: Union[str, List[str]]) -> Union[t.Tensor, ActivationCache]:
     '''
     Uses hooks to return activations from the model.
-
     If names is a string, returns the activations for that hook name.
     If names is a list of strings, returns a dictionary mapping hook names to tensors of activations.
     '''
@@ -240,7 +239,7 @@ def get_activations(model: HookedTransformer, toks: TT["batch", "seq"], names: U
 
 
 if MAIN:
-    tests.test_get_activations(get_activations, model, data_test.toks)
+    tests.test_get_activations(get_activations, model, data_test)
 
 # %%
 
@@ -267,15 +266,14 @@ def get_ln_fit(
     '''
     if seq_pos is None, find best fit aggregated over all sequence positions. Otherwise, fit only for given seq_pos.
 
-    Returns: A tuple of a (fitted) sklearn LinearRegression object and a dimensionless tensor containing the r^2 of 
-    the fit (hint: wrap a value in torch.tensor() to make a dimensionless tensor)
+    Returns: A tuple of a (fitted) sklearn LinearRegression object and the r^2 of the fit
     '''
 
     input_hook_name, output_hook_name = LN_hook_names(layernorm)
 
-    mini_cache = get_activations(model, data.toks, [input_hook_name, output_hook_name])
-    inputs = utils.to_numpy(mini_cache[input_hook_name])
-    outputs = utils.to_numpy(mini_cache[output_hook_name])
+    activations_dict = get_activations(model, data.toks, [input_hook_name, output_hook_name])
+    inputs = utils.to_numpy(activations_dict[input_hook_name])
+    outputs = utils.to_numpy(activations_dict[output_hook_name])
 
     if seq_pos is None:
         inputs = einops.rearrange(inputs, "batch seq d_model -> (batch seq) d_model")
@@ -388,7 +386,6 @@ if MAIN:
 # %%
 
 if MAIN:
-    out_by_component_in_unbalanced_dir = None
     # Get output by components, at sequence position 0 (which is used for classification)
     out_by_components_seq0: TT["comp", "batch", "d_model"] = out_by_components[:, :, 0, :]
     # Get the unbalanced direction for tensors being fed into the final layernorm
@@ -441,7 +438,6 @@ if MAIN:
 
 if MAIN:
     plot_utils.plot_contribution_vs_open_proportion(h20_in_unbalanced_dir, "2.0", failure_types_dict, data)
-    plot_utils.plot_contribution_vs_open_proportion(h21_in_unbalanced_dir, "2.0", failure_types_dict, data)
 
 # %%
 
@@ -457,7 +453,7 @@ def get_attn_probs(model: HookedTransformer, data: BracketsDataset, layer: int, 
 
 
 if MAIN:
-    tests.test_get_attn_probs(get_attn_probs, model, data_test)
+    tests.test_get_attn_probs(get_attn_probs, model, data.toks)
 
 # %%
 
@@ -531,6 +527,7 @@ def get_out_by_neuron(model: HookedTransformer, data: BracketsDataset, layer: in
     # Get activations of the layer just after the activation function, i.e. this is f(x.T @ W_in)
     f_x_W_in: TT["batch", "seq", "neurons"] = get_activations(model, data.toks, utils.get_act_name('post', layer))
 
+    # f_x_W_in are activations, so they have batch and seq dimensions - this is where we index by seq if necessary
     if seq is not None:
         f_x_W_in: TT["batch", "neurons"] = f_x_W_in[:, seq, :]
 
@@ -566,6 +563,10 @@ if MAIN:
 # %%
 
 def get_out_by_neuron_in_20_dir_less_memory(model: HookedTransformer, data: BracketsDataset, layer: int) -> TT["batch", "neurons"]:
+    '''
+    Has the same output as `get_out_by_neuron_in_20_dir`, but uses less memory (because it never stores
+    the output vector of each neuron individually).
+    '''
 
     W_out: TT["neurons", "d_model"] = model.W_out[layer]
 
@@ -655,15 +656,12 @@ if MAIN:
 
 if MAIN:
 
-    A = []
-
     def hook_fn_display_attn_patterns_for_single_query(
         pattern: TT["batch", "heads", "seqQ", "seqK"],
         hook: HookPoint,
         head_idx: int = 0,
         query_idx: int = 1
     ):
-        A.append(pattern[:, head_idx, query_idx].mean(0))
         fig = px.bar(
             pattern[:, head_idx, query_idx].mean(0), 
             title=f"Average attn probabilities on data at posn 1, with query token = '('",

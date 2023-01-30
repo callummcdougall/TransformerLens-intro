@@ -97,8 +97,8 @@ def test_total_elevation_and_negative_failures(data: BracketsDataset, total_elev
 
 def test_get_attn_probs(get_attn_probs: Callable, model: HookedTransformer, data: BracketsDataset):
     import solutions
-    probs_actual = get_attn_probs(model, data, 2, 0)
-    probs_expected = solutions.get_attn_probs(model, data, 2, 0)
+    probs_actual = get_attn_probs(model, data.toks, 2, 0)
+    probs_expected = solutions.get_attn_probs(model, data.toks, 2, 0)
     t.testing.assert_close(probs_actual, probs_expected)
     print("All tests in `test_get_attn_probs` passed!")
 
@@ -111,7 +111,6 @@ def test_get_WOV(get_WOV: Callable, model: HookedTransformer):
 
     t.testing.assert_close(W_OV_00, W_OV_00_expected)
     print("All tests in `test_get_WOV` passed!")
-
 
 def test_get_pre_20_dir(get_pre_20_dir: Callable, model: HookedTransformer, data: BracketsDataset):
     import solutions
@@ -140,3 +139,12 @@ def test_get_out_by_neuron_in_20_dir_less_memory(get_out_by_neuron_in_20_dir_les
     out_expected = solutions.get_out_by_neuron_in_20_dir_less_memory(model, data, layer=0)
     t.testing.assert_close(out, out_expected)
     print("All tests in `test_get_out_by_neuron_in_20_dir_less_memory` passed!")
+
+def test_get_q_and_k_for_given_input(get_q_and_k_for_given_input, model):
+    import solutions
+    parens = "()"
+    q, k = get_q_and_k_for_given_input(model, parens, 0, 0)
+    q_expected, k_expected = solutions.get_q_and_k_for_given_input(model, parens, 0, 0)
+    t.testing.assert_close(q, q_expected)
+    t.testing.assert_close(k, k_expected)
+    print("All tests in `test_get_q_and_k_for_given_input` passed!")
