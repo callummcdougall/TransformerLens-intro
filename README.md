@@ -51,6 +51,7 @@ You can access the Colab notebooks from the corresponding pages in Streamlit. Al
 
 * Transformer from scratch: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
 * TransformerLens & induction circuits: [**exercises**](https://colab.research.google.com/drive/17i8LctAgVLTJ883Nyo8VIEcCNeKNCYnr?usp=share_link), [**solutions**](https://colab.research.google.com/drive/15p2TgU7RLaVjLVJFpwoMhxOWoAGmTlI3?usp=share_link)
+* Interpretability on an algorithmic model: [**exercises**](https://colab.research.google.com/drive/1puoiNww84IAEgkUMI0PnWp_aL1vai707?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1Xm2AlQtonkvSQ1tLyBJx31AYmVjopdcf?usp=sharing)
 
 You can work through the **exercises** notebooks, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells. You can also look at the **solutions** notebooks if you're just interested in the output (since they have all the correct code filled in, and all the output on display within the notebook).
 
