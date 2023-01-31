@@ -27,9 +27,6 @@ from transformer_lens import utils, ActivationCache, HookedTransformer, HookedTr
 from transformer_lens.hook_points import HookPoint
 from transformer_lens.components import LayerNorm
 
-import os
-os.chdir("../interp_on_algorithmic_model")
-
 from brackets_datasets import SimpleTokenizer, BracketsDataset
 import tests
 import plot_utils
