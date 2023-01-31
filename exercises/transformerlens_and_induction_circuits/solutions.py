@@ -536,7 +536,45 @@ if MAIN:
     plot_utils.save_fig(fig, "ablation_scores")
     fig.show()
 
+# %%
 
+def get_ablation_complement_scores(
+    model: HookedTransformer,
+    tokens: TT["batch", "seq"],
+    heads_to_preserve: List[str]
+):
+
+    layer0_heads = [int(i[2:]) for i in heads_to_preserve if i.startswith("0.")]
+    layer1_heads = [int(i[2:]) for i in heads_to_preserve if i.startswith("1.")]
+
+    def hook_ablate_complement(
+        attn_result: TT["batch", "seq", "n_heads", "d_model"],
+        hook: HookPoint,
+        heads_to_preserve: List[int]
+    ):
+        n_heads = attn_result.shape[-2]
+        heads_to_ablate = [i for i in range(n_heads) if i not in heads_to_preserve]
+        attn_result[:, :, heads_to_ablate] = 0
+
+    hook_fn_layer0 = functools.partial(hook_ablate_complement, heads_to_preserve=layer0_heads)
+    hook_fn_layer1 = functools.partial(hook_ablate_complement, heads_to_preserve=layer1_heads)
+
+    # Run the model with the ablation hook
+    ablated_logits = model.run_with_hooks(tokens, fwd_hooks=[
+        (utils.get_act_name("result", 0), hook_fn_layer0),
+        (utils.get_act_name("result", 1), hook_fn_layer1)
+    ])
+    # Calculate the cross entropy difference
+    ablated_loss = cross_entropy_loss(ablated_logits[:, -seq_len:], tokens[:, -seq_len:])
+
+    logits = model(tokens)
+    loss = cross_entropy_loss(logits[:, -seq_len:], tokens[:, -seq_len:])
+
+    print(f"Ablated loss = {ablated_loss:.3f}\nOriginal loss = {loss:.3f}")
+
+if MAIN:
+    heads_to_preserve = ["0.7", "1.4", "1.10"]
+    get_ablation_complement_scores(model, rep_tokens, heads_to_preserve)
 
 
 
@@ -801,9 +839,9 @@ def get_comp_score(
     '''
     Return the composition score between W_A and W_B.
     '''
-    W_A_norm = W_A.pow(2).sum()
-    W_B_norm = W_B.pow(2).sum()
-    W_AB_norm = (W_A @ W_B).pow(2).sum()
+    W_A_norm = W_A.pow(2).sum().sqrt()
+    W_B_norm = W_B.pow(2).sum().sqrt()
+    W_AB_norm = (W_A @ W_B).pow(2).sum().sqrt()
 
     return (W_AB_norm / (W_A_norm * W_B_norm)).item()
 
@@ -822,7 +860,7 @@ if MAIN:
     k_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads, device=device)
     v_comp_scores = t.zeros(model.cfg.n_heads, model.cfg.n_heads, device=device)
     
-    # Fill in the tensors
+    # Fill in the tensors, by looping over W_A and W_B from layers 0 and 1
     "YOUR CODE HERE!"
     for i in tqdm(range(model.cfg.n_heads)):
         for j in range(model.cfg.n_heads):

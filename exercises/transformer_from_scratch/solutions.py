@@ -19,17 +19,13 @@ os.chdir("../transformer_from_scratch")
 # ipython.magic("load_ext autoreload")
 # ipython.magic("autoreload 2")
 
-MAIN = __name__ == "__main__"
-
-if MAIN:
-    reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 
 # %%
 
-if MAIN:
-    reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and"
-    tokens = reference_gpt2.to_tokens(reference_text).cuda()
-    logits, cache = reference_gpt2.run_with_cache(tokens)
+reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and take over the world!"
+tokens = reference_gpt2.to_tokens(reference_text).cuda()
+logits, cache = reference_gpt2.run_with_cache(tokens)
 
 @dataclass
 class Config:
@@ -44,8 +40,7 @@ class Config:
     n_heads: int = 12
     n_layers: int = 12
 
-if MAIN:
-    cfg = Config()
+cfg = Config()
 
 # %%
 
@@ -95,9 +90,8 @@ class LayerNorm(nn.Module):
         residual = (residual - residual_mean) / residual_std
         return residual * self.w + self.b
 
-if MAIN:
-    rand_float_test(LayerNorm, [2, 4, 768])
-    load_gpt2_test(LayerNorm, reference_gpt2.ln_final, cache["resid_post", 11])
+rand_float_test(LayerNorm, [2, 4, 768])
+load_gpt2_test(LayerNorm, reference_gpt2.ln_final, cache["resid_post", 11])
 
 # %%
 
@@ -112,9 +106,8 @@ class Embed(nn.Module):
         # tokens: [batch, position]
         return self.W_E[tokens]
 
-if MAIN:
-    rand_int_test(Embed, [2, 4])
-    load_gpt2_test(Embed, reference_gpt2.embed, tokens)
+rand_int_test(Embed, [2, 4])
+load_gpt2_test(Embed, reference_gpt2.embed, tokens)
 
 # %%
 
@@ -130,9 +123,8 @@ class PosEmbed(nn.Module):
         batch, seq_len = tokens.shape
         return einops.repeat(self.W_pos[:seq_len], "seq d_model -> batch seq d_model", batch=batch)
 
-if MAIN:
-    rand_int_test(PosEmbed, [2, 4])
-    load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
+rand_int_test(PosEmbed, [2, 4])
+load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
 
 # %%
 
@@ -195,9 +187,8 @@ class Attention(nn.Module):
         return attn_scores
 
 
-if MAIN:
-    # rand_float_test(Attention, [2, 4, 768])
-    load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
+# rand_float_test(Attention, [2, 4, 768])
+load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
 
 # %%
 
@@ -220,9 +211,8 @@ class MLP(nn.Module):
         normalized_resid_mid = normalized_resid_mid @ self.W_out + self.b_out
         return normalized_resid_mid
 
-if MAIN:
-    rand_float_test(MLP, [2, 4, 768])
-    load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["normalized", 0, "ln2"])
+rand_float_test(MLP, [2, 4, 768])
+load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["normalized", 0, "ln2"])
 
 # %%
 
@@ -237,14 +227,14 @@ class TransformerBlock(nn.Module):
         self.mlp = MLP(cfg)
 
     def forward(self, resid_pre):
-        # resid_pre [batch, position, d_model]
+        # resid_pre: [batch, position, d_model]
+        # output: [batch, position, d_model]
         resid_mid = self.attn(self.ln1(resid_pre)) + resid_pre
         resid_post = self.mlp(self.ln2(resid_mid)) + resid_mid
         return resid_post
 
-if MAIN:
-    rand_float_test(TransformerBlock, [2, 4, 768])
-    load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
+rand_float_test(TransformerBlock, [2, 4, 768])
+load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
 
 # %%
 
@@ -264,9 +254,8 @@ class Unembed(nn.Module):
         ) + self.b_U
         # Or, could just do `normalized_resid_final @ self.W_U + self.b_U`
 
-if MAIN:
-    rand_float_test(Unembed, [2, 4, 768])
-    load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
+rand_float_test(Unembed, [2, 4, 768])
+load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
 
 # %%
 
@@ -288,21 +277,19 @@ class DemoTransformer(nn.Module):
         logits = self.unembed(self.ln_final(residual))
         return logits
 
-if MAIN:
-    rand_int_test(DemoTransformer, [2, 4])
-    load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
+rand_int_test(DemoTransformer, [2, 4])
+load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
 
 # %%
 
-if MAIN:
-    demo_gpt2 = DemoTransformer(Config(debug=False))
-    demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
-    demo_gpt2.cuda()
+demo_gpt2 = DemoTransformer(Config(debug=False))
+demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
+demo_gpt2.cuda()
 
-    test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
+test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
 
-    test_tokens = reference_gpt2.to_tokens(test_string).cuda()
-    demo_logits = demo_gpt2(test_tokens)
+test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+demo_logits = demo_gpt2(test_tokens)
 
 def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
     # Measure next token loss
@@ -312,26 +299,24 @@ def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
     pred_log_probs = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
     return -pred_log_probs.mean()
 
-if MAIN:
-    loss = lm_cross_entropy_loss(demo_logits, test_tokens)
-    print(loss)
-    print("Loss as average prob", (-loss).exp())
-    print("Loss as 'uniform over this many variables'", (loss).exp())
-    print("Uniform loss over the vocab", math.log(demo_gpt2.cfg.d_vocab))
+loss = lm_cross_entropy_loss(demo_logits, test_tokens)
+print(loss)
+print("Loss as average prob", (-loss).exp())
+print("Loss as 'uniform over this many variables'", (loss).exp())
+print("Uniform loss over the vocab", math.log(demo_gpt2.cfg.d_vocab))
 
 # %%
 
-if MAIN:
-    test_string = "There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that"
-    for i in tqdm(range(100)):
-        test_tokens = reference_gpt2.to_tokens(test_string).cuda()
-        demo_logits = demo_gpt2(test_tokens)
-        test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
-    print(test_string)
+test_string = "There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that"
+for i in tqdm(range(100)):
+    test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+    demo_logits = demo_gpt2(test_tokens)
+    test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
+print(test_string)
 
 # %%
 
-if MAIN:
+if False:
     batch_size = 8
     num_epochs = 1
     max_steps = 1000

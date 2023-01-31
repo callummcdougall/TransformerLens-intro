@@ -4,7 +4,7 @@ import torch as t
 from typing import Tuple, Union, List
 from torchtyping import TensorType as TT
 
-device = t.device("cuda" if t.cuda.is_available() else "cpu")
+device = t.device("cpu")
 
 MAIN = __name__ == "__main__"
 

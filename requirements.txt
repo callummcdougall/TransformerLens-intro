@@ -35,4 +35,3 @@ torchtyping
 typeguard
 git+https://github.com/callummcdougall/TransformerLens.git@main
 streamlit
-datasets

@@ -16,7 +16,7 @@ def st_image(name, width):
     st.markdown(img_to_html(name, width=width), unsafe_allow_html=True)
 
 def read_from_html(filename):
-    filename = f"images/{filename}.html"
+    filename = f"images/{filename}.html" if "written_images" in filename else f"images/page_images/{filename}.html"
     with open(filename) as f:
         html = f.read()
     call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
@@ -30,7 +30,7 @@ def read_from_html(filename):
         fig = pio.from_json(json.dumps(plotly_json))
     return fig
 
-NAMES = []
+NAMES = ["training_curve_1", "training_curve_2"]
 
 def complete_fig_dict(fig_dict):
     for name in NAMES:
@@ -44,6 +44,8 @@ fig_dict = complete_fig_dict(fig_dict_old)
 if len(fig_dict) > len(fig_dict_old):
     st.session_state["fig_dict"] = fig_dict
 
+with open("images/page_images/attn_patterns_demo.html", "rb") as file:
+    attn_patterns_demo = file.read()
 
 def section_home():
     st.sidebar.markdown(r"""
@@ -100,12 +102,21 @@ import tqdm.auto as tqdm
 import datasets
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
-MAIN = __name__ == "__main__"
-
-if MAIN:
-    reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 ```
+""")
 
+    with st.expander("Help - I get error `ImportError: DLL load failed while importing lib` when I try and import things."):
+        st.markdown(r"""
+To fix this problem, run the following code in your terminal:
+
+```
+conda install libboost boost-cpp -c conda-forge
+```
+ 
+then restart your IDE. Hopefully this fixes the problem.
+""")
+    st.markdown(r"""
 ## Learning objectives
 
 Here are the learning objectives for each section of the tutorial. At the end of each section, you should refer back here to check that you've understood everything.
@@ -159,7 +170,7 @@ Here are the learning objectives for each section of the tutorial. At the end of
 # import einops
 # from fancy_einsum import einsum
 # from dataclasses import dataclass
-# import torch
+# import t
 # import t.nn as nn
 # import numpy as np
 # import math
@@ -209,7 +220,7 @@ You should run the following at the top of your notebook / Python file:
 import einops
 from fancy_einsum import einsum
 from dataclasses import dataclass
-import torch
+import t
 import t.nn as nn
 import numpy as np
 import math
@@ -279,15 +290,14 @@ Core idea: We need a model that can deal with arbitrary text. We want to convert
 
 The most common strategy is called **Byte-Pair encodings**.
 
-We begin with the 256 ASCII characters as our tokens, and then find the most common pair of tokens, and merge that into a new token. Note that we do have a space character as one of our 256 tokens, and merges using space are very common. For instance, here are the five first merges for the tokenizer used by GPT-2:
+We begin with the 256 ASCII characters as our tokens, and then find the most common pair of tokens, and merge that into a new token. Note that we do have a space character as one of our 256 tokens, and merges using space are very common. For instance, run this code to print the five first merges for the tokenizer used by GPT-2:
 
+```python
+sorted_vocab = sorted(list(reference_gpt2.tokenizer.vocab.items()), key=lambda n:n[1])
+print(sorted_vocab[256:261])
 ```
-" t"
-" a"
-"he"
-"in"
-"re"
-```
+
+Note - you might see the character `Ġ` in front of some tokens. This is a special token that indicates that the token begins with a space. Tokens with a leading space vs not are different.
 """)
     with st.expander("Fun (totally optional) exercise - can you guess what the first-formed 3/4/5/6/7-letter encodings in GPT-2's vocabulary are?"):
         st.markdown(r"""
@@ -303,12 +313,9 @@ They are:
 """)
 
     st.markdown(r"""
-Note - you might see the character `Ġ` in front of some tokens. This is a special token that indicates that the token begins with a space. Tokens with a leading space vs not are different.
-
 You can run the code below to see some more of GPT-2's tokenizer's vocabulary:
 
 ```python
-sorted_vocab = sorted(list(reference_gpt2.tokenizer.vocab.items()), key=lambda n:n[1])
 print(sorted_vocab[:20])
 print()
 print(sorted_vocab[250:270])
@@ -320,7 +327,7 @@ print()
 As you get to the end of the vocabulary, you'll be producing some pretty weird-looking esoteric tokens (because you'll already have exhausted all of the short frequently-occurring ones):
 
 ```python
-sorted_vocab[-20:]
+print(sorted_vocab[-20:])
 ```
 
 Transformers in the `transformer_lens` library have a `to_tokens` method that converts text to numbers. It also prepends them with a special token called `bos` (beginning of sequence) to indicate the start of a sequence (we'll learn more about this later). You can disable this with the `prepend_bos` argument.
@@ -377,7 +384,7 @@ So the model outputs a tensor of logits, one vector of size $d_{vocab}$ for each
 The sequence gets tokenized, so it has shape `[batch, seq_len]`. Here, the batch dimension is just one (because we only have one sequence).
 
 ```python
-reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and"
+reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and take over the world!"
 tokens = reference_gpt2.to_tokens(reference_text)
 print(tokens)
 print(tokens.shape)
@@ -386,8 +393,6 @@ print(reference_gpt2.to_str_tokens(tokens))
 
 #### **Step 2:** Map tokens to logits
 
-(`run_with_cache` tells the model to cache all intermediate activations. This isn't important right now; we'll look at it in more detail later.)
-
 From our input of shape `[batch, seq_len]`, we get output of shape `[batch, seq_len, vocab_size]`. The `[i, j, :]`-th element of our output is a vector of logits representing our prediction for the `j+1`-th token in the `i`-th sequence.
 
 ```python
@@ -395,6 +400,8 @@ tokens = tokens.cuda()
 logits, cache = reference_gpt2.run_with_cache(tokens)
 print(logits.shape)
 ```
+
+(`run_with_cache` tells the model to cache all intermediate activations. This isn't important right now; we'll look at it in more detail later.)
 
 #### **Step 3:** Convert the logits to a distribution with a softmax
 
@@ -413,6 +420,8 @@ print(probs.shape)
 list(zip(reference_gpt2.to_str_tokens(reference_text), reference_gpt2.tokenizer.batch_decode(logits.argmax(dim=-1)[0])))
 ```
 
+We can see that, in a few cases (particularly near the end of the sequence), the model accurately predicts the next token in the sequence. We might guess that `"take over the world"` is a common phrase that the model has seen in training, which is why the model can predict it.
+
 #### **Step 4:** Map distribution to a token
 
 ```python
@@ -421,22 +430,28 @@ next_char = reference_gpt2.to_string(next_token)
 print(repr(next_char))
 ```
 
+Note that we're indexing `logits[0, -1]`. This is because logits have shape `[1, sequence_length, vocab_size]`, so this indexing returns the vector of length `vocab_size` representing the model's prediction for what token follows the **last** token in the input sequence.
+
+We can see the model predicts the line break character `\n`, since this is common following the end of a sentence.
+
 #### **Step 5:** Add this to the end of the input, re-run
 
 There are more efficient ways to do this (e.g. where we cache some of the values each time we run our input, so we don't have to do as much calculation each time we generate a new value), but this doesn't matter conceptually right now.
 
 ```python
-next_tokens = t.cat([tokens, t.tensor(next_token, device='cuda', dtype=t.int64)[None, None]], dim=-1)
-new_logits = reference_gpt2(next_tokens)
-print("New Input:", next_tokens)
-print(next_tokens.shape)
-print("New Input:", reference_gpt2.tokenizer.decode(next_tokens[0]))
-
-print(new_logits.shape)
-print(new_logits[-1, -1].argmax(-1))
-
-print(reference_gpt2.tokenizer.decode(new_logits[-1, -1].argmax(-1)))
+for i in range(10):
+    # Define new input sequence, by appending the previously generated token
+    tokens = t.cat([tokens, next_token[None, None]], dim=-1)
+    # Pass our new sequence through the model, to get new output
+    logits = reference_gpt2(tokens)
+    # Get the predicted token at the end of our sequence
+    next_token = logits[0, -1].argmax(dim=-1)
+    # Decode and print the result
+    next_char = reference_gpt2.to_string(next_token)
+    print(f"{tokens.shape[-1]+1}th char = {repr(next_char)}")
 ```
+
+Note how our model predicts a second line break, followed by a second copy of the input sequence. 
 """)
 
     st.success(r"""
@@ -455,25 +470,33 @@ def section_code():
 ## Table of Contents
 
 <ul class="contents">
-   <li><a class="contents-el" href="#high-level-architecture">High-Level architecture</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#bonus-things-less-conceptually-important-but-key-technical-details">Bonus things - less conceptually important but key technical details</a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#actual-code">Actual Code!</a></li>
-   <li><ul class="contents">
-    <li><a class="contents-el" href="#parameters-and-activations">Parameters and Activations</a></li>
+    <li><a class="contents-el" href="#high-level-architecture">High-Level architecture</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#summary">Summary</a></li>
+        <li><a class="contents-el" href="#residual-stream">Residual stream</a></li>
+        <li><a class="contents-el" href="#transformer-blocks">Transformer blocks</a></li>
+        <li><ul class="contents">
+            <li><a class="contents-el" href="#attention">Attention</a></li>
+            <li><a class="contents-el" href="#mlps">MLPs</a></li>
+        </ul></li>
+        <li><a class="contents-el" href="#unembedding">Unembedding</a></li>
+        <li><a class="contents-el" href="#bonus-things-less-conceptually-important-but-key-technical-details">Bonus things</a></li>
+    </ul></li>
+    <li><a class="contents-el" href="#actual-code">Actual Code!</a></li>
+    <li><ul class="contents">
+    <li><a class="contents-el" href="#parameters-and-activations">Parameters vs Activations</a></li>
     <li><a class="contents-el" href="#config">Config</a></li>
     <li><a class="contents-el" href="#tests">Tests</a></li>
     <li><a class="contents-el" href="#layernorm">LayerNorm</a></li>
     <li><a class="contents-el" href="#embedding">Embedding</a></li>
     <li><a class="contents-el" href="#positional-embedding">Positional Embedding</a></li>
-    <li><a class="contents-el" href="#attention">Attention</a></li>
+    <li><a class="contents-el" href="#attention-layer">Attention Layer</a></li>
     <li><a class="contents-el" href="#mlp">MLP</a></li>
     <li><a class="contents-el" href="#transformer-block">Transformer Block</a></li>
     <li><a class="contents-el" href="#unembedding">Unembedding</a></li>
     <li><a class="contents-el" href="#full-transformer">Full Transformer</a></li>
     </ul></li>
-   <li><a class="contents-el" href="#try-it-out">Try it out!</a></li>
+    <li><a class="contents-el" href="#try-it-out">Try it out!</a></li>
 </ul>
 """, unsafe_allow_html=True)
     st.markdown(r"""
@@ -560,7 +583,7 @@ Below is a schematic diagram of the attention layers; don't worry if you don't f
     st_image("transformer-attn.png", 1300)
     st.markdown(r"")
     st.markdown(r"""
-### MLP
+### MLPs
 
 The MLP layers are just a standard neural network, with a singular hidden layer and a nonlinear activation function. The exact activation isn't conceptually important ([GELU](https://paperswithcode.com/method/gelu) seems to perform best).
 
@@ -629,7 +652,7 @@ d_mlp = 3072 (4 * d_model)
 d_head = 64 (d_model / n_heads)
 ```
 
-### Parameters and Activations
+### Parameters vs Activations
 
 It's important to distinguish between parameters and activations in the model.
 
@@ -648,10 +671,10 @@ The dropdown below contains a diagram of a single layer (called a `TransformerBl
 Run the following code to print all the activation shapes of the reference model:
 
 ```python
-for activation_name, activation in cache.cache_dict.items():
+for activation_name, activation in cache.items():
     # Only print for first layer
     if ".0." in activation_name or "blocks" not in activation_name:
-        print(activation_name, activation.shape)
+        print(f"{activation_name:30} {tuple(activation.shape)}")
 ```
 
 #### Print All Parameters Shapes of Reference Model
@@ -660,7 +683,7 @@ for activation_name, activation in cache.cache_dict.items():
 for name, param in reference_gpt2.named_parameters():
     # Only print for first layer
     if ".0." in name or "blocks" not in name:
-        print(name, param.shape)
+        print(f"{name:18} {tuple(param.shape)}")
 ```
 
 The diagram below shows the name of all activations and parameters in a fully general transformer model from transformerlens (except for a few at the start and end, like the embedding and unembedding). Lots of this won't make sense at first, but you can return to this diagram later and check that you understand most/all parts of it.
@@ -755,6 +778,8 @@ You can use the PyTorch [LayerNorm documentation](https://pyt.org/docs/stable/ge
 * The `layer_norm_eps` argument in your config object corresponds to the $\epsilon$ term in the PyTorch documentation (it is included to avoid division-by-zero errors).
 * We've given you a `debug` argument in your config. If `debug=True`, then you can print output like the shape of objects in your `forward` function to help you debug (this is a very useful trick to improve your coding speed).
 
+Fill in the function, where it says `pass` (this will be the basic pattern for most other exercises in this section).
+
 ```python
 class LayerNorm(nn.Module):
     def __init__(self, cfg):
@@ -765,7 +790,8 @@ class LayerNorm(nn.Module):
     
     def forward(self, residual):
         # residual: [batch, position, d_model]
-        "YOUR CODE HERE"
+        # output: [batch, position, d_model]
+        pass
 ```""")
 
     with st.expander("Solution"):
@@ -780,6 +806,7 @@ class LayerNorm(nn.Module):
 
     def forward(self, residual):
         # residual: [batch, position, d_model]
+        # output: [batch, position, d_model]
         residual_mean = residual.mean(dim=-1, keepdim=True)
         residual_std = (residual.var(dim=-1, keepdim=True, unbiased=False) + self.cfg.layer_norm_eps).sqrt()
 
@@ -809,7 +836,8 @@ class Embed(nn.Module):
 
     def forward(self, tokens):
         # tokens: [batch, position]
-        return self.W_E[tokens]
+        # output: [batch, position, d_model]
+        pass
 
 rand_int_test(Embed, [2, 4])
 load_gpt2_test(Embed, reference_gpt2.embed, tokens)
@@ -827,10 +855,8 @@ class Embed(nn.Module):
     
     def forward(self, tokens):
         # tokens: [batch, position]
-        if self.cfg.debug: print("Tokens:", tokens.shape)
-        embed = self.W_E[tokens, :] # [batch, position, d_model]
-        if self.cfg.debug: print("Embeddings:", embed.shape)
-        return embed
+        # output: [batch, position, d_model]
+        return self.W_E[tokens]
 
 rand_int_test(Embed, [2, 4])
 load_gpt2_test(Embed, reference_gpt2.embed, tokens)
@@ -849,7 +875,9 @@ class PosEmbed(nn.Module):
         nn.init.normal_(self.W_pos, std=self.cfg.init_range)
     
     def forward(self, tokens):
-        "YOUR CODE HERE"
+        # tokens: [batch, position]
+        # output: [batch, position, d_model]
+        pass
 
 rand_int_test(PosEmbed, [2, 4])
 load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
@@ -867,6 +895,7 @@ class PosEmbed(nn.Module):
 
     def forward(self, tokens):
         # tokens: [batch, position]
+        # output: [batch, position, d_model]
         batch, seq_len = tokens.shape
         return einops.repeat(self.W_pos[:seq_len], "seq d_model -> batch seq d_model", batch=batch)
 
@@ -875,7 +904,7 @@ load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
 ```""")
     st.markdown(r"""
 
-### Attention
+### Attention Layer
 
 * **Step 1:** Produce an attention pattern - for each destination token, probability distribution over previous tokens (including current token)
     * Linear map from input -> query, key shape `[batch, seq_posn, head_index, d_head]`
@@ -888,15 +917,6 @@ load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
     * Map to output, `[batch, position, d_model]` (position = query_pos, we've summed over all heads)
 
 Below is a much larger, more detailed version of the attention head diagram from earlier. Note that this diagram assumes a batch size of 1 (in the general case, all terms except the model weights $W_Q$, $b_Q$ etc will have a batch dimension at the start). Also, this diagram shows how the attention layer works for all heads (whenever there are three dimensional tensors in the diagram, the depth axis represents different heads).
-
-```
-Key for dimensions in the diagram:
-
-n = num heads / head index
-s = sequence length / position (s_q and s_k are the same, but indexed to distinguish them)
-e = embedding dimension (also called d_model)
-h = head size (also called d_head, or d_k)
-```
 """)
     st_image("transformer-attn-2.png", 1200)
     with st.expander("A few extra notes on attention (optional)"):
@@ -950,16 +970,16 @@ from IPython.display import display
 
 display(cv.attention.attention_patterns(tokens=reference_gpt2.to_str_tokens(reference_text), attention=cache["pattern", 0][0]))
 ```
-
----
-
+""")
+    st.components.v1.html(attn_patterns_demo, height=550)
+    st.markdown(r"""
 Note - don't worry if you don't get 100% accuracy here; the tests are pretty stringent. Even things like having your `einsum` input arguments in a different order might result in the output being very slightly different. You should be getting at least 99% accuracy though, so if the value is lower then this it probably means you've made a mistake somewhere.
 
 Also, this implementation will probably be the most challenging exercise on this page, so don't worry if it takes you some time! You should look at parts of the solution if you're stuck.
 
 ```python
 class Attention(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
         self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
@@ -971,29 +991,52 @@ class Attention(nn.Module):
         self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_V, std=self.cfg.init_range)
         self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
-        
+
         self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
         nn.init.normal_(self.W_O, std=self.cfg.init_range)
         self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
-        
-        self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
-    
-    def forward(self, normalized_resid_pre):
-        # normalized_resid_pre: [batch, position, d_model]
-        "YOUR CODE HERE"
 
-    def apply_causal_mask(self, attn_scores):
+        self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
+
+    def forward(self, normalized_resid_pre: t.Tensor):
+        # normalized_resid_pre: [batch, position, d_model]
+        # output: [batch, position, d_model]
+        pass
+
+    def apply_causal_mask(self, attn_scores: t.Tensor):
         # attn_scores: [batch, n_heads, query_pos, key_pos]
-        "YOUR CODE HERE"
+        # output: [batch, n_heads, query_pos, key_pos]
+        pass
+
 
 rand_float_test(Attention, [2, 4, 768])
 load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
-```""")
+```
+""")
+    with st.expander("Hint (pseudocode for both functions)"):
+        st.markdown(r"""
+```python
+def forward(self, normalized_resid_pre):    
+    # Calculate query, key and value vectors
+
+    # Calculate attention scores, then scale and mask, and apply softmax to get probabilities
+
+    # Take weighted sum of value vectors, according to attention probabilities
+
+    # Calculate output (by applying matrix W_O and summing over heads, then adding bias b_O)
+
+
+def apply_causal_mask(self, attn_scores):
+    # Define a mask that is True for all positions we want to set probabilities to zero for
+
+    # Apply the mask to attention scores, then return the masked scores
+```
+""")
     with st.expander("Solution"):
         st.markdown(r"""
 ```python
 class Attention(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
         self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
@@ -1005,46 +1048,65 @@ class Attention(nn.Module):
         self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
         nn.init.normal_(self.W_V, std=self.cfg.init_range)
         self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
-        
+
         self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
         nn.init.normal_(self.W_O, std=self.cfg.init_range)
         self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
-        
+
         self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
-    
-    def forward(self, normalized_resid_pre):
+
+    def forward(self, normalized_resid_pre: t.Tensor):
         # normalized_resid_pre: [batch, position, d_model]
-        if self.cfg.debug: print("Normalized_resid_pre:", normalized_resid_pre.shape)
-        
-        q = einsum("batch query_pos d_model, n_heads d_model d_head -> batch query_pos n_heads d_head", normalized_resid_pre, self.W_Q) + self.b_Q
-        k = einsum("batch key_pos d_model, n_heads d_model d_head -> batch key_pos n_heads d_head", normalized_resid_pre, self.W_K) + self.b_K
-        
-        attn_scores = einsum("batch query_pos n_heads d_head, batch key_pos n_heads d_head -> batch n_heads query_pos key_pos", q, k)
-        attn_scores = attn_scores / math.sqrt(self.cfg.d_head)
-        attn_scores = self.apply_causal_mask(attn_scores)
+        # output: [batch, position, d_model]
 
-        pattern = attn_scores.softmax(dim=-1) # [batch, n_head, query_pos, key_pos]
+        # Calculate query, key and value vectors
+        q = einsum(
+            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head", 
+            normalized_resid_pre, self.W_Q
+        ) + self.b_Q
+        k = einsum(
+            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head", 
+            normalized_resid_pre, self.W_K
+        ) + self.b_K
+        v = einsum(
+            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head", 
+            normalized_resid_pre, self.W_V
+        ) + self.b_V
 
-        v = einsum("batch key_pos d_model, n_heads d_model d_head -> batch key_pos n_heads d_head", normalized_resid_pre, self.W_V) + self.b_V
+        # Calculate attention scores, then scale and mask, and apply softmax to get probabilities
+        attn_scores = einsum("batch posn_Q nheads d_head, batch posn_K nheads d_head -> batch nheads posn_Q posn_K", q, k)
+        attn_scores_masked = self.apply_causal_mask(attn_scores / self.cfg.d_head ** 0.5)
+        attn_pattern = attn_scores_masked.softmax(-1)
 
-        z = einsum("batch n_heads query_pos key_pos, batch key_pos n_heads d_head -> batch query_pos n_heads d_head", pattern, v)
+        # Take weighted sum of value vectors, according to attention probabilities
+        z = einsum("batch posn_K nheads d_head, batch nheads posn_Q posn_K -> batch posn_Q nheads d_head", v, attn_pattern)
 
-        attn_out = einsum("batch query_pos n_heads d_head, n_heads d_head d_model -> batch query_pos d_model", z, self.W_O) + self.b_O
+        # Calculate output (by applying matrix W_O and summing over heads, then adding bias b_O)
+        attn_out = einsum("batch posn_Q nheads d_head, nheads d_head d_model -> batch posn_Q d_model", z, self.W_O) + self.b_O
+
         return attn_out
 
-    def apply_causal_mask(self, attn_scores):
+    def apply_causal_mask(self, attn_scores: t.Tensor):
         # attn_scores: [batch, n_heads, query_pos, key_pos]
+        # output: [batch, n_heads, query_pos, key_pos]
+
+        # Define a mask that is True for all positions we want to set probabilities to zero for
         mask = t.triu(t.ones(attn_scores.size(-2), attn_scores.size(-1), device=attn_scores.device), diagonal=1).bool()
+        # Apply the mask to attention scores, then return the masked scores
         attn_scores.masked_fill_(mask, self.IGNORE)
         return attn_scores
 
+
 rand_float_test(Attention, [2, 4, 768])
-load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["blocks.0.ln1.hook_normalized"])
-```""")
+load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
+```
+""")
 
     st.markdown(r"""
 
 ### MLP
+
+Note, we have the `gelu_new` function imported from transformer lens, which you should use as your activation function.
 
 ```python
 class MLP(nn.Module):
@@ -1060,7 +1122,8 @@ class MLP(nn.Module):
     
     def forward(self, normalized_resid_mid):
         # normalized_resid_mid: [batch, position, d_model]
-        "YOUR CODE HERE"
+        # output: [batch, position, d_model]
+        pass
 
 rand_float_test(MLP, [2, 4, 768])
 load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["blocks.0.ln2.hook_normalized"])
@@ -1082,10 +1145,16 @@ class MLP(nn.Module):
     
     def forward(self, normalized_resid_mid):
         # normalized_resid_mid: [batch, position, d_model]
-        if self.cfg.debug: print("Normalized_resid_mid:", normalized_resid_mid.shape)
-        pre = einsum("batch position d_model, d_model d_mlp -> batch position d_mlp", normalized_resid_mid, self.W_in) + self.b_in
+        # output: [batch, position, d_model]
+        pre = einsum(
+            "batch position d_model, d_model d_mlp -> batch position d_mlp", 
+            normalized_resid_mid, self.W_in
+        ) + self.b_in
         post = gelu_new(pre)
-        mlp_out = einsum("batch position d_mlp, d_mlp d_model -> batch position d_model", post, self.W_out) + self.b_out
+        mlp_out = einsum(
+            "batch position d_mlp, d_mlp d_model -> batch position d_model", 
+            post, self.W_out
+        ) + self.b_out
         return mlp_out
 
 rand_float_test(MLP, [2, 4, 768])
@@ -1108,8 +1177,9 @@ class TransformerBlock(nn.Module):
         self.mlp = MLP(cfg)
     
     def forward(self, resid_pre):
-        # resid_pre [batch, position, d_model]
-        "YOUR CODE HERE"
+        # resid_pre: [batch, position, d_model]
+        # output: [batch, position, d_model]
+        pass
 
 rand_float_test(TransformerBlock, [2, 4, 768])
 load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
@@ -1129,19 +1199,16 @@ class TransformerBlock(nn.Module):
         self.mlp = MLP(cfg)
     
     def forward(self, resid_pre):
-        # resid_pre [batch, position, d_model]
-        normalized_resid_pre = self.ln1(resid_pre)
-        attn_out = self.attn(normalized_resid_pre)
-        resid_mid = resid_pre + attn_out
-        
-        normalized_resid_mid = self.ln2(resid_mid)
-        mlp_out = self.mlp(normalized_resid_mid)
-        resid_post = resid_mid + mlp_out
+        # resid_pre: [batch, position, d_model]
+        # output: [batch, position, d_model]
+        resid_mid = self.attn(self.ln1(resid_pre)) + resid_pre
+        resid_post = self.mlp(self.ln2(resid_mid)) + resid_mid
         return resid_post
 
 rand_float_test(TransformerBlock, [2, 4, 768])
 load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
-```""")
+```
+""")
 
     st.markdown(r"""
 ### Unembedding
@@ -1156,8 +1223,9 @@ class Unembed(nn.Module):
         self.b_U = nn.Parameter(t.zeros((cfg.d_vocab), requires_grad=False))
     
     def forward(self, normalized_resid_final):
-        # normalized_resid_final [batch, position, d_model]
-        "YOUR CODE HERE"
+        # normalized_resid_final: [batch, position, d_model]
+        # output: [batch, position, d_vocab]
+        pass
 
 rand_float_test(Unembed, [2, 4, 768])
 load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
@@ -1176,8 +1244,8 @@ class Unembed(nn.Module):
         self.b_U = nn.Parameter(t.zeros((cfg.d_vocab), requires_grad=False))
     
     def forward(self, normalized_resid_final):
-        # normalized_resid_final [batch, position, d_model]
-        if self.cfg.debug: print("Normalized_resid_final:", normalized_resid_final.shape)
+        # normalized_resid_final: [batch, position, d_model]
+        # output: [batch, position, d_vocab]
         logits = einsum("batch position d_model, d_model d_vocab -> batch position d_vocab", normalized_resid_final, self.W_U) + self.b_U
         return logits
 
@@ -1202,7 +1270,8 @@ class DemoTransformer(nn.Module):
     
     def forward(self, tokens):
         # tokens [batch, position]
-        "YOUR CODE HERE"
+        # output: [batch, position, d_vocab]
+        pass
 
 rand_int_test(DemoTransformer, [2, 4])
 load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
@@ -1223,6 +1292,7 @@ class DemoTransformer(nn.Module):
     
     def forward(self, tokens):
         # tokens [batch, position]
+        # output: [batch, position, d_vocab]
         embed = self.embed(tokens)
         pos_embed = self.pos_embed(tokens)
         residual = embed + pos_embed
@@ -1235,7 +1305,8 @@ class DemoTransformer(nn.Module):
 
 rand_int_test(DemoTransformer, [2, 4])
 load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
-```""")
+```
+""")
 
     st.markdown(r"""
 
@@ -1249,6 +1320,20 @@ demo_gpt2.cuda()
 
 Let's take a test string, and calculate the loss!
 
+We're using the formula for **cross-entropy loss**. The cross entropy loss between a modelled distribution $Q$ and target distribution $P$ is:
+
+$$
+-\sum_x P(x) \log Q(x)
+$$
+
+In the case where $P$ is just the distribution derived from target classes (i.e. $P(x^*) = 1$ for the correct class $x^*$) then this becomes:
+
+$$
+-\log Q(x^*)
+$$
+
+in other words, the negative log prob of the true classification. 
+
 ```python
 test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
 test_tokens = reference_gpt2.to_tokens(test_string).cuda()
@@ -1256,24 +1341,24 @@ demo_logits = demo_gpt2(test_tokens)
 ```
 
 ```python
-def lm_cross_entropy_loss(logits, tokens):
-    # Measure next token loss
+def get_log_probs(logits, tokens):
     # Logits have shape [batch, position, d_vocab]
     # Tokens have shape [batch, position]
     log_probs = logits.log_softmax(dim=-1)
-    pred_log_probs = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
-    return -pred_log_probs.mean()
-loss = lm_cross_entropy_loss(demo_logits, test_tokens)
-print(loss)
-print("Loss as average prob", (-loss).exp())
-print("Loss as 'uniform over this many variables'", (loss).exp())
-print("Uniform loss over the vocab", math.log(demo_gpt2.cfg.d_vocab))
+    # Get logprobs the first seq_len-1 predictions (so we can compare them with the actual next tokens)
+    log_probs_for_predicted_tokens = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
+
+    return log_probs_for_predicted_tokens
+
+pred_log_probs = get_log_probs(demo_logits, test_tokens)
+print(f"Avg cross entropy loss: {-pred_log_probs.mean():.4f}")
+print(f"Avg cross entropy loss for uniform distribution: {math.log(demo_gpt2.cfg.d_vocab):4f}")
+print(f"Avg probability assigned to correct token: {pred_log_probs.exp().mean():4f}")
 ```
 
 We can also greedily generate text:
 
 ```python
-test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that'''
 for i in tqdm.tqdm(range(100)):
     test_tokens = reference_gpt2.to_tokens(test_string).cuda()
     demo_logits = demo_gpt2(test_tokens)
@@ -1292,6 +1377,7 @@ def section_training():
    <li><a class="contents-el" href="#create-model">Create Model</a></li>
    <li><a class="contents-el" href="#create-optimizer">Create Optimizer</a></li>
    <li><a class="contents-el" href="#run-training-loop">Run Training Loop</a></li>
+   <li><a class="contents-el" href="#a-note-on-this-loss-curve">A note on this loss curve</a></li>
 </ul>
 """, unsafe_allow_html=True)
     st.markdown(r"""
@@ -1313,6 +1399,156 @@ For our purposes, we'll train 2L 4 heads per layer model, with context length 25
 
     st.error(r"""
 You should use the Colab to run this code, since it will put quite a strain on your GPU otherwise! You can access a complete version of the Colab (with solutions for all the earlier exercises filled in) [here](https://colab.research.google.com/drive/1kP27XsoJsPeCyVtzeolNMlVAsLFEmxZ6?usp=sharing#scrollTo=QfeyG6NZm4SC).
+
+Alternatively, if you just want to read the code and look at the outputs, you can still do it on this page.
+""")
+
+    st.markdown(r"""
+```python
+import datasets
+import transformers
+import plotly.express as px
+```
+
+## Config
+
+```python
+batch_size = 8
+num_epochs = 1
+max_steps = 1000
+log_every = 10
+lr = 1e-3
+weight_decay = 1e-2
+model_cfg = Config(debug=False, d_model=256, n_heads=4, d_head=64, d_mlp=1024, n_layers=2, n_ctx=256, d_vocab=reference_gpt2.cfg.d_vocab)
+```
+
+## Create Data
+
+We load in a tiny dataset I made, with the first 10K entries in the Pile (inspired by Stas' version for OpenWebText!)
+
+```python
+dataset = datasets.load_dataset("NeelNanda/pile-10k", split="train")
+print(dataset)
+print(dataset[0]['text'][:100])
+tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
+data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+```
+
+## Create Model
+
+```python
+model = DemoTransformer(model_cfg)
+model.cuda()
+```
+
+## Create Optimizer
+
+We use AdamW - it's a pretty standard optimizer.
+
+```python
+optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+```
+
+## Run Training Loop
+
+This is a pretty standard template for a training loop. There are annotations to explain the different parts of the code.
+
+```python
+losses = []
+print("Number of batches:", len(data_loader))
+
+for epoch in range(num_epochs):
+    
+    for c, batch in tqdm.tqdm(enumerate(data_loader)):
+        
+        # Get batch of tokens, and run your model on them
+        tokens = batch['tokens'].cuda()
+        logits = model(tokens)
+        # Get the avg cross entropy loss of your predictions
+        loss = -get_log_probs(logits, tokens).mean()
+        # Backprop on the loss (so our parameters store gradients)
+        loss.backward()
+        # Update the values of your parameters, using the Adam method
+        optimizer.step()
+        # Reset gradients to zero (since grads accumulate with each .backward() call)
+        optimizer.zero_grad()
+
+        losses.append(loss.item())
+        if c % log_every == 0:
+            print(f"Step: {c}, Loss: {loss.item():.4f}")
+        if c > max_steps:
+            break
+```
+
+We can now plot a loss curve!
+
+```python
+px.line(y=losses, x=np.arange(len(losses))*(model_cfg.n_ctx * batch_size), labels={"y":"Loss", "x":"Tokens"}, title="Training curve for my tiny demo model!")
+```
+""")
+    st.plotly_chart(fig_dict["training_curve_1"])
+    st.markdown(r"""
+## A note on this loss curve
+""")
+    st.info("*This section provides a bit of extra context on why the loss curve looks like this. It's not very important, so if you don't find this interesting then you can skip it and move on to the next section of exercises.*")
+    st.markdown(r"""
+What's up with the shape of our loss curve? It seems like we start at around 10-11, drop down fast to around 7-8, then level out. It turns out, this is all to do with the kinds of algorithms the model learns during training.
+
+When it starts out, your model will be outputting random noise, which might look a lot like "predict each token with approximately uniform probability", i.e. $Q(x) = 1/d_\text{vocab}$ for all $x$. This gives us a cross entropy loss of $\log (d_\text{vocab})$.
+
+```python
+d_vocab = model.cfg.d_vocab
+
+print(f"d_vocab = {d_vocab}")
+print(f"Cross entropy loss on uniform distribution = {math.log(d_vocab)}")
+```
+
+The next thing we might expect the model to learn is the frequencies of words in the english language. After all, small common tokens like `" and"` or `" the"` might appear much more frequently than others. This would give us an average cross entropy loss of:
+
+$$
+- \sum_x p_x \log p_x
+$$
+
+where $p_x$ is the actual frequency of the word in our training data.
+
+We can evaluate this quantity as follows:
+
+```python
+toks = tokens_dataset[:]["tokens"].flatten()
+
+freqs = t.bincount(toks, minlength=model.cfg.d_vocab)
+probs = freqs.float() / freqs.sum()
+
+distn = t.distributions.categorical.Categorical(probs=probs)
+entropy = distn.entropy()
+
+print(f"Entropy of training data = {entropy}")
+```
+
+Now, let's show these values on the graph, and see how they line up with the training pattern!
+
+```python
+fig = px.line(y=losses, x=np.arange(len(losses))*(model_cfg.n_ctx * batch_size), labels={"y":"Loss", "x":"Tokens"}, title="Training curve for my tiny demo model!")
+
+for text, value in zip(["Entropy of uniform distribution", "Entropy of training data"], [math.log(d_vocab), entropy]):
+    fig.add_hline(x0=0, x1=1, y=value, line_color="red", line_dash="dash", annotation_text=text, annotation_position="top right")
+
+fig.show()
+```
+""")
+    st.plotly_chart(fig_dict["training_curve_2"])
+    st.markdown(r"""
+We can see this lines up pretty well with our model's observed training patterns.
+
+The next thing our model usually learns is **bigram frequencies** (i.e. the frequency of pairs of adjacent tokens in the training data). For instance, `"I"` and `" am"` are common tokens, but their bigram frequency is much higher than would be suggested if they occurred independently. Bigram frequencies actually take you pretty far, since it also covers:
+
+* Simple grammatical rules (e.g. a full stop being followed by a capitalized word)
+* Weird quirks of tokenization (e.g. `" manip"` being followed by `"ulative"`)
+* Common names (e.g. `"Barack"` being followed by `" Obama"`)
+
+Even a zero-layer model (i.e. no attention layers or MLPs) can approximate bigram frequencies. The output of a zero-layer transformer for one-hot encoded tokens $t$ is the vector $t^T W_E W_U + b_U$, so we can have the $t$-th row of the matrix $W_E W_U$ be (approxmately) the logit distribution for tokens which follow $t$ in the training data). 
+
+After approximating bigram frequencies, we need to start using smarter techniques, like trigrams (which can only be implemented using attention heads), and **induction heads** (which we'll learn a lot more about in the next set of exercises!).
 """)
 
 # ```python
@@ -1433,5 +1669,4 @@ def page():
         st.markdown("---")
     func_list[page_dict[radio]]()
 
-if is_local or check_password():
-    page()
+page()

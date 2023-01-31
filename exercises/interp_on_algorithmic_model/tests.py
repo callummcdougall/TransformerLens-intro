@@ -14,7 +14,7 @@ from brackets_datasets import BracketsDataset
 # ipython.magic("autoreload 2")
 
 MAIN = __name__ == "__main__"
-device = t.device("cuda" if t.cuda.is_available() else "cpu")
+device = t.device("cpu")
 
 t.set_grad_enabled(False)
 
@@ -22,12 +22,12 @@ def test_get_activations(get_activations: Callable, model: HookedTransformer, da
 
     import solutions
     
-    embed_actual = get_activations(model, data, "hook_embed")
-    embed_expected = solutions.get_activations(model, data, "hook_embed")
+    embed_actual = get_activations(model, data.toks, "hook_embed")
+    embed_expected = solutions.get_activations(model, data.toks, "hook_embed")
     t.testing.assert_close(embed_actual, embed_expected)
     
-    dict_actual = get_activations(model, data, ["hook_embed", "hook_pos_embed"])
-    dict_expected = solutions.get_activations(model, data, ["hook_embed", "hook_pos_embed"])
+    dict_actual = get_activations(model, data.toks, ["hook_embed", "hook_pos_embed"])
+    dict_expected = solutions.get_activations(model, data.toks, ["hook_embed", "hook_pos_embed"])
     assert isinstance(dict_actual, ActivationCache)
     t.testing.assert_close(dict_actual["hook_pos_embed"], dict_expected["hook_pos_embed"])
     
@@ -82,6 +82,13 @@ def test_out_by_component_in_unbalanced_dir(out_by_component_in_unbalanced_dir: 
 
 # %%
 
+def test_get_post_final_ln_dir(get_post_final_ln_dir, model: HookedTransformer):
+    import solutions
+    actual = get_post_final_ln_dir(model)
+    expected = solutions.get_post_final_ln_dir(model)
+    t.testing.assert_close(actual, expected)
+    print("All tests in `test_get_post_final_ln_dir` passed!")
+
 def test_total_elevation_and_negative_failures(data: BracketsDataset, total_elevation_failure: TT["batch"], negative_failure: TT["batch"]):
 
     import solutions
@@ -97,8 +104,8 @@ def test_total_elevation_and_negative_failures(data: BracketsDataset, total_elev
 
 def test_get_attn_probs(get_attn_probs: Callable, model: HookedTransformer, data: BracketsDataset):
     import solutions
-    probs_actual = get_attn_probs(model, data.toks, 2, 0)
-    probs_expected = solutions.get_attn_probs(model, data.toks, 2, 0)
+    probs_actual = get_attn_probs(model, data, 2, 0)
+    probs_expected = solutions.get_attn_probs(model, data, 2, 0)
     t.testing.assert_close(probs_actual, probs_expected)
     print("All tests in `test_get_attn_probs` passed!")
 
@@ -140,11 +147,11 @@ def test_get_out_by_neuron_in_20_dir_less_memory(get_out_by_neuron_in_20_dir_les
     t.testing.assert_close(out, out_expected)
     print("All tests in `test_get_out_by_neuron_in_20_dir_less_memory` passed!")
 
-def test_get_q_and_k_for_given_input(get_q_and_k_for_given_input, model):
+def test_get_q_and_k_for_given_input(get_q_and_k_for_given_input, model, tokenizer):
     import solutions
     parens = "()"
-    q, k = get_q_and_k_for_given_input(model, parens, 0, 0)
-    q_expected, k_expected = solutions.get_q_and_k_for_given_input(model, parens, 0, 0)
+    q, k = get_q_and_k_for_given_input(model, tokenizer, parens, 0, 0)
+    q_expected, k_expected = solutions.get_q_and_k_for_given_input(model, tokenizer, parens, 0, 0)
     t.testing.assert_close(q, q_expected)
     t.testing.assert_close(k, k_expected)
     print("All tests in `test_get_q_and_k_for_given_input` passed!")

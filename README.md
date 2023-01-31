@@ -66,10 +66,22 @@ Full instructions for running the exercises in this way:
 * Make & activate a virtual environment
     * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 * Install requirements.
-    * First, install PyTorch (the command to run in your terminal can be found at the top of the `requirements.txt` file in the cloned repo).
+    * First, install PyTorch using the following command: `conda install pytorch=1.11.0 torchdata torchvision -c pytorch -y`.
     * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
 * While in the directory, run `streamlit run Home.py` in your terminal (this should work since Streamlit is one of the libraries in `requirements.txt`).
     * This should open up a local copy of the page you're reading right now, and you're good to go!
+
+<details>
+<summary>Help - I get error `ImportError: DLL load failed while importing lib` when I try and import things.</summary>
+
+To fix this problem, run the following code in your terminal:
+
+```
+conda install libboost boost-cpp -c conda-forge
+```
+ 
+then restart your IDE. Hopefully this fixes the problem.
+</details>
 
 To complete one of the exercise pages, you should:
 

@@ -13,15 +13,15 @@ from tqdm import tqdm
 from torchtyping import TensorType as TT
 
 MAIN = __name__ == "__main__"
-device = t.device("cuda" if t.cuda.is_available() else "cpu")
+device = t.device("cpu")
 
 t.set_grad_enabled(False)
 
-from IPython import get_ipython
-ipython = get_ipython()
-# Code to automatically update the HookedTransformer code as its edited without restarting the kernel
-ipython.magic("load_ext autoreload")
-ipython.magic("autoreload 2")
+# from IPython import get_ipython
+# ipython = get_ipython()
+# # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
+# ipython.magic("load_ext autoreload")
+# ipython.magic("autoreload 2")
 
 from transformer_lens import utils, ActivationCache, HookedTransformer, HookedTransformerConfig
 from transformer_lens.hook_points import HookPoint
@@ -214,7 +214,7 @@ def get_post_final_ln_dir(model: HookedTransformer) -> TT["d_model"]:
 
 # Solution using hooks:
 
-def get_activations(model: HookedTransformer, toks: TT["batch", "seq"], names: Union[str, List[str]]) -> Union[t.Tensor, ActivationCache]:
+def get_activations(model: HookedTransformer, tokens: TT["batch", "seq"], names: Union[str, List[str]]) -> Union[t.Tensor, ActivationCache]:
     '''
     Uses hooks to return activations from the model.
     If names is a string, returns the activations for that hook name.
@@ -230,7 +230,7 @@ def get_activations(model: HookedTransformer, toks: TT["batch", "seq"], names: U
 
     hook_name_filter = lambda name: name in hook_names_list
     model.run_with_hooks(
-        toks,
+        tokens,
         return_type=None,
         fwd_hooks=[(hook_name_filter, hook_fn)]
     )
@@ -596,7 +596,7 @@ if MAIN:
 # %%
 
 def get_q_and_k_for_given_input(
-    model: HookedTransformer, parens: str, layer: int, head: int
+    model: HookedTransformer, tokenizer: SimpleTokenizer, parens: str, layer: int, head: int
 ) -> Tuple[TT["seq", "d_model"], TT[ "seq", "d_model"]]:
     '''
     Returns the queries and keys for the given parns input, in the attention head `layer.head`.
@@ -619,8 +619,8 @@ if MAIN:
     all_left_parens = "".join(["(" * 40])
     all_right_parens = "".join([")" * 40])
     model.reset_hooks()
-    q00_all_left, k00_all_left = get_q_and_k_for_given_input(model, all_left_parens, 0, 0)
-    q00_all_right, k00_all_right = get_q_and_k_for_given_input(model, all_right_parens, 0, 0)
+    q00_all_left, k00_all_left = get_q_and_k_for_given_input(model, tokenizer, all_left_parens, 0, 0)
+    q00_all_right, k00_all_right = get_q_and_k_for_given_input(model, tokenizer, all_right_parens, 0, 0)
     k00_avg = (k00_all_left + k00_all_right) / 2
 
     # Define hook function to patch in q or k vectors

@@ -99,7 +99,7 @@ def plot_neurons(neurons_in_unbalanced_dir: TT["batch", "neurons"], model: Hooke
         template="simple_white", height=800, width=1100
     ).update_traces(marker_size=3).update_layout(xaxis_range=[0, 1], yaxis_range=[-5, 5])
     save_fig(fig, f"neuron_contributions_{layer}")
-    fig.show()
+    fig.show(renderer="browser")
 
 def plot_attn_pattern(pattern: TT["batch", "head_idx", "seqQ", "seqK"]):
     fig = px.imshow(
