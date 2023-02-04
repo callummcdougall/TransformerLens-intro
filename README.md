@@ -9,6 +9,8 @@ This page contains a collation of resources and exercises on interpretability. T
 
 The exercises exist in two forms: as self-contained Colab notebooks (links below), and in this GitHub repo (accessible via the [Streamlit homepage](https://transformerlens-intro.streamlit.app/) which reads from this repo). Streamlit also allows you to publish webpages, so you can access that link to go to the Streamlit app homepage, and read all the same content from this README there.
 
+<img src="https://raw.githubusercontent.com/callummcdougall/TransformerLens-intro/main/images/page_images/magnifying-glass-2.png" width=400>
+
 ## About TransformerLens
 
 From the description in Neel Nanda's repo:
