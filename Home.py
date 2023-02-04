@@ -2,7 +2,7 @@ import os
 from st_dependencies import *
 st.set_page_config(layout="wide")
 
-st.markdown("""
+st.markdown(r"""
 <style>
 div[data-testid="column"] {
     background-color: #f9f5ff;
@@ -156,7 +156,7 @@ Full instructions for running the exercises in this way:
     * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 * Install requirements.
     * First, install PyTorch using the following command: `conda install pytorch=1.11.0 torchdata torchvision -c pytorch -y`.
-    * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
+    * Then install the rest of the requirements by navigating to the directory and running `pip install -r requirements.txt`.
 * While in the directory, run `streamlit run Home.py` in your terminal (this should work since Streamlit is one of the libraries in `requirements.txt`).
     * This should open up a local copy of the page you're reading right now, and you're good to go!
 

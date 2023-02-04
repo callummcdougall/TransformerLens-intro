@@ -1798,14 +1798,13 @@ This also agrees with our attention scores result, in showing tht `1.10` is a st
 """)
 
     st.markdown(r"""
-
 ### Aside - typechecking
 
 Typechecking is a useful habit to get into. It's not strictly necessary, but it can be a great help when you're debugging.
 
 One good way to typecheck in PyTorch is with the `torchtyping`. The most important object in this library is the `TensorType` object, which can be used to specify things like the shape and dtype of a tensor.
 
-You can also use the `typeguard.typechecked` to strictly enforce the type signatures of your inputs and outputs. For instance, if you replaced the `plot_logit_attribution` function with the following:
+In its simplest form, this just behaves like a fancier version of a docstring or comment (signalling to you, as well as any readers, what the size of objects should be). But you can also use the `typeguard.typechecked` to strictly enforce the type signatures of your inputs and outputs. For instance, if you replaced the `plot_logit_attribution` function with the following:
 
 ```python
 from torchtyping import TensorType as TT
