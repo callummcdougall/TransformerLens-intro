@@ -77,7 +77,7 @@ fig_dict = update_fig_dict(fig_dict)
 
 
 def section_home():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
