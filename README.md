@@ -8,6 +8,13 @@ The exercise are hosted on Streamlit, but there are also Colabs available. You c
 
 This page contains a collation of resources and exercises on interpretability. The focus is on [`TransformerLens`](https://github.com/neelnanda-io/TransformerLens), a library maintained by Neel Nanda.
 
+Some highlights include:
+
+* A walkthrough of how to build a transformer from scratch, and how to use it to generate text
+* How to use hooks to find evidence of induction circuits in a model, and how to reverse-engineer induction circuits directly from the model's weights
+* Interpreting a model trained to perform modular arithmetic
+* Investigating the [indirect object identification circuit](https://openreview.net/forum?id=NpsVSN6o4ul) in GPT-2
+
 The exercises exist in two forms: as self-contained Colab notebooks (links below), and in this GitHub repo (accessible via the [Streamlit homepage](https://transformerlens-intro.streamlit.app/) which reads from this repo). Streamlit also allows you to publish webpages, so you can access that link to go to the Streamlit app homepage, and read all the same content from this README there.
 
 <img src="https://raw.githubusercontent.com/callummcdougall/TransformerLens-intro/main/images/page_images/magnifying-glass-2.png" width=450>
