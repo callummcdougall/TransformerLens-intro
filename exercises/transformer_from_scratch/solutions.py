@@ -8,10 +8,8 @@ import torch.nn as nn
 import math
 from transformer_lens import HookedTransformer
 from transformer_lens.utils import gelu_new, tokenize_and_concatenate
-import tqdm.auto as tqdm
-import datasets
+from tqdm import tqdm
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
-os.chdir("../transformer_from_scratch")
 
 # # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
 # from IPython import get_ipython
@@ -19,13 +17,19 @@ os.chdir("../transformer_from_scratch")
 # ipython.magic("load_ext autoreload")
 # ipython.magic("autoreload 2")
 
-reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+MAIN = __name__ == "__main__"
+if MAIN:
+    os.chdir("../transformer_from_scratch")
+
+if MAIN:
+    reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 
 # %%
 
-reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and take over the world!"
-tokens = reference_gpt2.to_tokens(reference_text).cuda()
-logits, cache = reference_gpt2.run_with_cache(tokens)
+if MAIN:
+    reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and take over the world!"
+    tokens = reference_gpt2.to_tokens(reference_text).cuda()
+    logits, cache = reference_gpt2.run_with_cache(tokens)
 
 @dataclass
 class Config:
@@ -90,8 +94,9 @@ class LayerNorm(nn.Module):
         residual = (residual - residual_mean) / residual_std
         return residual * self.w + self.b
 
-rand_float_test(LayerNorm, [2, 4, 768])
-load_gpt2_test(LayerNorm, reference_gpt2.ln_final, cache["resid_post", 11])
+if MAIN:
+    rand_float_test(LayerNorm, [2, 4, 768])
+    load_gpt2_test(LayerNorm, reference_gpt2.ln_final, cache["resid_post", 11])
 
 # %%
 
@@ -106,8 +111,9 @@ class Embed(nn.Module):
         # tokens: [batch, position]
         return self.W_E[tokens]
 
-rand_int_test(Embed, [2, 4])
-load_gpt2_test(Embed, reference_gpt2.embed, tokens)
+if MAIN:
+    rand_int_test(Embed, [2, 4])
+    load_gpt2_test(Embed, reference_gpt2.embed, tokens)
 
 # %%
 
@@ -123,8 +129,9 @@ class PosEmbed(nn.Module):
         batch, seq_len = tokens.shape
         return einops.repeat(self.W_pos[:seq_len], "seq d_model -> batch seq d_model", batch=batch)
 
-rand_int_test(PosEmbed, [2, 4])
-load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
+if MAIN:
+    rand_int_test(PosEmbed, [2, 4])
+    load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
 
 # %%
 
@@ -152,29 +159,38 @@ class Attention(nn.Module):
         # normalized_resid_pre: [batch, position, d_model]
 
         # Calculate query, key and value vectors
-        q = einsum(
-            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head", 
-            normalized_resid_pre, self.W_Q
+        q = einops.einsum(
+            normalized_resid_pre, self.W_Q,
+            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head" 
         ) + self.b_Q
-        k = einsum(
-            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head", 
-            normalized_resid_pre, self.W_K
+        k = einops.einsum(
+            normalized_resid_pre, self.W_K,
+            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head" 
         ) + self.b_K
-        v = einsum(
-            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head", 
-            normalized_resid_pre, self.W_V
+        v = einops.einsum(
+            normalized_resid_pre, self.W_V,
+            "batch posn d_model, nheads d_model d_head -> batch posn nheads d_head" 
         ) + self.b_V
 
         # Calculate attention scores, then scale and mask, and apply softmax to get probabilities
-        attn_scores = einsum("batch posn_Q nheads d_head, batch posn_K nheads d_head -> batch nheads posn_Q posn_K", q, k)
+        attn_scores = einops.einsum(
+            q, k, 
+            "batch posn_Q nheads d_head, batch posn_K nheads d_head -> batch nheads posn_Q posn_K"
+        )
         attn_scores_masked = self.apply_causal_mask(attn_scores / self.cfg.d_head ** 0.5)
         attn_pattern = attn_scores_masked.softmax(-1)
 
         # Take weighted sum of value vectors, according to attention probabilities
-        z = einsum("batch posn_K nheads d_head, batch nheads posn_Q posn_K -> batch posn_Q nheads d_head", v, attn_pattern)
+        z = einops.einsum(
+            v, attn_pattern, 
+            "batch posn_K nheads d_head, batch nheads posn_Q posn_K -> batch posn_Q nheads d_head"
+        )
 
         # Calculate output (by applying matrix W_O and summing over heads, then adding bias b_O)
-        out = einsum("batch posn_Q nheads d_head, nheads d_head d_model -> batch posn_Q d_model", z, self.W_O) + self.b_O
+        out = einops.einsum(
+            z, self.W_O, 
+            "batch posn_Q nheads d_head, nheads d_head d_model -> batch posn_Q d_model"
+        ) + self.b_O
 
         return out
 
@@ -187,8 +203,9 @@ class Attention(nn.Module):
         return attn_scores
 
 
-# rand_float_test(Attention, [2, 4, 768])
-load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
+if MAIN:
+    # rand_float_test(Attention, [2, 4, 768])
+    load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
 
 # %%
 
@@ -211,8 +228,9 @@ class MLP(nn.Module):
         normalized_resid_mid = normalized_resid_mid @ self.W_out + self.b_out
         return normalized_resid_mid
 
-rand_float_test(MLP, [2, 4, 768])
-load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["normalized", 0, "ln2"])
+if MAIN:
+    rand_float_test(MLP, [2, 4, 768])
+    load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["normalized", 0, "ln2"])
 
 # %%
 
@@ -233,8 +251,9 @@ class TransformerBlock(nn.Module):
         resid_post = self.mlp(self.ln2(resid_mid)) + resid_mid
         return resid_post
 
-rand_float_test(TransformerBlock, [2, 4, 768])
-load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
+if MAIN:
+    rand_float_test(TransformerBlock, [2, 4, 768])
+    load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
 
 # %%
 
@@ -254,8 +273,9 @@ class Unembed(nn.Module):
         ) + self.b_U
         # Or, could just do `normalized_resid_final @ self.W_U + self.b_U`
 
-rand_float_test(Unembed, [2, 4, 768])
-load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
+if MAIN:
+    rand_float_test(Unembed, [2, 4, 768])
+    load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
 
 # %%
 
@@ -277,19 +297,21 @@ class DemoTransformer(nn.Module):
         logits = self.unembed(self.ln_final(residual))
         return logits
 
-rand_int_test(DemoTransformer, [2, 4])
-load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
+if MAIN:
+    rand_int_test(DemoTransformer, [2, 4])
+    load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
 
 # %%
 
-demo_gpt2 = DemoTransformer(Config(debug=False))
-demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
-demo_gpt2.cuda()
+if MAIN:
+    demo_gpt2 = DemoTransformer(Config(debug=False))
+    demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
+    demo_gpt2.cuda()
 
-test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
+    test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
 
-test_tokens = reference_gpt2.to_tokens(test_string).cuda()
-demo_logits = demo_gpt2(test_tokens)
+    test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+    demo_logits = demo_gpt2(test_tokens)
 
 def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
     # Measure next token loss
@@ -299,36 +321,21 @@ def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
     pred_log_probs = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
     return -pred_log_probs.mean()
 
-loss = lm_cross_entropy_loss(demo_logits, test_tokens)
-print(loss)
-print("Loss as average prob", (-loss).exp())
-print("Loss as 'uniform over this many variables'", (loss).exp())
-print("Uniform loss over the vocab", math.log(demo_gpt2.cfg.d_vocab))
+if MAIN:
+    loss = lm_cross_entropy_loss(demo_logits, test_tokens)
+    print(loss)
+    print("Loss as average prob", (-loss).exp())
+    print("Loss as 'uniform over this many variables'", (loss).exp())
+    print("Uniform loss over the vocab", math.log(demo_gpt2.cfg.d_vocab))
 
 # %%
 
-test_string = "There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that"
-for i in tqdm(range(100)):
-    test_tokens = reference_gpt2.to_tokens(test_string).cuda()
-    demo_logits = demo_gpt2(test_tokens)
-    test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
-print(test_string)
-
-# %%
-
-if False:
-    batch_size = 8
-    num_epochs = 1
-    max_steps = 1000
-    log_every = 10
-    lr = 1e-3
-    weight_decay = 1e-2
-    model_cfg = Config(debug=False, d_model=256, n_heads=4, d_head=64, d_mlp=1024, n_layers=2, n_ctx=256, d_vocab=reference_gpt2.cfg.d_vocab)
-
-    dataset = datasets.load_dataset("NeelNanda/pile-10k", split="train")
-    print(dataset)
-    print(dataset[0]['text'][:100])
-    tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
-    data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+if MAIN:
+    test_string = "There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that"
+    for i in tqdm(range(100)):
+        test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+        demo_logits = demo_gpt2(test_tokens)
+        test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
+    print(test_string)
 
 # %%

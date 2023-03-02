@@ -1,5 +1,6 @@
 # Make sure to install the torch dependencies with conda:
 # conda install pytorch=1.11.0 torchdata torchvision -c pytorch -y
+# conda install pytorch=1.13.1 torchvision pytorch-cuda=11.6 -c pytorch -c nvidia
 
 fancy_einsum
 einops
@@ -33,5 +34,5 @@ diffusers
 circuitsvis
 torchtyping
 typeguard
-git+https://github.com/callummcdougall/TransformerLens.git@main
+transformer_lens
 streamlit

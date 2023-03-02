@@ -65,7 +65,7 @@ Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL
 
 ## Introduction
 
-This is a clean, first principles implementation of GPT-2 in PyTorch. This is an accompaniment to [my video tutorial on implementing GPT-2](https://neelnanda.io/transformer-tutorial-2). If you want to properly understand how to implement GPT-2, you'll need to do it yourself! There's a [template version of this notebook here](https://neelnanda.io/transformer-template), go and fill in the blanks (no copying and pasting!) and see if you can pass the tests. **I recommend filling out the template *as* you watch the video, and seeing how far you can get with each section before watching me do it**.
+This is a clean, first principles implementation of GPT-2 in PyTorch. The architectural choices closely follow those used by the TransformerLens library (which you'll be using a lot more in later exercises).
 
 If you enjoyed this, I expect you'd enjoy learning more about what's actually going on inside these models and how to reverse engineer them! This is a fascinating young research field, with a lot of low-hanging fruit and open problems! **I recommend starting with my post [Concrete Steps for Getting Started in Mechanistic Interpretability](https://www.neelnanda.io/mechanistic-interpretability/getting-started).**
 
@@ -83,8 +83,6 @@ Check out these other intros to transformers for another perspective:
 
 **Sharing Guidelines:** This tutorial is still a bit of a work in progress! I think it's usable, but please don't post it anywhere publicly without checking with me first! Sharing with friends is fine. 
 
-If you've found this useful, I'd love to hear about it! Positive and negative feedback also very welcome. You can reach me via [email](mailto:neelnanda27@gmail.com)
-
 ## Imports
 
 If you're using Colab, you can just go straight to the page (scroll to the top for the link). If you're using your own IDE such as VSCode, and you've already gone through the setup steps described in **Home**, then you just need to create a file called `answers.py` (or `.ipynb` if you prefer notebooks) in the directory `exercises/transformer_from_scratch`, and run the following code at the top:
@@ -98,7 +96,7 @@ import torch.nn as nn
 import math
 from transformer_lens import HookedTransformer
 from transformer_lens.utils import gelu_new, tokenize_and_concatenate
-import tqdm.auto as tqdm
+from tqdm import tqdm
 import datasets
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
