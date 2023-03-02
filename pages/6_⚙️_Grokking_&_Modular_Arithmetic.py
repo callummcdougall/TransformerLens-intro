@@ -144,13 +144,21 @@ In this section, you'll apply your understanding of the Fourier basis and the pe
     st.markdown(r"""
 ### 3️⃣ Analysis During Training
 
-In the final section, you'll have a look at how the model evolves during the course of training. This section is optional, and the observations we make are more qualitative than concretely testable.
+In this section, you'll have a look at how the model evolves during the course of training. This section is optional, and the observations we make are more speculative than the rest of the material.
 """)
     st.info(r"""
 #### Learning Objectives
 
-TODO
+* Understand the idea of tracking metrics over time, and how this can inform when certain circuits are forming.
+* Investigate and interpret the evolution over time of the singular values of the model's weight matrices.
+* Investigate the formation of other capabilities in the model, like commutativity.
 """)
+    st.markdown(r"""
+### 4️⃣ Discussion & Future Directions
+
+Finally, we conclude with a discussion of these exercises, and some thoughts on future directions it could be taken.
+""")
+    
 def section_intro():
     st.sidebar.markdown(r"""
 ## Table of Contents
@@ -1879,8 +1887,31 @@ An example:
 """)
     st_image("cosine-components.png", 600)
 
-
 def section_training():
+    st.sidebar.markdown(r"""
+## Table of Contents
+
+<ul class="contents">
+   <li><a class="contents-el" href="#setup">Setup</a></li>
+   <li><a class="contents-el" href="#excluded-loss">Excluded Loss</a></li>
+   <li><ul class="contents">
+       <li><a class="contents-el" href="#discussion
+       ">Discussion</a></li>
+   </ul></li>
+   <li><a class="contents-el" href="#development-of-the-embedding">Development of the embedding</a></li>
+   <li><ul class="contents">
+       <li><a class="contents-el" href="#embedding-in-fourier-basis">Embedding in Fourier basis</a></li>
+       <li><a class="contents-el" href="#svd-of-embedding">SVD of embedding</a></li>
+   </ul></li>
+   <li><a class="contents-el" href="#development-of-computing-trig-components">Development of computing trig components</a></li>
+   <li><ul class="contents">
+       <li><a class="contents-el" href="#discussion">Discussion</a></li>
+   </ul></li>
+   <li><a class="contents-el" href="#development-of-neuron-activations">Development of neuron activations</a></li>
+   <li><a class="contents-el" href="#development-of-commutativity">Development of commutativity</a></li>
+</ul>
+""", unsafe_allow_html=True)
+
     st.markdown(r"""
 # Analysis During Training
 
@@ -1888,9 +1919,9 @@ In this section, we analyse the modular addition transformer during training. In
 
 Usability note: I often use animations in this section. I recommend using the slider manually, not pressing play - Plotly smooths animations in a confusing and misleading way (and I haven't figured out how to fix it).
 
-Usability note 2: To get plots to display in Colab for other users, they can't have too many data points, so often plots will have different epoch intervals between data points, or different final epochs
+Usability note 2: To get plots to display, they can't have too many data points, so often plots will have different epoch intervals between data points, or different final epochs
 
-Notation: I use "trig components" to refer to the components  cos(w(x+y)),sin(w(x+y))
+Notation: I use "trig components" to refer to the components $\cos(\omega(x+y))$, $\sin(\omega(x+y))$.
 """)
     st.info(r"""
 ### Overview
@@ -1902,9 +1933,8 @@ Notation: I use "trig components" to refer to the components  cos(w(x+y)),sin(w(
     * We see that all circuits somewhat develop pre-grokking, but at different rates and some have a more pronounced phase change than others
     * We examine the embedding circuit, the 'calculating trig dimensions' circuit and the development of commutativity.
     * We also explore the development of neuron activations and how it varies by cluster
-* There's a small but noticeable lag between 'the model learns the generalisable algorithm' and 'the model cleans up all memorised noise'
-* We validate that the general algorithm is "simpler" by showing a significant drop in the weights at the phase change.
-* There are indications of several smaller phase changes, beyond the main grokking one
+* There's a small but noticeable lag between 'the model learns the generalisable algorithm' and 'the model cleans up all memorised noise'.
+* There are indications of several smaller phase changes, beyond the main grokking one.
     * In particular, a phase change at 43K-44K, well after grokking (I have not yet interpreted what's going on here).
 """)
     st.markdown(r"""
@@ -2033,7 +2063,7 @@ I find excluded loss particularly exciting because it's a clear metric that show
 
 It also seems weak evidence for the possibility of interpretability-inspired metrics that could be included in the loss function while training to influence the model's capabilities, though excluded loss is a fairly weird metric for this, as calculating it involves running the model on the training *and* test data.
 
-## Development of the Embedding
+## Development of the embedding
 
 ### Embedding in Fourier basis
 
@@ -2177,6 +2207,21 @@ Coming soon!
 """)
     
 def section_discussion():
+    st.sidebar.markdown(r"""
+## Table of Contents
+
+<ul class="contents">
+   <li><a class="contents-el" href="#why-phase-changes">Why Phase Changes?</a></li>
+   <li><a class="contents-el" href="#limitations">Limitations</a></li>
+   <li><a class="contents-el" href="#relevance-to-alignment">Relevance to Alignment</a></li>
+   <li><ul class="contents">
+       <li><a class="contents-el" href="#model-training-dynamics">Model Training Dynamics</a></li>
+       <li><a class="contents-el" href="#other-relevance">Other Relevance</a></li>
+   </ul></li>
+   <li><a class="contents-el" href="#training-dynamics">Training Dynamics</a></li>
+   <li><a class="contents-el" href="#future-directions">Future Directions</a></li>
+</ul>
+""", unsafe_allow_html=True)
     st.markdown(r"""
 # Discussion & Future Directions
 
@@ -2261,7 +2306,6 @@ Some thoughts on future directions I'd be excited to see - if you're interested 
             * Soft induction heads, eg [translation](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html#performing-translation)
             * Look at attention heads on various text and see if any have recognisable attention patterns (eg start of word, adjective describing current word, syntactic features of code like indents or variable definitions, most recent open bracket, etc).
 """)
-
 
 
 func_page_list = [

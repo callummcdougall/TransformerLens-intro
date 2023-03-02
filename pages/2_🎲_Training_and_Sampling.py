@@ -53,45 +53,14 @@ def section_home():
     <li><a class="contents-el" href="#imports">Imports</a></li>
     <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
 </ul>""", unsafe_allow_html=True)
-    st.markdown(r"""
-Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
-""")
+#     st.markdown(r"""
+# Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
+# """)
     st_image("sampling.png", 350)
     st.markdown(r"""
 # Training and Sampling
 
-## Introduction
-
-. . .
-
-## Imports
-
-```python
-import einops
-from fancy_einsum import einsum
-from dataclasses import dataclass
-import torch as t
-import torch.nn as nn
-import math
-from transformer_lens import HookedTransformer
-from transformer_lens.utils import gelu_new, tokenize_and_concatenate
-import tqdm.auto as tqdm
-import datasets
-import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
-
-reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
-```
-""")
-
-    with st.expander("Help - I get error `ImportError: DLL load failed while importing lib` when I try and import things."):
-        st.markdown(r"""
-To fix this problem, run the following code in your terminal:
-
-```
-conda install libboost boost-cpp -c conda-forge
-```
- 
-then restart your IDE. Hopefully this fixes the problem.
+Coming soon!
 """)
     st.markdown(r"""
 ## Learning objectives
@@ -115,111 +84,18 @@ Here are the learning objectives for each section of the tutorial. At the end of
 
     
 def section_training():
-    st.sidebar.markdown("""
-## Table of Contents
-
-<ul class="contents">
-   <li><a class="contents-el" href="#what-is-the-point-of-a-transformer">What is the point of a transformer?</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#how-is-the-model-trained">How is the model trained?</a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#tokens-transformer-inputs">Tokens - Transformer Inputs</a></li>
-   <li><ul class="contents">
-       <li><a class="contents-el" href="#how-do-we-convert-language-to-vectors">How do we convert language to vectors?</a></li>
-       <li><a class="contents-el" href="#idea-integers-to-vectors">Idea: integers to vectors</a></li>
-       <li><a class="contents-el" href="#tokens-language-to-sequence-of-integers">Tokens: language to sequence of integers</a></li>
-   </ul></li>
-   <li><a class="contents-el" href="#logits-transformer-outputs">Logits - Transformer Outputs</a></li>
-   <li><a class="contents-el" href="#generation">Generation!</a></li>
-</ul>
-""", unsafe_allow_html=True)
-
     st.markdown(r"""
 # Training
-""")
-    st.info(r"""
-## Learning Objectives
 
-* Understand what a transformer is used for
-* Understand causal attention, and what a transformer's output represents
-* Learn what tokenization is, and how models do it
-* Understand what logits are, and how to use them to derive a probability distribution over the vocabulary
-""")
-    st.markdown(r"""
-### Setup
-
-You should run the following at the top of your notebook / Python file:
-
-```python
-import einops
-from fancy_einsum import einsum
-from dataclasses import dataclass
-import t
-import t.nn as nn
-import numpy as np
-import math
-from transformer_lens import EasyTransformer
-from transformer_lens.utils import gelu_new, tokenize_and_concatenate
-import tqdm.auto as tqdm
-
-reference_gpt2 = EasyTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
-```
+Coming soon!
 """)
 
 def section_sampling():
-    st.sidebar.markdown("""
-## Table of Contents
-
-<ul class="contents">
-    <li><a class="contents-el" href="#high-level-architecture">High-Level architecture</a></li>
-    <li><ul class="contents">
-        <li><a class="contents-el" href="#summary">Summary</a></li>
-        <li><a class="contents-el" href="#residual-stream">Residual stream</a></li>
-        <li><a class="contents-el" href="#transformer-blocks">Transformer blocks</a></li>
-        <li><ul class="contents">
-            <li><a class="contents-el" href="#attention">Attention</a></li>
-            <li><a class="contents-el" href="#mlps">MLPs</a></li>
-        </ul></li>
-        <li><a class="contents-el" href="#unembedding">Unembedding</a></li>
-        <li><a class="contents-el" href="#bonus-things-less-conceptually-important-but-key-technical-details">Bonus things</a></li>
-    </ul></li>
-    <li><a class="contents-el" href="#actual-code">Actual Code!</a></li>
-    <li><ul class="contents">
-    <li><a class="contents-el" href="#parameters-and-activations">Parameters vs Activations</a></li>
-    <li><a class="contents-el" href="#config">Config</a></li>
-    <li><a class="contents-el" href="#tests">Tests</a></li>
-    <li><a class="contents-el" href="#layernorm">LayerNorm</a></li>
-    <li><a class="contents-el" href="#embedding">Embedding</a></li>
-    <li><a class="contents-el" href="#positional-embedding">Positional Embedding</a></li>
-    <li><a class="contents-el" href="#attention-layer">Attention Layer</a></li>
-    <li><a class="contents-el" href="#mlp">MLP</a></li>
-    <li><a class="contents-el" href="#transformer-block">Transformer Block</a></li>
-    <li><a class="contents-el" href="#unembedding">Unembedding</a></li>
-    <li><a class="contents-el" href="#full-transformer">Full Transformer</a></li>
-    </ul></li>
-    <li><a class="contents-el" href="#try-it-out">Try it out!</a></li>
-</ul>
-""", unsafe_allow_html=True)
     st.markdown(r"""
-# Sampling
+# Sampling and Caching
+
+Coming soon!
 """)
-    st.info(r"""
-## Learning Objectives
-
-* Understand that a transformer is composed of attention heads and MLPs, with each one performing operations on the residual stream
-* Understand that the attention heads in a single layer operate independently, and that they have the role of calculating attention patterns (which determine where information is moved to & from in the residual stream)
-* Implement the following transformer modules:
-    * LayerNorm (transforming the input to have zero mean and unit variance)
-    * Positional embedding (a lookup table from position indices to residual stream vectors)
-    * Attention (the method of computing attention patterns for residual stream vectors)
-    * MLP (the collection of linear and nonlinear transformations which operate on each residual stream vector in the same way)
-    * Embedding (a lookup table from tokens to residual stream vectors)
-    * Unembedding (a matrix for converting residual stream vectors into a distribution over tokens)
-* Combine these first four modules to form a transformer block, then combine these with an embedding and unembedding to create a full transformer
-* Load in weights to your transformer, and demo it on a sample input
-""")
-
-
 
 func_page_list = [
     (section_home, "🏠 Home"), 
