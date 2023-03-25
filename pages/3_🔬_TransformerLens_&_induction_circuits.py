@@ -112,8 +112,6 @@ The throughline of the exercises is **induction circuits**. Induction circuits a
     st.markdown(r"""
 ## Imports
 
-Note - if you haven't done the initial setup yet (i.e. installing packages), you should return to the home page (on the left hand sidebar) and follow the instructions there.
-
 ```python
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 import plotly.express as px
@@ -160,13 +158,13 @@ def scatter(x, y, xaxis="", yaxis="", caxis="", **kwargs):
 
 We've included a summary of each section, as well as the learning objectives, so you can get a sense of what the general flow of the material is. You can also return here to check that you've understood all the material.
 
-## 1️⃣ TransformerLens: Introduction
+### 1️⃣ TransformerLens: Introduction
 
 This section is designed to get you up to speed with the TransformerLens library. You'll learn how to load and run models, and learn about the shared architecture template for all of these models.
 """)
 
     st.info(r"""
-### Learning Objectives
+#### Learning Objectives
 
 * Load and run a `HookedTransformer` model.
 * Understand the basic architecture of these models.
@@ -176,12 +174,12 @@ This section is designed to get you up to speed with the TransformerLens library
 
 """)
     st.markdown(r"""
-## 2️⃣ Finding induction heads
+### 2️⃣ Finding induction heads
 
 Here, you'll learn about induction heads, how they work and why they are important. You'll also learn how to identify them from the characteristic induction head stripe in their attention patterns when the model input is a repeating sequence.
 """)
     st.info(r"""
-### Learning Objectives
+#### Learning Objectives
 
 * Understand what induction heads are, and the algorithm they are implementing.
 * Inspect activation patterns to identify basic attention head patterns, and write your own functions to detect attention heads for you.
@@ -189,12 +187,12 @@ Here, you'll learn about induction heads, how they work and why they are importa
 
 """)
     st.markdown(r"""
-## 3️⃣ TransformerLens: Hooks
+### 3️⃣ TransformerLens: Hooks
 
 Next, you'll learn about hooks, which are a great feature of TransformerLens allowing you to access and intervene on activations within the model. We will mainly focus on the basics of hooks and using them to access activations (we'll mainly save the causal interventions for the later IOI exercises). You will also build some tools to perform logit attribution within your model, so you can identify which components are responsible for your model's performance on certain tasks.
 """)
     st.info(r"""
-### Learning Objectives
+#### Learning Objectives
 
 * Understand what hooks are, and how TransformerLens uses them.
 * Use hooks to access activations, process the results, and write them to an external tensor.
@@ -202,12 +200,12 @@ Next, you'll learn about hooks, which are a great feature of TransformerLens all
 * Understand how hooks can be used to perform basic interventions like **ablation**.
 """)
     st.markdown(r"""
-## 4️⃣ Reverse-engineering induction circuits
+### 4️⃣ Reverse-engineering induction circuits
 
 Lastly, these exercises show you how you can reverse-engineer a circuit by looking directly at a transformer's weights (which can be considered a "gold standard" of interpretability, although it won't be possible in every situation). You'll examine QK and OV circuits by multiplying through matrices (and learn how the FactoredMatrix class makes matrices like these much easier to analyse). You'll also look for evidence of composition between two induction heads, and once you've found it then you'll investigate the functionality of the full circuit formed from this composition.
 """)
     st.info(r"""
-### Learning Objectives
+#### Learning Objectives
 
 * Understand the difference between investigating a circuit by looking at activtion patterns, and reverse-engineering a circuit by looking directly at the weights.
 * Use the factored matrix class to inspect the QK and OV circuits within an induction circuit.
@@ -244,7 +242,7 @@ def section_intro():
 #        <li><a class="contents-el" href="#folding-layernorm-for-the-curious">Folding LayerNorm (For the Curious)</a></li>
 #     </ul></li>
     st.info(r"""
-## Learning objectives
+### Learning Objectives
 
 * Load and run a `HookedTransformer` model.
 * Understand the basic architecture of these models.
@@ -679,7 +677,7 @@ def section_finding_induction_heads():
     st.markdown(r"")
 
     st.info(r"""
-## Learning objectives
+### Learning Objectives
 
 * Understand what induction heads are, and the algorithm they are implementing.
 * Inspect activation patterns to identify basic attention head patterns, and write your own functions to detect attention heads for you.
@@ -1196,7 +1194,7 @@ def section_hooks():
 # TransformerLens: Hooks""")
     st.markdown(r"")
     st.info(r"""
-## Learning Objectives
+### Learning Objectives
 
 * Understand what hooks are, and how TransformerLens uses them.
 * Use hooks to access activations, process the results, and write them to an external tensor.
@@ -2065,7 +2063,7 @@ def section_reverse_engineering():
 # Reverse-engineering induction circuits""")
     st.markdown(r"")
     st.info(r"""
-## Learning Objectives
+### Learning Objectives
 
 * Understand the difference between investigating a circuit by looking at activtion patterns, and reverse-engineering a circuit by looking directly at the weights.
 * Use the factored matrix class to inspect the QK and OV circuits within an induction circuit.

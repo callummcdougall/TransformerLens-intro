@@ -18,6 +18,8 @@ device = t.device("cpu")
 
 t.set_grad_enabled(False)
 
+# %%
+
 def test_get_activations(get_activations: Callable, model: HookedTransformer, data: BracketsDataset):
 
     import solutions

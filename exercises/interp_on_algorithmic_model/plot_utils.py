@@ -10,11 +10,6 @@ from transformer_lens import utils, HookedTransformer
 import einops
 import torch as t
 
-WIP = r"../../images/written_images"
-def save_fig(fig, filename):
-    with open(f"{WIP}/{filename}.html", "w") as f:
-        f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
-
 color_discrete_map = dict(zip(['both failures', 'just neg failure', 'balanced', 'just total elevation failure'], px.colors.qualitative.D3))
 # names = ["balanced", "just total elevation failure", "just neg failure", "both failures"]
 # colors = ['#2CA02C', '#1c96eb', '#b300ff', '#ff4800']
@@ -40,7 +35,6 @@ def plot_failure_types_scatter(
         title="h20 vs h21 for different failure types", template="simple_white", height=600, width=800,
         # category_orders={"color": failure_types_dict.keys()},
     ).update_traces(marker_size=4)
-    save_fig(fig, "failure_types_scatter")
     fig.show()
 
 def plot_contribution_vs_open_proportion(unbalanced_component: TT["batch"], title: str, failure_types_dict: Dict, data: BracketsDataset):
@@ -52,7 +46,6 @@ def plot_contribution_vs_open_proportion(unbalanced_component: TT["batch"], titl
         title=f"Head {title} contribution vs proportion of open brackets '('", template="simple_white", height=500, width=800,
         labels={"x": "Open-proportion", "y": f"Head {title} contribution"}
     ).update_traces(marker_size=4, opacity=0.5).update_layout(legend_title_text='Failure type')
-    save_fig(fig, f"failure_types_scatter_{title.replace('.', '')}")
     fig.show()
 
 def mlp_attribution_scatter(
@@ -98,7 +91,6 @@ def plot_neurons(neurons_in_unbalanced_dir: TT["batch", "neurons"], model: Hooke
         title=f"Neuron contributions from layer {layer}", 
         template="simple_white", height=800, width=1100
     ).update_traces(marker_size=3).update_layout(xaxis_range=[0, 1], yaxis_range=[-5, 5])
-    save_fig(fig, f"neuron_contributions_{layer}")
     fig.show(renderer="browser")
 
 def plot_attn_pattern(pattern: TT["batch", "head_idx", "seqQ", "seqK"]):
@@ -118,11 +110,10 @@ def plot_attn_pattern(pattern: TT["batch", "head_idx", "seqQ", "seqK"]):
             tickvals = list(range(42)), 
         ),
     )
-    save_fig(fig, "attn_plot")
     fig.show()
     
 
-def hists_per_comp(out_by_component_in_unbalanced_dir: TT["component", "batch"], data: BracketsDataset, xaxis_range=(-1, 1), save_figure: bool = False):
+def hists_per_comp(out_by_component_in_unbalanced_dir: TT["component", "batch"], data: BracketsDataset, xaxis_range=(-1, 1)):
     '''
     Plots the contributions in the unbalanced direction, as supplied by the `out_by_component_in_unbalanced_dir` tensor.
     '''
@@ -139,6 +130,4 @@ def hists_per_comp(out_by_component_in_unbalanced_dir: TT["component", "batch"],
         fig.add_trace(go.Histogram(x=utils.to_numpy(in_dir[~data.isbal]), name="Unbalanced", marker_color="red", opacity=0.5, legendgroup = '2', showlegend=title=="embeddings"), row=row, col=col)
         fig.update_xaxes(title_text=title, row=row, col=col, range=xaxis_range)
     fig.update_layout(width=1200, height=250*(n_layers+1), barmode="overlay", legend=dict(yanchor="top", y=0.92, xanchor="left", x=0.4), title="Histograms of component significance")
-    if save_figure:
-        save_fig(fig, "hists_per_comp" + ("" if n_layers == 3 else "_20"))
     fig.show()

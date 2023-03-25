@@ -15,66 +15,6 @@ def img_to_html(img_path, width):
 def st_image(name, width):
     st.markdown(img_to_html(name, width=width), unsafe_allow_html=True)
 
-def read_from_html(filename):
-    filename = f"images/{filename}.html" if "written_images" in filename else f"images/page_images/{filename}.html"
-    with open(filename) as f:
-        html = f.read()
-    try:
-        call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
-        call_args = json.loads(f'[{call_arg_str}]')
-        try:
-            plotly_json = {'data': call_args[1], 'layout': call_args[2]}
-            fig = pio.from_json(json.dumps(plotly_json))
-        except:
-            del call_args[2]["template"]["data"]["scatter"][0]["fillpattern"]
-            plotly_json = {'data': call_args[1], 'layout': call_args[2]}
-            fig = pio.from_json(json.dumps(plotly_json))
-    except:
-        call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
-        call_arg_str = re.split(r'"responsive": true', call_arg_str)[0].rstrip("{, ")
-        call_args = json.loads(f'[{call_arg_str}]')
-        del call_args[2]["template"]["data"]["scatter"][0]["fillpattern"]
-        frame_arg_str = re.findall(r'Plotly\.addFrames\((.*)\)', html)[0].split(", ")[1]
-        frame_args = json.loads(frame_arg_str)
-        plotly_json = {'data': call_args[1], 'layout': call_args[2], 'frames': frame_args}
-        fig = pio.from_json(json.dumps(plotly_json))
-
-    return fig
-
-WIP = r"images/written_images"
-NAMES = ["attribution_fig", "attribution_fig_2", "failure_types_fig", "failure_types_fig_2", "attn_probs_red", "attn_qpos1"]
-def get_fig_dict():
-    return {name: read_from_html(name) for name in NAMES}
-def update_fig_dict(fig_dict):
-    for name in [
-        r"hists_per_comp", 
-        r"failure_types_scatter", 
-        r"failure_types_scatter_21", 
-        r"failure_types_scatter_20", 
-        r"attn_probs_20", 
-        r"hists_per_comp_20", 
-        r"mlp_attribution_0", 
-        r"mlp_attribution_1", 
-        r"get_out_by_neuron", 
-        r"neuron_contributions_0", 
-        r"neuron_contributions_1", 
-        r"attn_plot",
-        r"attn_probs_00", 
-    ]:
-        # if os.path.exists(WIP + "/" + name + ".json"):
-        #     fig_dict[name] = pio.read_json(WIP + "/" + name + ".json")
-        if os.path.exists(WIP + "/" + name + ".html"):
-            fig_dict[name] = read_from_html("written_images/" + name)
-    return fig_dict
-
-if "fig_dict" not in st.session_state:
-    st.session_state["fig_dict"] = {}
-if NAMES[0] not in st.session_state["fig_dict"]:
-    st.session_state["fig_dict"] |= get_fig_dict()
-fig_dict = st.session_state["fig_dict"]
-fig_dict = update_fig_dict(fig_dict)
-
-
 
 def section_home():
     st.sidebar.markdown(r"""
@@ -138,7 +78,7 @@ from solutions import LN_hook_names
 
 ## Overview of content
 
-## 1️⃣ Bracket classifier
+### 1️⃣ Bracket classifier
 
 We'll start by looking at our bracket classifier and dataset, and see how it works. We'll also write our own hand-coded solution to the balanced bracket problem (understanding what a closed-form solution looks like will be helpful as we discover how our transformer is solving the problem).""")
 
@@ -151,7 +91,7 @@ We'll start by looking at our bracket classifier and dataset, and see how it wor
 * Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).""")
 
     st.markdown(r"""
-## 2️⃣ Moving backwards
+### 2️⃣ Moving backwards
 
 If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **residual stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.""")
 
@@ -165,7 +105,7 @@ If we want to investigate which heads cause the model to classify a bracket stri
 
     st.markdown(r"""
 
-## 3️⃣ Total elevation circuit
+### 3️⃣ Total elevation circuit
 
 In this section (which is the meat of the exercises), we'll hone in on a particular circuit and try to figure out what kinds of composition it is using.""")
 
@@ -215,7 +155,15 @@ def section_1():
     st.markdown(r"""
 
 # Bracket classifier
+""")
+    st.info(r"""
+### Learning Objectives
 
+* Understand how we can use transformers as classifiers (via **bidirectional attention**, special **classification tokens**, and having a different **output vocabulary** than input vocabulary).
+* Review hooks, and understand how to use **permanent hooks** to modify your model's behaviour.
+* Understand the bracket classifier model and dataset.
+* Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).""")
+    st.markdown(r"""
 One of the many behaviors that a large language model learns is the ability to tell if a sequence of nested parentheses is balanced. For example, `(())()`, `()()`, and `(()())` are balanced sequences, while `)()`, `())()`, and `((()((())))` are not.
 
 In training, text containing balanced parentheses is much more common than text with imbalanced parentheses - particularly, source code scraped from GitHub is mostly valid syntactically. A pretraining objective like "predict the next token" thus incentivizes the model to learn that a close parenthesis is more likely when the sequence is unbalanced, and very unlikely if the sequence is currently balanced.
@@ -688,7 +636,15 @@ def section_2():
 
     st.markdown(r"""
 # Moving backwards
+""")
+    st.info(r"""
+### Learning Objectives
 
+* Understand the idea of having an **"unbalanced direction"** in the residual stream, which maximally points in the direction of classifying the bracket string as unbalanced.
+* Decompose the residual stream into a sum of terms, and use **logit attribution** to identify which components are important.
+* Generalize the "unbalanced direction" concept by thinking about the unbalanced direction for the inputs to different model components.
+* Classify unbalanced bracket strings by the different ways in which they can fail to be balanced, and observe that one of your attention heads seems to specialize in identifying a certain class of unbalanced strings.""")
+    st.markdown(r"""
 Suppose we run the model on some sequence and it outputs the classification probabilities `[0.99, 0.01]`, i.e. highly confident classification as "unbalanced".
 
 We'd like to know _why_ the model had this output, and we'll do so by moving backwards through the network, and figuring out the correspondence between facts about earlier activations and facts about the final output. We want to build a chain of connections through different places in the computational graph of the model, repeatedly reducing our questions about later values to questions about earlier values.
@@ -1177,7 +1133,7 @@ if MAIN:
 
     tests.test_out_by_component_in_unbalanced_dir(out_by_component_in_unbalanced_dir, model, data)
 
-    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20], save_figure=True)
+    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20])
 ```
 """)
 
@@ -1211,22 +1167,22 @@ if MAIN:
 
     tests.test_out_by_component_in_unbalanced_dir(out_by_component_in_unbalanced_dir, model, data)
     # Plot the histograms
-    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20], save_figure=True)
+    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20])
 ```
 """)
 
-        st.markdown(r"""
-#### Your output
+#         st.markdown(r"""
+# #### Your output
 
-When you've passed the tests and generated your histogram, you can press the button below to display your histogram on this page.
-""")
-        button1 = st.button("Show my output", key="button1")
-        if button1 or "got_hists_per_comp" in st.session_state:
-            if "hists_per_comp" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["hists_per_comp"], use_container_width=True)
-                st.session_state["got_hists_per_comp"] = True
+# When you've passed the tests and generated your histogram, you can press the button below to display your histogram on this page.
+# """)
+        # button1 = st.button("Show my output", key="button1")
+        # if button1 or "got_hists_per_comp" in st.session_state:
+        #     if "hists_per_comp" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["hists_per_comp"], use_container_width=True)
+        #         st.session_state["got_hists_per_comp"] = True
 
         with st.expander("Which heads do you think are the most important, and can you guess why that might be?"):
             st.markdown(r"""
@@ -1292,18 +1248,14 @@ if MAIN:
         data
     )
 ```
-
-#### Your output
-
-You can press the button below to display your output on this page.
 """)
-        button2 = st.button("Show my output", key="button2")
-        if button2 or "got_failure_types_scatter" in st.session_state:
-            if "failure_types_scatter" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["failure_types_scatter"], use_container_width=True)
-                st.session_state["got_failure_types_scatter"] = True
+        # button2 = st.button("Show my output", key="button2")
+        # if button2 or "got_failure_types_scatter" in st.session_state:
+        #     if "failure_types_scatter" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["failure_types_scatter"], use_container_width=True)
+        #         st.session_state["got_failure_types_scatter"] = True
 
         st.markdown(r"")
         with st.expander("Solution"):
@@ -1350,20 +1302,16 @@ In most of the rest of these exercises, we'll focus on the overall elevation cir
 if MAIN:
     plot_utils.plot_contribution_vs_open_proportion(h20_in_unbalanced_dir, "2.0", failure_types_dict, data)
 ```
-
-Once you've run this code, press the button below to display your output on this page.
-
-#### Your output
 """)
 
-    button3 = st.button("Show my output", key="button3")
-    if button3 or "got_failure_types_scatter_2" in st.session_state:
-        if "failure_types_scatter_20" not in fig_dict:
-            st.error("No figure was found in your directory. Have you run the code above yet?")
-        else:
-            st.plotly_chart(fig_dict["failure_types_scatter_20"], use_container_width=True)
-            # st.plotly_chart(fig_dict["failure_types_scatter_21"])
-            st.session_state["got_failure_types_scatter_2"] = True
+    # button3 = st.button("Show my output", key="button3")
+    # if button3 or "got_failure_types_scatter_2" in st.session_state:
+    #     if "failure_types_scatter_20" not in fig_dict:
+    #         st.error("No figure was found in your directory. Have you run the code above yet?")
+    #     else:
+    #         st.plotly_chart(fig_dict["failure_types_scatter_20"], use_container_width=True)
+    #         # st.plotly_chart(fig_dict["failure_types_scatter_21"])
+    #         st.session_state["got_failure_types_scatter_2"] = True
 
     # with st.expander("Click to see the output you should be getting."):
     #     st.plotly_chart(fig_dict["failure_types_fig_2"])
@@ -1408,7 +1356,15 @@ def section_3():
 
     st.markdown(r"""
 # Understanding the total elevation circuit
+""")
+    st.info(r"""
+### Learning Objectives
 
+* Identify the path through the model which is responsible for implementing the **net elevation** circuit (i.e. identifying whether the number of left and right brackets match).
+* Interpret different attention patterns, as doing things like "copying information from sequence position $i$ to $j$", or as "averaging information over all sequence positions".
+* Understand the role of **MLPs** as taking a linear function of the sequence (e.g. difference between number of left and right brackets) and converting it into a nonlinear function (e.g. the boolean information `num_left_brackets == num_right_brackets`).
+""")
+    st.markdown(r"""
 ## Attention pattern of the responsible head
 
 Which tokens is 2.0 paying attention to when the query is an open paren at token 0? Recall that we focus on sequences that start with an open paren because sequences that don't can be ruled out immediately, so more sophisticated behavior is unnecessary.
@@ -1454,24 +1410,23 @@ if MAIN:
         template="simple_white", height=500, width=600, 
         title="Avg Attention Probabilities for query 0, first token '(', head 2.0"
     ).update_layout(showlegend=False, hovermode='x unified')
-    plot_utils.save_fig(fig, "attn_probs_20")
     fig.show()
 ```
 """)
 
-        st.markdown(r"""
-#### Your output
+#         st.markdown(r"""
+# #### Your output
 
-After you've run this code, click the button below to see your output.
-""")
+# After you've run this code, click the button below to see your output.
+# """)
 
-        button4 = st.button("Show my output", key="button4")
-        if button4 or "got_attn_probs_20" in st.session_state:
-            if "attn_probs_20" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["attn_probs_20"], use_container_width=True)
-                st.session_state["got_attn_probs_20"] = True
+#         button4 = st.button("Show my output", key="button4")
+#         if button4 or "got_attn_probs_20" in st.session_state:
+#             if "attn_probs_20" not in fig_dict:
+#                 st.error("No figure was found in your directory. Have you run the code above yet?")
+#             else:
+#                 st.plotly_chart(fig_dict["attn_probs_20"], use_container_width=True)
+#                 st.session_state["got_attn_probs_20"] = True
 
         st.markdown(r"""
 You should see an average attention of around 0.5 on position 1, and an average of about 0 for all other tokens. So `2.0` is just moving information from residual stream 1 to residual stream 0. In other words, `2.0` passes residual stream 1 through its `W_OV` circuit (after `LayerNorm`ing, of course), weighted by some amount which we'll pretend is constant. Importantly, this means that **the necessary information for classification must already have been stored in sequence position 1 before this head**. The plot thickens!
@@ -1555,7 +1510,7 @@ if MAIN:
     # Define `out_by_component_in_pre_20_unbalanced_dir` (for all components before head 2.0)
     # Remember to subtract the mean for each component for balanced inputs
 
-    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, xaxis_range=(-5, 12), save_figure=True)
+    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, xaxis_range=(-5, 12))
 ```
 """)
         with st.expander("Solution"):
@@ -1569,22 +1524,22 @@ if MAIN:
         get_pre_20_dir(model, data)
     )
     out_by_component_in_pre_20_unbalanced_dir -= out_by_component_in_pre_20_unbalanced_dir[:, data.isbal].mean(-1, keepdim=True)
-    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, xaxis_range=(-5, 12), save_figure=True)
+    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, xaxis_range=(-5, 12))
 ```
 """)
-        st.markdown(r"""
-#### Your output
+#         st.markdown(r"""
+# #### Your output
 
-When you've run the code above, click the button below to display your output in the page.
-""")
+# When you've run the code above, click the button below to display your output in the page.
+# """)
 
-        button5 = st.button("Show my output", key="button5")
-        if button5 or "got_hists_per_comp_20" in st.session_state:
-            if "hists_per_comp_20" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["hists_per_comp_20"], use_container_width=True)
-                st.session_state["got_hists_per_comp_20"] = True
+#         button5 = st.button("Show my output", key="button5")
+#         if button5 or "got_hists_per_comp_20" in st.session_state:
+#             if "hists_per_comp_20" not in fig_dict:
+#                 st.error("No figure was found in your directory. Have you run the code above yet?")
+#             else:
+#                 st.plotly_chart(fig_dict["hists_per_comp_20"], use_container_width=True)
+#                 st.session_state["got_hists_per_comp_20"] = True
 
         # with st.expander("Click here to see the output you should be getting."):
         #     st.plotly_chart(fig_dict["attribution_fig_2"])
@@ -1618,19 +1573,16 @@ In order to get a better look at what `mlp0` and `mlp1` are doing more thoughly,
 if MAIN:
     plot_utils.mlp_attribution_scatter(out_by_component_in_pre_20_unbalanced_dir, data, failure_types_dict)
 ```
-
-#### Your output
-
 """)
 
-        button6 = st.button("Show my output", key="button6")
-        if button6 or "got_mlp_attribution" in st.session_state:
-            if "mlp_attribution_0" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["mlp_attribution_0"], use_container_width=True)
-                st.plotly_chart(fig_dict["mlp_attribution_1"], use_container_width=True)
-                st.session_state["got_mlp_attribution"] = True
+        # button6 = st.button("Show my output", key="button6")
+        # if button6 or "got_mlp_attribution" in st.session_state:
+        #     if "mlp_attribution_0" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["mlp_attribution_0"], use_container_width=True)
+        #         st.plotly_chart(fig_dict["mlp_attribution_1"], use_container_width=True)
+        #         st.session_state["got_mlp_attribution"] = True
 
     st.markdown(r"""
 ### Breaking down an MLP's contribution by neuron
@@ -1873,14 +1825,14 @@ if MAIN:
 Click the button below to see your output.
 """)
 
-    button7 = st.button("Show my output", key="button7")
-    if button7 or "got_neuron_contributions" in st.session_state:
-        if "neuron_contributions_0" not in fig_dict:
-            st.error("No figure was found in your directory. Have you run the code above yet?")
-        else:
-            st.plotly_chart(fig_dict["neuron_contributions_0"], use_container_width=True)
-            st.plotly_chart(fig_dict["neuron_contributions_1"], use_container_width=True)
-            st.session_state["got_neuron_contributions"] = True
+    # button7 = st.button("Show my output", key="button7")
+    # if button7 or "got_neuron_contributions" in st.session_state:
+    #     if "neuron_contributions_0" not in fig_dict:
+    #         st.error("No figure was found in your directory. Have you run the code above yet?")
+    #     else:
+    #         st.plotly_chart(fig_dict["neuron_contributions_0"], use_container_width=True)
+    #         st.plotly_chart(fig_dict["neuron_contributions_1"], use_container_width=True)
+    #         st.session_state["got_neuron_contributions"] = True
 
     with st.expander("Some observations:"):
         st.markdown(r"""
@@ -2008,13 +1960,13 @@ if MAIN:
 
 #### Your output""")
 
-    button8 = st.button("Show my output", key="button8")
-    if button8 or "got_attn_plot" in st.session_state:
-        if "attn_plot" not in fig_dict:
-            st.error("No figure was found in your directory. Have you run the code above yet?")
-        else:
-            st.plotly_chart(fig_dict["attn_plot"], use_container_width=True)
-            st.session_state["got_attn_plot"] = True
+    # button8 = st.button("Show my output", key="button8")
+    # if button8 or "got_attn_plot" in st.session_state:
+    #     if "attn_plot" not in fig_dict:
+    #         st.error("No figure was found in your directory. Have you run the code above yet?")
+    #     else:
+    #         st.plotly_chart(fig_dict["attn_plot"], use_container_width=True)
+    #         st.session_state["got_attn_plot"] = True
 
     # with st.expander("Click here to see the output you should be getting."):
     #     st.plotly_chart(fig_dict["attn_probs_red"], use_container_width=True)
@@ -2046,7 +1998,6 @@ def hook_fn_display_attn_patterns_for_single_query(
         labels={"index": "Sequence position of key", "value": "Average attn over dataset"},
         template="simple_white", height=500, width=700
     ).update_layout(showlegend=False, margin_l=100, yaxis_range=[0, 0.1], hovermode="x unified")
-    plot_utils.save_fig(fig, "attn_probs_00")
     fig.show()
 
 
@@ -2067,13 +2018,13 @@ if MAIN:
 #### Your output
 """)
 
-    button9 = st.button("Show my output", key="button9")
-    if button9 or "got_attn_probs_00" in st.session_state:
-        if "attn_probs_00" not in fig_dict:
-            st.error("No figure was found in your directory. Have you run the code above yet?")
-        else:
-            st.plotly_chart(fig_dict["attn_probs_00"], use_container_width=True)
-            st.session_state["got_attn_probs_00"] = True
+    # button9 = st.button("Show my output", key="button9")
+    # if button9 or "got_attn_probs_00" in st.session_state:
+    #     if "attn_probs_00" not in fig_dict:
+    #         st.error("No figure was found in your directory. Have you run the code above yet?")
+    #     else:
+    #         st.plotly_chart(fig_dict["attn_probs_00"], use_container_width=True)
+    #         st.session_state["got_attn_probs_00"] = True
 
     # with st.expander("Click here to see the output you should be getting."):
     #     st.plotly_chart(fig_dict["attn_qpos1"], use_container_width=True)

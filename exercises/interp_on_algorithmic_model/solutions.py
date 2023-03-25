@@ -398,7 +398,7 @@ if MAIN:
 
     tests.test_out_by_component_in_unbalanced_dir(out_by_component_in_unbalanced_dir, model, data)
     # Plot the histograms
-    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20], save_figure=True)
+    plot_utils.hists_per_comp(out_by_component_in_unbalanced_dir, data, xaxis_range=[-10, 20])
 
 # %%
 
@@ -464,7 +464,6 @@ if MAIN:
         template="simple_white", height=500, width=600, 
         title="Avg Attention Probabilities for query 0, first token '(', head 2.0"
     ).update_layout(showlegend=False, hovermode='x unified')
-    plot_utils.save_fig(fig, "attn_probs_20")
     fig.show()
 
 # %%
@@ -502,7 +501,7 @@ if MAIN:
         get_pre_20_dir(model, data)
     )
     out_by_component_in_pre_20_unbalanced_dir -= out_by_component_in_pre_20_unbalanced_dir[:, data.isbal].mean(-1, keepdim=True)
-    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, xaxis_range=(-5, 12), save_figure=True)
+    plot_utils.hists_per_comp(out_by_component_in_pre_20_unbalanced_dir, data, xaxis_range=(-5, 12))
 
 # %%
 # %%
@@ -665,7 +664,6 @@ if MAIN:
             labels={"index": "Sequence position of key", "value": "Average attn over dataset"},
             template="simple_white", height=500, width=700
         ).update_layout(showlegend=False, margin_l=100, yaxis_range=[0, 0.1], hovermode="x unified")
-        plot_utils.save_fig(fig, "attn_probs_00")
         fig.show()
 
     data_len_40 = BracketsDataset.with_length(data_tuples, 40)

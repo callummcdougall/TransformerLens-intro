@@ -11,6 +11,8 @@ from transformer_lens.utils import gelu_new, tokenize_and_concatenate
 from tqdm import tqdm
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
+
 # # Code to automatically update the HookedTransformer code as its edited without restarting the kernel
 # from IPython import get_ipython
 # ipython = get_ipython()
@@ -28,7 +30,7 @@ if MAIN:
 
 if MAIN:
     reference_text = "I am an amazing autoregressive, decoder-only, GPT-2 style transformer. One day I will exceed human level intelligence and take over the world!"
-    tokens = reference_gpt2.to_tokens(reference_text).cuda()
+    tokens = reference_gpt2.to_tokens(reference_text).to(device)
     logits, cache = reference_gpt2.run_with_cache(tokens)
 
 @dataclass
@@ -50,23 +52,23 @@ cfg = Config()
 
 def rand_float_test(cls, shape):
     cfg = Config(debug=True)
-    layer = cls(cfg).cuda()
-    random_input = t.randn(shape).cuda()
+    layer = cls(cfg).to(device)
+    random_input = t.randn(shape).to(device)
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
 
 def rand_int_test(cls, shape):
     cfg = Config(debug=True)
-    layer = cls(cfg).cuda()
-    random_input = t.randint(100, 1000, shape).cuda()
+    layer = cls(cfg).to(device)
+    random_input = t.randint(100, 1000, shape).to(device)
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
 
 def load_gpt2_test(cls, gpt2_layer, input):
     cfg = Config(debug=True)
-    layer = cls(cfg).cuda()
+    layer = cls(cfg).to(device)
     layer.load_state_dict(gpt2_layer.state_dict(), strict=False)
     print("Input shape:", input.shape)
     output = layer(input)
@@ -306,11 +308,11 @@ if MAIN:
 if MAIN:
     demo_gpt2 = DemoTransformer(Config(debug=False))
     demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
-    demo_gpt2.cuda()
+    demo_gpt2.to(device)
 
     test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
 
-    test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+    test_tokens = reference_gpt2.to_tokens(test_string).to(device)
     demo_logits = demo_gpt2(test_tokens)
 
 def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
@@ -331,9 +333,8 @@ if MAIN:
 # %%
 
 if MAIN:
-    test_string = "There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that"
     for i in tqdm(range(100)):
-        test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+        test_tokens = reference_gpt2.to_tokens(test_string).to(device)
         demo_logits = demo_gpt2(test_tokens)
         test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
     print(test_string)

@@ -101,6 +101,8 @@ import datasets
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
 reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
+
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
 ```
 """)
 
@@ -115,13 +117,13 @@ conda install libboost boost-cpp -c conda-forge
 then restart your IDE. Hopefully this fixes the problem.
 """)
     st.markdown(r"""
-## Learning objectives
+## Learning Objectives
 
 Here are the learning objectives for each section of the tutorial. At the end of each section, you should refer back here to check that you've understood everything.
 """)
 
     st.info(r"""
-## 1️⃣ Understanding Inputs & Outputs of a Transformer
+### 1️⃣ Understanding Inputs & Outputs of a Transformer
 
 * Understand what a transformer is used for
 * Understand causal attention, and what a transformer's output represents
@@ -129,7 +131,7 @@ Here are the learning objectives for each section of the tutorial. At the end of
 * Understand what logits are, and how to use them to derive a probability distribution over the vocabulary
 """)
     st.info(r"""
-## 2️⃣ Clean Transformer Implementation
+### 2️⃣ Clean Transformer Implementation
 
 * Understand that a transformer is composed of attention heads and MLPs, with each one performing operations on the residual stream
 * Understand that the attention heads in a single layer operate independently, and that they have the role of calculating attention patterns (which determine where information is moved to & from in the residual stream)
@@ -144,7 +146,7 @@ Here are the learning objectives for each section of the tutorial. At the end of
 * Load in weights to your transformer, and demo it on a sample input
 """)
     st.info(r"""
-## 3️⃣ Training a model
+### 3️⃣ Training a model
 
 * Use the `Adam` optimizer to train your transformer
 * Run a training loop on a very small dataset, and verify that your model's loss is going down
@@ -202,7 +204,7 @@ def section_intro():
 # Understanding Inputs & Outputs of a Transformer
 """)
     st.info(r"""
-## Learning Objectives
+### Learning Objectives
 
 * Understand what a transformer is used for
 * Understand causal attention, and what a transformer's output represents
@@ -501,7 +503,7 @@ def section_code():
 # Clean Transformer Implementation
 """)
     st.info(r"""
-## Learning Objectives
+### Learning Objectives
 
 * Understand that a transformer is composed of attention heads and MLPs, with each one performing operations on the residual stream
 * Understand that the attention heads in a single layer operate independently, and that they have the role of calculating attention patterns (which determine where information is moved to & from in the residual stream)
@@ -1339,26 +1341,27 @@ demo_logits = demo_gpt2(test_tokens)
 ```
 
 ```python
-def get_log_probs(logits, tokens):
+def lm_cross_entropy_loss(logits: t.Tensor, tokens: t.Tensor):
+    # Measure next token loss
     # Logits have shape [batch, position, d_vocab]
     # Tokens have shape [batch, position]
     log_probs = logits.log_softmax(dim=-1)
-    # Get logprobs the first seq_len-1 predictions (so we can compare them with the actual next tokens)
-    log_probs_for_predicted_tokens = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
+    pred_log_probs = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
+    return -pred_log_probs.mean()
 
-    return log_probs_for_predicted_tokens
-
-pred_log_probs = get_log_probs(demo_logits, test_tokens)
-print(f"Avg cross entropy loss: {-pred_log_probs.mean():.4f}")
-print(f"Avg cross entropy loss for uniform distribution: {math.log(demo_gpt2.cfg.d_vocab):4f}")
-print(f"Avg probability assigned to correct token: {pred_log_probs.exp().mean():4f}")
+if MAIN:
+    loss = lm_cross_entropy_loss(demo_logits, test_tokens)
+    print(loss)
+    print("Loss as average prob", (-loss).exp())
+    print("Loss as 'uniform over this many variables'", (loss).exp())
+    print("Uniform loss over the vocab", math.log(demo_gpt2.cfg.d_vocab))
 ```
 
 We can also greedily generate text:
 
 ```python
 for i in tqdm.tqdm(range(100)):
-    test_tokens = reference_gpt2.to_tokens(test_string).cuda()
+    test_tokens = reference_gpt2.to_tokens(test_string).to(device)
     demo_logits = demo_gpt2(test_tokens)
     test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
 print(test_string)
@@ -1382,17 +1385,17 @@ def section_training():
 # Training a Model!
 """)
     st.info(r"""
-## Learning Objectives
+### Learning Objectives
 
 * Use the `Adam` optimizer to train your transformer
 * Run a training loop on a very small dataset, and verify that your model's loss is going down
 """)
     st.markdown(r"""
+***Note - this section provides a demo rather than exercises. If you've got more time today, you might wnat to to jump to the next section (Training and Sampling) to go through the process of building dataloaders and training loops by yourself, without looking at this section first. It's totally up to you!***
 
 This is a lightweight demonstration of how you can actually train your own GPT-2 with this code! Here we train a tiny model on a tiny dataset, but it's fundamentally the same code for training a larger/more real model (though you'll need beefier GPUs and data parallelism to do it remotely efficiently, and fancier parallelism for much bigger ones).
 
 For our purposes, we'll train 2L 4 heads per layer model, with context length 256, for 1000 steps of batch size 8, just to show what it looks like.
-
 """)
 
     st.error(r"""
@@ -1436,7 +1439,7 @@ data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shu
 
 ```python
 model = DemoTransformer(model_cfg)
-model.cuda()
+model.to(device)
 ```
 
 ## Create Optimizer

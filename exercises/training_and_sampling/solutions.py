@@ -15,18 +15,14 @@ MAIN = __name__ == "__main__"
 
 import re
 import torch as t
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import transformers
-from typing import List, Tuple, Union, Optional, Callable
-from torch import nn, optim
+from typing import List, Tuple, Union, Optional, Callable, Dict
 import numpy as np
-from einops import einsum, rearrange, repeat, reduce
+import einops
 from dataclasses import dataclass
-import plotly.express as px
 import plotly.graph_objects as go
 from tqdm import tqdm
-import torch.nn.functional as F
-import datasets
 from torchtyping import TensorType as TT
 
 device = t.device("cuda" if t.cuda.is_available() else "cpu")
@@ -41,10 +37,10 @@ if MAIN:
     with open("shakespeare-corpus.txt", encoding="utf-8") as file:
         text = file.read()
 
-        while "  " in text:
-            text = re.sub("  ", " ", text)
-        while "\n\n\n" in text:
-            text = re.sub("\n\n\n", "\n\n", text)
+        # while "  " in text:
+        #     text = re.sub("  ", " ", text)
+        # while "\n\n\n" in text:
+        #     text = re.sub("\n\n\n", "\n\n", text)
 
         # text = re.split(r"\b", text)
 
@@ -59,7 +55,7 @@ class SimpleTokenizer():
         self.text = text
         self.words = sorted(set(re.split(r"\b", text)))
         self.unk = len(self.words) + 1
-        self.bos_token_id = len(self.words) + 2
+        # self.bos_token_id = len(self.words) + 2
         self.word_to_index = {word: index for index, word in enumerate(self.words)}
         self.index_to_word = {index: word for index, word in enumerate(self.words)}
 
@@ -78,10 +74,13 @@ class SimpleTokenizer():
             return t.tensor(encoding).unsqueeze(0)
         return encoding
 
-    def decode(self, tokens: t.Tensor):
+    def decode(self, tokens: Union[List, t.Tensor]):
         '''
         Decodes the tokens into a string of text.
         '''
+        if isinstance(tokens, t.Tensor) and tokens.dim() == 2:
+            assert tokens.size(0) == 1, "Only batch size 1 is supported"
+            tokens = tokens[0]
         return "".join([self.index_to_word[token] for token in tokens])
 
 
@@ -127,17 +126,17 @@ if MAIN:
 class TransformerTrainingArgs():
     tokenizer: transformers.PreTrainedTokenizer = mytokenizer
     epochs: int = 3
-    batch_size: int = 16
+    batch_size: int = 4
     max_seq_len: int = 48
     optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
-    optimizer_args: Tuple = ()
+    optimizer_kwargs: Dict = dict(lr=0.001, betas=(0.9, 0.999))
     device: str = "cuda" if t.cuda.is_available() else "cpu"
     filename_save_model: str = "transformer_shakespeare.pt"
 
 
 # %%
 
-def tokenize_text(text: str, max_seq_len: int, tokenizer: SimpleTokenizer):
+def prepare_text(text: str, max_seq_len: int, tokenizer: SimpleTokenizer):
     '''
     Takes a string of text, and returns an array of tokens rearranged into chunks of size max_seq_len.
     '''
@@ -145,21 +144,21 @@ def tokenize_text(text: str, max_seq_len: int, tokenizer: SimpleTokenizer):
 
     # We want to rearrange the tokens into chunks of size max_seq_len.
     num_tokens = tokens.size(1) - (tokens.size(1) % max_seq_len)
-    tokens = rearrange(
+    tokens = einops.rearrange(
         tokens[0, :num_tokens], "(chunk seq_len) -> chunk seq_len", seq_len=max_seq_len
     )
 
-    # Append the start token to the beginning of each chunk
-    tokens = t.cat([
-        t.full((tokens.size(0), 1), tokenizer.bos_token_id, dtype=t.long), 
-        tokens
-    ], dim=1)
+    # # Append the start token to the beginning of each chunk
+    # tokens = t.cat([
+    #     t.full((tokens.size(0), 1), tokenizer.bos_token_id, dtype=t.long), 
+    #     tokens
+    # ], dim=1)
 
     return tokens
 
 
 if MAIN:
-    tokens = tokenize_text(text[:500], max_seq_len=48, tokenizer=mytokenizer)
+    tokens = prepare_text(text[:500], max_seq_len=48, tokenizer=mytokenizer)
     print("Does this size look reasonable for the first 500 characters?\n", tokens.shape)
 
 # %%
@@ -172,22 +171,23 @@ def train_transformer(model: DemoTransformer, text: str, args: TransformerTraini
     '''
     model.to(args.device)
 
-    tokens = tokenize_text(text, max_seq_len=args.max_seq_len, tokenizer=args.tokenizer)
+    tokens = prepare_text(text, max_seq_len=args.max_seq_len, tokenizer=args.tokenizer)
 
-    len_trainset = int(0.9 * len(tokens))
-    trainset = TensorDataset(tokens[:len_trainset])
-    testset = TensorDataset(tokens[len_trainset:])
+    randperm = t.randperm(tokens.size(0))
+    len_trainset = int(0.9 * tokens.size(0))
+    trainset = TensorDataset(tokens[randperm[:len_trainset]])
+    testset = TensorDataset(tokens[randperm[len_trainset:]])
 
     trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
     testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
 
-    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
+    optimizer = args.optimizer(model.parameters(), **args.optimizer_kwargs)
     train_loss_list = []
     test_loss_list = []
 
     for epoch in range(args.epochs):
 
-        progress_bar = tqdm(trainloader)
+        progress_bar = tqdm(trainloader, desc="Calculating training loss")
         for (tokens,) in progress_bar:
 
             tokens = tokens.to(args.device)
@@ -237,15 +237,15 @@ if MAIN:
         n_ctx = 1024,
         d_head = 64,
         d_mlp = 1536,
-        n_heads = 12,
-        n_layers = 6
+        n_heads = 6,
+        n_layers = 4
     )
 
     model = DemoTransformer(config)
 
     args = TransformerTrainingArgs(
         tokenizer = mytokenizer,
-        batch_size = 64,
+        batch_size = 8,
         epochs = 3,
     )
 

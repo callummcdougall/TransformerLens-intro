@@ -5,11 +5,21 @@ import platform
 
 is_local = (platform.processor() != "")
 
-def st_image(name, width):
+def on_hover(title, content):
+        st.markdown(f"""
+<div class="myDIV">{title}</div>
+<div class="hide">
+{content}
+</div>
+""", unsafe_allow_html=True)
+
+def st_image(name, width, return_html=False):
     with open("images/page_images/" + name, "rb") as file:
         img_bytes = file.read()
     encoded = base64.b64encode(img_bytes).decode()
     img_html = f"<img style='width:{width}px;max-width:100%;margin-bottom:25px' src='data:image/png;base64,{encoded}' class='img-fluid'>"
+    if return_html:
+        return img_html
     st.markdown(img_html, unsafe_allow_html=True)
 
 def st_excalidraw(name, width):
@@ -26,6 +36,18 @@ def styling():
     st.set_page_config(layout="wide", page_icon="🔬")
     st.markdown(r"""
 <style>
+.myDIV {
+    margin-bottom: 15px;
+}
+.hide {
+    display: none;
+}
+.myDIV:hover + .hide {
+    display: block;
+    float: left;
+    position: absolute;
+    z-index: 1;
+}
 div[data-testid="column"] {
     background-color: #f9f5ff;
     padding: 15px;
