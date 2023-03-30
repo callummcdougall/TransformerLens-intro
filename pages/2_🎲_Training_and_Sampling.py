@@ -66,7 +66,7 @@ In the previous set of exercises, we built a transformer from scratch. Here, we'
 
 These exercises mainly focus on building up your understanding of transformers, and the important considerations that go into using them. Subsequent exercises will focus more on interpretability, so you can skip to them if you want (this material generally won't be very important for future exercises).
 
-## Learning objectives
+## Learning Objectives
 
 Here are the learning objectives for each section of the tutorial. At the end of each section, you should refer back here to check that you've understood everything.
 """)
@@ -78,11 +78,16 @@ Here are the learning objectives for each section of the tutorial. At the end of
 * Implement a transformer training loop
 """)
     st.info(r"""
-## 2️⃣ Sampling and Caching
+## 2️⃣ Sampling
 
 * Learn how to sample from a transformer
     * This includes basic methods like greedy search or top-k, and more advanced methods like beam search
+""")
+    st.info(r"""
+## 3️⃣ Caching
+
 * Learn how to cache the output of a transformer, so that it can be used to generate text more efficiently
+* Update your sampling functions to make use of your caching methods
 """)
     # end
 
@@ -1372,6 +1377,11 @@ def section_caching():
 """)
     # start
     st.markdown(r"""
+## Learning Objectives
+
+* Learn how to cache the output of a transformer, so that it can be used to generate text more efficiently
+* Update your sampling functions to make use of your caching methods
+    
 ## Efficient text generation via caching
     
 The text generation we've done so far is needlessly re-computing certain values, which is very noticeable when you try to generate longer sequences.

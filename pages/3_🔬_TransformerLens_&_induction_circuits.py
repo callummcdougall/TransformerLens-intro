@@ -3924,7 +3924,7 @@ def page():
     new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
     new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
 
-    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=True)
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=False)
  
 # if is_local or check_password():
 page()
