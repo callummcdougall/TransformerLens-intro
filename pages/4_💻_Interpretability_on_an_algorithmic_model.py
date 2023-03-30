@@ -29,7 +29,7 @@ def section_home():
     st.markdown(r"""
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1puoiNww84IAEgkUMI0PnWp_aL1vai707?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1Xm2AlQtonkvSQ1tLyBJx31AYmVjopdcf?usp=sharing)
 """)
-    st_image("gears.png", 350)
+    st_image("gears2.png", 350)
     # start
     st.markdown(r"""
 # Interpretability on an algorithmic model
