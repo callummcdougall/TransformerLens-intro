@@ -86,6 +86,7 @@ st.sidebar.markdown(r"""
         <li><a class="contents-el" href="#transformer-circuits">Transformer Circuits</a></li>
         <li><a class="contents-el" href="#other-topics">Other topics</a></li>
     </ul></li>
+    <li><a class="contents-el" href="#feedback">Feedback</a></li>
 </ul>
 """, unsafe_allow_html=True)
 
@@ -314,9 +315,13 @@ Here are a few other topics that would probably be useful to have some familiari
 * Information theory (e.g. what is cross entropy, and what does it mean for a predictive model to minimise cross entropy loss between its predictions and the true labels)
 * Familiarity with other useful Python libraries (e.g. `einops` for rearranging tensors, `typing` for typechecking, `plotly` for interactive visualisations)
 * Working with VSCode, and basic Git (this will be useful if you're doing these exercises from VSCode rather than from Colab)
-
 """)
     # end
+    st.markdown(r"""
+## Feedback
+
+If you have any feedback on this course (e.g. bugs, confusing explanations, parts that you feel could be structured better), please let me know using [this Google Form](https://forms.gle/2ZhdHa87wWsrATjh9).
+""")
 
 if "current_page" not in st.session_state:
     st.session_state["current_page"] = ["", ""]
