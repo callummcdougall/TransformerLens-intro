@@ -50,7 +50,6 @@ def section_home():
 
 <ul class="contents">
     <li><a class="contents-el" href="#introduction">Introduction</a></li>
-    <li><a class="contents-el" href="#imports">Imports</a></li>
     <li><a class="contents-el" href="#learning-objectives">Learning Objectives</a></li>
 </ul>""", unsafe_allow_html=True)
     st.markdown(r"""
@@ -60,6 +59,12 @@ Links to Colab: [**exercises**](https://colab.research.google.com/drive/1CzqjUwF
     # start
     st.markdown(r"""
 # Training and Sampling
+
+## Introduction
+
+In the previous set of exercises, we built a transformer from scratch. Here, we're going to look closer at how a transformer works in practice. We'll cover three topics: how to train transformers, how to sample from their output to autoregressively generate text, and how to use caching to run them more efficiently.
+
+These exercises mainly focus on building up your understanding of transformers, and the important considerations that go into using them. Subsequent exercises will focus more on interpretability, so you can skip to them if you want (this material generally won't be very important for future exercises).
 
 ## Learning objectives
 

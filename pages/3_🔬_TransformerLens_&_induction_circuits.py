@@ -75,7 +75,7 @@ with open("images/page_images/layer0_head_attn_patterns.html") as f:
     layer0_head_attn_patterns = f.read()
 
 def section_home():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -91,8 +91,6 @@ Links to Colab: [**exercises**](https://colab.research.google.com/drive/17i8LctA
     # start
     st.markdown(r"""
 # TransformerLens & induction circuits
-
-In order to get the most out of these exercises, you should have read the **Mathematical Framework for Transformer Circuits** paper in some form. For a few tips on how best to read it, go to the homepage (on the left hand sidebar) and scroll to the section **Prerequisites / Transformer Circuits**.
 
 ## Introduction
 
