@@ -59,7 +59,7 @@ ul.contents a:hover {
 }
 </style>""", unsafe_allow_html=True)
 
-st.sidebar.markdown("""
+st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -76,6 +76,7 @@ st.sidebar.markdown("""
     <li><ul class="contents">
         <li><a class="contents-el" href="#option-1-colab">Option 1: Colab</a></li>
         <li><a class="contents-el" href="#option-2-your-own-ide">Option 2: Your own IDE</a></li>
+        <li><a class="contents-el" href="#chatbot-assistant">Chatbot assistant</a></li>
     </ul></li>
     <li><a class="contents-el" href="#prerequisites">Prerequisites</a></li>
     <li><ul class="contents">
@@ -88,12 +89,12 @@ st.sidebar.markdown("""
 </ul>
 """, unsafe_allow_html=True)
 
-def page():
+def section_home():
     st_image("magnifying-glass-2.png", width=600)
-    st.title("Mechanistic Interpretability & TransformerLens")
-
+    # start
     st.markdown(r"""
-
+# Mechanistic Interpretability & TransformerLens
+    
 This page contains a collation of resources and exercises on interpretability. The focus is on [`TransformerLens`](https://github.com/neelnanda-io/TransformerLens), a library maintained by Neel Nanda.
 
 ## About TransformerLens
@@ -164,10 +165,10 @@ To complete one of the exercise pages, you should:
 
 * Navigate to the appropriate directory in the repo (e.g. `exercises/transformer_from_scratch`)
 * Create a file called `answers.py` (or `answers.ipynb` if you prefer using notebooks)
-* Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
+* Work your way through the Streamlit page, copying over the code blocks into your own IDE and editing / running them there.
     * For each page, this will always start with some basic imports (including libraries like `transformer_lens`, as well as local files like `tests.py` and `solutions.py`).
 """)
-
+    # end
     with st.expander("Help - I get error `ImportError: DLL load failed while importing lib` when I try and import things."):
         st.markdown(r"""
 To fix this problem, run the following code in your terminal:
@@ -178,7 +179,28 @@ conda install libboost boost-cpp -c conda-forge
  
 then restart your IDE. Hopefully this fixes the problem.
 """)
+    # start
     st.markdown(r"""
+### Chatbot assistant
+
+In the sidebar of this page, below the contents page, you will (at first) see an error message saying "Please set the OpenAI key...". This is space for a chatbot assistant, which can help answer your questions about the material. Take the following steps to set it up:
+
+* Go to the [OpenAI API](https://openai.com/blog/openai-api) and sign up for an account.
+* Create a secret key from [this page](https://platform.openai.com/account/api-keys). Copy this key.
+* Create a file `.streamlit/secrets.toml` in this repo, and have the first line read `api_secret = "<your key>"`.
+* Refresh the page, and you should now be able to use the chatbot.
+
+This interface was built using the `openai` library, and it exists to help answer questions you might have about the material. All prompts from this chatbot are prepended with most\* of the material on the page and section you're currently reading. For instance, try passing in the question ***What are 2 ways to use this material?*** to the chatbot, and it should describe the two options given above (i.e. colab, or your own IDE). This feature is very experimental, so please [let me know](mailto:cal.s.mcdougall@gmail.com) if you have any feedback!
+
+\**Because of the context window, the entire page isn't always included in the prompt (e.g. generally code blocks aren't included). When in doubt, you can copy sections of the page into the prompt and run it! If you get an error message saying that the prompt is too long, then you can use the **clear chat** button and start again.*
+
+Here are some suggestions for the kinds of questions you can ask the chatbot (in the appropriate sections of the course):
+
+* *(copying in a function to the start of your prompt)* What does this function do?
+* Why are skip connections important in deep learning?
+* Give a visual explanation of ray tracing.
+* What are the different methods of hyperparameter tuning provided by Weights and Biases?
+
 ## Prerequisites
 
 This material starts with a guided implementation of transformers, so you don't need to understand how they work before starting. However, there are a few things we do recommend:
@@ -228,7 +250,7 @@ The paper is highly technical, so don't worry if it takes you a few passes to un
 * Read [this LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated), which uses a series of diagrams to explain induction heads and how they work (these are at the core of the second set of exercises).
 * When it comes to reading the actual paper, the set of tips below should help you get the most out of it (these were written by Neel, and many of them overlap with the points he makes in his video walkthrough).
 """)
-
+    # end
     with st.expander("Tips & Insights for the Paper"):
         st.markdown(r"""
 
@@ -281,7 +303,7 @@ Attention heads are harder because they map the input tensor $x$ (shape: `[posit
 
 The key point to remember is that if you ever get confused about what a tensor product means, explicitly represent it as a function of some input and see if things feel clearer.
 """)
-
+    # start
     st.markdown(r"""
 ### Other topics
 
@@ -294,7 +316,18 @@ Here are a few other topics that would probably be useful to have some familiari
 * Working with VSCode, and basic Git (this will be useful if you're doing these exercises from VSCode rather than from Colab)
 
 """)
-    
+    # end
 
-# if is_local or check_password():
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
+def page():
+    section_home()
+    prepend = parse_text_from_page(r"home", r"section_home")
+    current_page = r"Home"
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    new_page = st.session_state["current_page"][0] != st.session_state["current_page"][1]
+    chatbot_setup(prepend=prepend, new_page=new_page, debug=False)
+
+
 page()

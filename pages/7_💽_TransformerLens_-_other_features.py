@@ -6,7 +6,7 @@ from st_dependencies import *
 styling()
 
 def section_other_features():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -42,7 +42,7 @@ def section_other_features():
     </ul></li>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # TransformerLens: Other Features
 """)
@@ -56,9 +56,11 @@ def section_other_features():
 * Build your own custom transformer, with its own hook points.
 * Load models at pre-trained checkpoints, and study these models to identify the induction head phase transition.
 """)
+    # end
     st.error(r"""
 Note - some of this might not make sense unless you've gone through some more basic introductions to TransformerLens, like the **TransformerLens & induction circuits** exercises. You can find them from the sidebar on the left.
 """)
+    # start
     st.markdown(r"""
 ## Available Models
 
@@ -67,8 +69,10 @@ TransformerLens comes with over 40 open source models available, all of which ca
 **Note:** Though TransformerLens can load in some large transformers (eg OPT-66B), it does not currently support loading a single model across multiple GPUs, so in practice loading a model (eg >7B parameters) will be impractical, depending on your GPU memory. Feel free to reach out if you need to use larger models for your research.
 
 Notably, this means that analysis can be near immediately re-run on a different model by just changing the name.
-
-#### Exercise - re-run smoe old analysis on a different model
+""")
+    # end
+    st.markdown(r"""
+#### Exercise - re-run some old analysis on a different model
 
 Load in DistilGPT-2 (a distilled version of GPT-2, with half as many layers), with the following code: 
 
@@ -76,9 +80,8 @@ Load in DistilGPT-2 (a distilled version of GPT-2, with half as many layers), wi
 distilgpt2 = HookedTransformer.from_pretrained("distilgpt2")
 ```
 
-Take some analysis you did for GPT-2 small (e.g. locating induction heads), and re-run the exact same code on DistilGPT-2. Verify that it works without any further modification needed.""")
-
-
+Take some analysis you did for GPT-2 small (e.g. locating induction heads), and re-run the exact same code on DistilGPT-2. Verify that it works without any further modification needed.
+""")
     st.markdown(r"""
 ### An overview of the important open source models in the library
 
@@ -95,7 +98,6 @@ Take some analysis you did for GPT-2 small (e.g. locating induction heads), and 
 * **GPT-NeoX** - Eleuther's 20B parameter model, trained on the Pile
 * **Stanford CRFM models** - a replication of GPT-2 Small and GPT-2 Medium, trained on 5 different random seeds.
     * Notably, 600 checkpoints were taken during training per model, and these are available in the library with eg `HookedTransformer.from_pretrained("stanford-gpt2-small-a", checkpoint_index=265)`.
-
 
 ### An overview of some interpretability-friendly models I've trained and included
 
@@ -128,7 +130,9 @@ Note that all models are trained with a Beginning of Sequence token, and will li
     * A [recorded walkthrough](https://www.youtube.com/watch?v=yo4QvDn-vsU) of me doing research with TransformerLens on whether a tiny model can re-derive positional information, with [an accompanying Colab](https://colab.research.google.com/github/neelnanda-io/TransformerLens/blob/main/No_Position_Experiment.ipynb)
 * [Neuroscope](https://neuroscope.io), a website showing the text in the dataset that most activates each neuron in some selected models. Good to explore to get a sense for what kind of features the model tends to represent, and as a "wiki" to get some info
     * A tutorial on how to make an [Interactive Neuroscope](https://github.com/neelnanda-io/TransformerLens/blob/main/Hacky-Interactive-Lexoscope.ipynb), where you type in text and see the neuron activations over the text update live.
-
+""")
+    # start
+    st.markdown(r"""
 ### Folding LayerNorm (For the Curious)
 
 (For the curious - this is an important technical detail that's worth understanding, especially if you have preconceptions about how transformers work, but not necessary to use TransformerLens)
@@ -145,7 +149,9 @@ Mathematically, centering is a linear map, normalizing is *not* a linear map, an
 * **Scaling and Translation:** Scaling and translation are linear maps, and are always followed by another linear map. The composition of two linear maps is another linear map, so we can *fold* the scaling and translation weights into the weights of the subsequent layer, and simplify things without changing the underlying computation. 
 
 [See the docs for more details](https://github.com/neelnanda-io/TransformerLens/blob/main/further_comments.md#what-is-layernorm-folding-fold_ln)
-
+""")
+    # end
+    st.markdown(r"""
 A fun consequence of LayerNorm folding is that it creates a bias across the unembed, a `d_vocab` length vector that is added to the output logits - GPT-2 is not trained with this, but it *is* trained with a final LayerNorm that contains a bias. 
 
 Turns out, this LayerNorm bias learns structure of the data that we can only see after folding! In particular, it essentially learns **unigram statistics** - rare tokens get suppressed, common tokens get boosted, by pretty dramatic degrees! Let's list the top and bottom 20 - at the top we see common punctuation and words like " the" and " and", at the bottom we see weird-ass tokens like " RandomRedditor":
@@ -177,6 +183,9 @@ print(f"John bias: {john_bias.item():.4f}")
 print(f"Mary bias: {mary_bias.item():.4f}")
 print(f"Prob ratio bias: {t.exp(john_bias - mary_bias).item():.4f}x")
 ```
+""")
+    # start
+    st.markdown(r"""
 
 ## Dealing with tokens
 
@@ -193,7 +202,9 @@ Some observations - there are a lot of arbitrary-ish details in here!
 * Tokens include the preceding space, and whether the first token is a capital letter. `'how'` and `' how'` are different tokens!
 * Common words are single tokens, even if fairly long (` paragraph`) while uncommon words are split into multiple tokens (` token|ized`).
 * Tokens *mostly* split on punctuation characters (eg `*` and `.`), but eg `'s` is a single token.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 example_text = "The first thing you need to figure out is *how* things are tokenized. `model.to_str_tokens` splits a string into the tokens *as a list of substrings*, and so lets you explore what the text looks like. To demonstrate this, let's use it on this paragraph."
 example_text_str_tokens = model.to_str_tokens(example_text)
@@ -225,8 +236,8 @@ For example, let's input `The cat sat on the mat.` to GPT-2, and look at the log
         st.markdown(r"""
 Note that if we input a string to the model, it's implicitly converted to a string with `to_tokens`. 
 
-Note further that the log probs have shape `[batch, position, d_vocab]==[1, 8, 50257]`, with a vector of log probs predicting the next token for *every* token position. GPT-2 uses causal attention which means heads can only look backwards (equivalently, information can only move forwards in the model.), so the log probs at position k are only a function of the first k tokens, and it can't just cheat and look at the k+1 th token. This structure lets it generate text more efficiently, and lets it treat every *token* as a training example, rather than every *sequence*.""")
-
+Note further that the log probs have shape `[batch, position, d_vocab]==[1, 8, 50257]`, with a vector of log probs predicting the next token for *every* token position. GPT-2 uses causal attention which means heads can only look backwards (equivalently, information can only move forwards in the model.), so the log probs at position k are only a function of the first k tokens, and it can't just cheat and look at the k+1 th token. This structure lets it generate text more efficiently, and lets it treat every *token* as a training example, rather than every *sequence*.
+""")
     st.markdown(r"""
 ```python
 cat_text = "The cat sat on the mat."
@@ -271,7 +282,9 @@ print("Final occurence", model.get_token_position(
     "The cat sat on the mat. The mat sat on the cat.", 
     mode="last"))
 ```
-
+""")
+    # start
+    st.markdown(r"""
 In general, tokenization is a pain, and full of gotchas. I highly recommend just playing around with different inputs and their tokenization and getting a feel for it. As another "fun" example, let's look at the tokenization of arithmetic expressions - tokens do *not* contain consistent numbers of digits. (This makes it even more impressive that GPT-3 can do arithmetic!)
 
 ```python
@@ -288,6 +301,9 @@ I also *highly* recommend investigating prompts with easy tokenization when star
 A weirdness you may have noticed in the above is that `to_tokens` and `to_str_tokens` added a weird `<|endoftext|>` to the start of each prompt. TransformerLens does this by default, and it can easily trip up new users. Notably, **this includes `model.forward`** (which is what's implicitly used when you do eg `model("Hello World")`). This is called a **Beginning of Sequence (BOS)** token, and it's a special token used to mark the beginning of the sequence. Confusingly, in GPT-2, the End of Sequence (EOS), Beginning of Sequence (BOS) and Padding (PAD) tokens are all the same, `<|endoftext|>` with index `50256`.
 
 You can disable this behaviour by setting the flag `prepend_bos=False` in `to_tokens`, `to_str_tokens`, `model.forward` and any other function that converts strings to multi-token tensors. 
+""")
+    # end
+    st.markdown(r"""
 
 **Gotcha:** You only want to do this at the *start* of a prompt. If you, eg, want to input a question followed by an answer, and want to tokenize these separately, you do *not* want to prepend_bos on the answer.
 
@@ -321,7 +337,10 @@ Though, note that this also illustrates another gotcha - when `Claire` is at the
 print(f"| Claire| -> {model.to_str_tokens(' Claire', prepend_bos=False)}")
 print(f"|Claire| -> {model.to_str_tokens('Claire', prepend_bos=False)}")
 ```
-
+""")
+    # start
+    st.markdown(r"""
+    
 ## Generating Text
 
 TransformerLens also has basic text generation functionality, which can be useful for generally exploring what the model is capable of (thanks to Ansh Radhakrishnan for adding this!). This is pretty rough functionality, and where possible I recommend using more established libraries like HuggingFace for this.
@@ -329,11 +348,14 @@ TransformerLens also has basic text generation functionality, which can be usefu
 ```python
 model.generate("(CNN) President Barack Obama caught in embarrassing new scandal\n", max_new_tokens=50, temperature=0.7, prepend_bos=True)
 ```
-
+""")
+    st.markdown(r"""
 ## Hook Points
 
 The key part of TransformerLens that lets us access and edit intermediate activations are the HookPoints around every model activation. Importantly, this technique will work for *any* model architecture, not just transformers, so long as you're able to edit the model code to add in HookPoints! This is essentially a lightweight library bundled with TransformerLens that should let you take an arbitrary model and make it easier to study. 
-
+""")
+    # end
+    st.markdown(r"""
 This is implemented by having a HookPoint layer. Each transformer component has a HookPoint for every activation, which wraps around that activation. The HookPoint acts as an identity function, but has a variety of helper functions that allows us to put PyTorch hooks in to edit and access the relevant activation. 
 
 There is also a `HookedRootModule` class - this is a utility class that the root module should inherit from (root module = the model we run) - it has several utility functions for using hooks well, notably `reset_hooks`, `run_with_cache` and `run_with_hooks`. 
@@ -341,7 +363,8 @@ There is also a `HookedRootModule` class - this is a utility class that the root
 The default interface is the `run_with_hooks` function on the root module, which lets us run a forwards pass on the model, and pass on a list of hooks paired with layer names to run on that pass. 
 
 The syntax for a hook is `function(activation, hook)` where `activation` is the activation the hook is wrapped around, and `hook` is the `HookPoint` class the function is attached to. If the function returns a new activation or edits the activation in-place, that replaces the old one, if it returns None then the activation remains as is.
-
+""")
+    st.markdown(r"""
 ### Toy Example
 
 Here's a simple example of defining a small network with HookPoints:
@@ -415,14 +438,17 @@ print(
     ).item(),
 )
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Loading Pre-Trained Checkpoints
 
 There are a lot of interesting questions combining mechanistic interpretability and training dynamics - analysing model capabilities and the underlying circuits that make them possible, and how these change as we train the model. 
 
 TransformerLens supports these by having several model families with checkpoints throughout training. `HookedTransformer.from_pretrained` can load a checkpoint of a model with the `checkpoint_index` (the label 0 to `num_checkpoints-1`) or `checkpoint_value` (the step or token number, depending on how the checkpoints were labelled).
-
-
+""")
+    # end
+    st.markdown(r"""
 Available models:
 * All of my interpretability-friendly models have checkpoints available, including:
     * The toy models - `attn-only`, `solu`, `gelu` 1L to 4L
@@ -469,7 +495,7 @@ tokens_trained_on = []
 induction_losses = []
 ```
 
-We load the models, cache them in a list, and 
+We load the models, cache them in a list, and:
 
 ```python
 for index in checkpoint_indices:
@@ -493,5 +519,24 @@ line(induction_losses, x=tokens_trained_on, xaxis="Tokens Trained On", yaxis="In
 ```
 """)
 
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
 # if is_local or check_password():
-section_other_features()
+def page():
+    section_other_features()
+    current_page = r"7_💽_TransformerLens_-_other_features"
+    prepend = parse_text_from_page(current_page, r"section_other_features")
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    new_page = st.session_state["current_page"][0] != st.session_state["current_page"][1]
+    chatbot_setup(prepend=prepend, new_page=new_page, debug=True)
+
+    # from transformers import AutoTokenizer
+    # tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    # st.sidebar.write(len(prepend))
+    # st.sidebar.write(len(tokenizer.tokenize(prepend)))
+
+page()
+

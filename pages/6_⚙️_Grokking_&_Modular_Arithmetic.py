@@ -10,6 +10,9 @@ styling()
 # st_image("fourier.png", 350)
 
 def section_home():
+    st.error(r"""
+*Note - this section hasn't been trialled yet, so it may have some bugs.*
+""")
     st_image("wheel3.png", 350)
     st.sidebar.markdown(r"""
 ## Table of Contents

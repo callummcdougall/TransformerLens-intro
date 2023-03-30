@@ -34,5 +34,8 @@ diffusers
 circuitsvis
 torchtyping
 typeguard
+frozendict
 transformer_lens
 streamlit
+streamlit-chat
+openai

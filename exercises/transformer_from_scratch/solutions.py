@@ -7,7 +7,7 @@ import torch as t
 import torch.nn as nn
 import math
 from transformer_lens import HookedTransformer
-from transformer_lens.utils import gelu_new, tokenize_and_concatenate
+from transformer_lens.utils import gelu_new
 from tqdm import tqdm
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
@@ -22,8 +22,6 @@ device = t.device("cuda" if t.cuda.is_available() else "cpu")
 MAIN = __name__ == "__main__"
 if MAIN:
     os.chdir("../transformer_from_scratch")
-
-if MAIN:
     reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 
 # %%
@@ -47,6 +45,8 @@ class Config:
     n_layers: int = 12
 
 cfg = Config()
+if MAIN:
+    print(cfg)
 
 # %%
 
@@ -73,9 +73,9 @@ def load_gpt2_test(cls, gpt2_layer, input):
     print("Input shape:", input.shape)
     output = layer(input)
     print("Output shape:", output.shape)
-    reference_output = gpt2_layer(input)
+    try: reference_output = gpt2_layer(input)
+    except: reference_output = gpt2_layer(input, input, input)
     print("Reference output shape:", reference_output.shape, "\n")
-
     comparison = t.isclose(output, reference_output, atol=1e-4, rtol=1e-3)
     print(f"{comparison.sum()/comparison.numel():.2%} of the values are correct\n")
 
@@ -142,19 +142,17 @@ class Attention(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.W_K = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_K, std=self.cfg.init_range)
-        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_V, std=self.cfg.init_range)
-        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
-
         self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
-        nn.init.normal_(self.W_O, std=self.cfg.init_range)
+        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
-
+        nn.init.normal_(self.W_Q, std=self.cfg.init_range)
+        nn.init.normal_(self.W_K, std=self.cfg.init_range)
+        nn.init.normal_(self.W_V, std=self.cfg.init_range)
+        nn.init.normal_(self.W_O, std=self.cfg.init_range)
         self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
 
     def forward(self, normalized_resid_pre: t.Tensor):
@@ -206,7 +204,7 @@ class Attention(nn.Module):
 
 
 if MAIN:
-    # rand_float_test(Attention, [2, 4, 768])
+    rand_float_test(Attention, [2, 4, 768])
     load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
 
 # %%
@@ -224,7 +222,6 @@ class MLP(nn.Module):
 
     def forward(self, normalized_resid_mid):
         # normalized_resid_mid: [batch, position, d_model]
-        
         normalized_resid_mid = normalized_resid_mid @ self.W_in + self.b_in
         normalized_resid_mid = gelu_new(normalized_resid_mid)
         normalized_resid_mid = normalized_resid_mid @ self.W_out + self.b_out
@@ -269,9 +266,9 @@ class Unembed(nn.Module):
 
     def forward(self, normalized_resid_final):
         # normalized_resid_final [batch, position, d_model]
-        return einsum(
+        return einops.einsum(
+            normalized_resid_final, self.W_U,
             "batch posn d_model, d_model d_vocab -> batch posn d_vocab",
-            normalized_resid_final, self.W_U
         ) + self.b_U
         # Or, could just do `normalized_resid_final @ self.W_U + self.b_U`
 
@@ -282,7 +279,7 @@ if MAIN:
 # %%
 
 class DemoTransformer(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
         self.embed = Embed(cfg)

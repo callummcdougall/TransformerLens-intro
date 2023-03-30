@@ -60,6 +60,7 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL2Fx0xq3lLgDQvHKM5tnqRFeRM?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1ND38oNmvI702tu32M74G26v-mO5lkByM?usp=share_link)
 """)
     st_image("transformer-building.png", 350)
+    # start
     st.markdown(r"""
 # Transformer from scratch
 
@@ -82,7 +83,9 @@ Check out these other intros to transformers for another perspective:
 * [Andrej Karpathy's MinGPT](https://github.com/karpathy/minGPT)
 
 **Sharing Guidelines:** This tutorial is still a bit of a work in progress! I think it's usable, but please don't post it anywhere publicly without checking with me first! Sharing with friends is fine. 
-
+""")
+    # end
+    st.markdown(r"""
 ## Imports
 
 If you're using Colab, you can just go straight to the page (scroll to the top for the link). If you're using your own IDE such as VSCode, and you've already gone through the setup steps described in **Home**, then you just need to create a file called `answers.py` (or `.ipynb` if you prefer notebooks) in the directory `exercises/transformer_from_scratch`, and run the following code at the top:
@@ -95,27 +98,18 @@ import torch as t
 import torch.nn as nn
 import math
 from transformer_lens import HookedTransformer
-from transformer_lens.utils import gelu_new, tokenize_and_concatenate
+from transformer_lens.utils import gelu_new
 from tqdm import tqdm
-import datasets
 import os; os.environ["ACCELERATE_DISABLE_RICH"] = "1"
 
 reference_gpt2 = HookedTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
 
 device = t.device("cuda" if t.cuda.is_available() else "cpu")
+
+MAIN = __name__ == "__main__"
 ```
 """)
-
-    with st.expander("Help - I get error `ImportError: DLL load failed while importing lib` when I try and import things."):
-        st.markdown(r"""
-To fix this problem, run the following code in your terminal:
-
-```
-conda install libboost boost-cpp -c conda-forge
-```
- 
-then restart your IDE. Hopefully this fixes the problem.
-""")
+    # start
     st.markdown(r"""
 ## Learning Objectives
 
@@ -151,34 +145,7 @@ Here are the learning objectives for each section of the tutorial. At the end of
 * Use the `Adam` optimizer to train your transformer
 * Run a training loop on a very small dataset, and verify that your model's loss is going down
 """)
-
-#     st.markdown(r"""
-# ## Setup
-
-# If you're using the Colab rather than the Streamlit page, then you can follow the instructions in the Colab (from the "Instructions" section onwards). If you're using your own IDE, then you'll need to install the following packages:
-
-# ```python
-# %pip install git+https://github.com/neelnanda-io/TransformerLens.git@new-demo
-# %pip install git+https://github.com/neelnanda-io/PySvelte.git
-# %pip install fancy_einsum
-# %pip install einops
-# ```
-
-# and then run the following:
-
-# ```python
-# import einops
-# from fancy_einsum import einsum
-# from dataclasses import dataclass
-# import t
-# import t.nn as nn
-# import numpy as np
-# import math
-# from transformer_lens import utils, HookedTransformer
-# import tqdm.auto as tqdm
-# ```
-
-# """)
+    # end
     
 def section_intro():
     st.sidebar.markdown("""
@@ -200,6 +167,7 @@ def section_intro():
 </ul>
 """, unsafe_allow_html=True)
 
+    # start
     st.markdown(r"""
 # Understanding Inputs & Outputs of a Transformer
 """)
@@ -212,25 +180,6 @@ def section_intro():
 * Understand what logits are, and how to use them to derive a probability distribution over the vocabulary
 """)
     st.markdown(r"""
-### Setup
-
-You should run the following at the top of your notebook / Python file:
-
-```python
-import einops
-from fancy_einsum import einsum
-from dataclasses import dataclass
-import t
-import t.nn as nn
-import numpy as np
-import math
-from transformer_lens import EasyTransformer
-from transformer_lens.utils import gelu_new, tokenize_and_concatenate
-import tqdm.auto as tqdm
-
-reference_gpt2 = EasyTransformer.from_pretrained("gpt2-small", fold_ln=False, center_unembed=False, center_writing_weights=False)
-```
-
 ## What is the point of a transformer?
 
 **Transformers exist to model text!**
@@ -247,7 +196,8 @@ Importantly, if you give a model 100 tokens in a sequence, it predicts the next 
 
 #### Objection: Isn't this trivial for all except the last prediction, since the transformer can just "look at the next one"?
 
-No! We make the transformer have *causal attention*. The core thing is that it can only move information forwards in the sequence. The prediction of what comes after token 50 is only a function of the first 50 tokens, *not* of token 51. We say the transformer is **autoregressive**, because it only predicts future words based on past data.""")
+No! We make the transformer have *causal attention*. The core thing is that it can only move information forwards in the sequence. The prediction of what comes after token 50 is only a function of the first 50 tokens, *not* of token 51. We say the transformer is **autoregressive**, because it only predicts future words based on past data.
+""")
 
     st_image("transformer-overview.png", 1000)
     st.markdown("")
@@ -292,6 +242,8 @@ The most common strategy is called **Byte-Pair encodings**.
 
 We begin with the 256 ASCII characters as our tokens, and then find the most common pair of tokens, and merge that into a new token. Note that we do have a space character as one of our 256 tokens, and merges using space are very common. For instance, run this code to print the five first merges for the tokenizer used by GPT-2:
 
+*(Note - for all the code on this page, you can delete it or comment it out after you run it.)*
+
 ```python
 sorted_vocab = sorted(list(reference_gpt2.tokenizer.vocab.items()), key=lambda n:n[1])
 print(sorted_vocab[256:261])
@@ -299,6 +251,7 @@ print(sorted_vocab[256:261])
 
 Note - you might see the character `Ġ` in front of some tokens. This is a special token that indicates that the token begins with a space. Tokens with a leading space vs not are different.
 """)
+    # end
     with st.expander("Fun (totally optional) exercise - can you guess what the first-formed 3/4/5/6/7-letter encodings in GPT-2's vocabulary are?"):
         st.markdown(r"""
 They are:
@@ -333,7 +286,9 @@ print(sorted_vocab[-20:])
 Transformers in the `transformer_lens` library have a `to_tokens` method that converts text to numbers. It also prepends them with a special token called `bos` (beginning of sequence) to indicate the start of a sequence (we'll learn more about this later). You can disable this with the `prepend_bos` argument.
 
 Prepends with a special token to give attention a resting position, disable with `prepend_bos=False`
-
+""")
+    # start
+    st.markdown(r"""
 ### Some tokenization annoyances
 
 There are a few funky and frustrating things about tokenization, which causes it to behave differently than you might expect. For instance:
@@ -355,7 +310,6 @@ Length is inconsistent, common numbers bundle together.
 reference_gpt2.to_str_tokens("56873+3184623=123456789-1000000000")
 ```
 """)
-
     st.success(r"""
 ### Key Takeaways
 
@@ -376,7 +330,9 @@ reference_gpt2.to_str_tokens("56873+3184623=123456789-1000000000")
 So the model outputs a tensor of logits, one vector of size $d_{vocab}$ for each input token.
 
 (Note - we call something a logit if it represents a probability distribution, and it is related to the actual probabilities via the softmax function. Logits and probabilities are both equally valid ways to represent a distribution.)
-
+""")
+    # end
+    st.markdown(r"""
 ## Text generation
 
 #### **Step 1:** Convert text to tokens
@@ -396,7 +352,7 @@ print(reference_gpt2.to_str_tokens(tokens))
 From our input of shape `[batch, seq_len]`, we get output of shape `[batch, seq_len, vocab_size]`. The `[i, j, :]`-th element of our output is a vector of logits representing our prediction for the `j+1`-th token in the `i`-th sequence.
 
 ```python
-tokens = tokens.cuda()
+tokens = tokens.to(device)
 logits, cache = reference_gpt2.run_with_cache(tokens)
 print(logits.shape)
 ```
@@ -453,7 +409,7 @@ for i in range(10):
 
 Note how our model predicts a second line break, followed by a second copy of the input sequence. 
 """)
-
+    # start
     st.success(r"""
 ### Key takeaways
 
@@ -464,6 +420,7 @@ Note how our model predicts a second line break, followed by a second copy of th
 * We append this to the input + run again to generate more text (Jargon: *autoregressive*)
 * Meta level point: Transformers are sequence operation models, they take in a sequence, do processing in parallel at each position, and use attention to move information between positions!
 """)
+    # end
 
 def section_code():
     st.sidebar.markdown("""
@@ -499,6 +456,7 @@ def section_code():
     <li><a class="contents-el" href="#try-it-out">Try it out!</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
 # Clean Transformer Implementation
 """)
@@ -517,18 +475,15 @@ def section_code():
 * Combine these first four modules to form a transformer block, then combine these with an embedding and unembedding to create a full transformer
 * Load in weights to your transformer, and demo it on a sample input
 """)
-
-
+    # end
     st.markdown(r"""
-
-
 This diagram shows the high-level transformer architecture. It can be thought of in terms of a sequence of **attention heads** (denoted $h_1, h_2, ...$) and MLPs (denoted $m$), with each one performing operations on the residual stream (which is the central object of the transformer).
 """)
     st.markdown(r"")
     st_image("transformer.png", 900)
     st.markdown(r"")
+    # start
     st.markdown(r"""
-
 ## High-Level architecture
 
 Go watch my [Transformer Circuits walkthrough](https://www.youtube.com/watch?v=KV5gbOmHbjU) if you want more intuitions!
@@ -579,8 +534,7 @@ A few key points:
 
 Below is a schematic diagram of the attention layers; don't worry if you don't follow this right now, we'll go into more detail during implementation.
 """)
-
-    st_image("transformer-attn.png", 1300)
+    st_image("transformer-attn.png", 1100)
     st.markdown(r"")
     st.markdown(r"""
 ### MLPs
@@ -595,6 +549,7 @@ Intuition - once attention has moved relevant information to a single position i
 
 Another important intuition - `linear map -> non-linearity -> linear map` is pretty much the most powerful force in the universe! It basically [just works](https://xkcd.com/1838/), and can approximate arbitrary functions.
 """)
+    # end
     st_image("transformer-mlp.png", 720)
     st.markdown(r"""
 ### Unembedding
@@ -603,7 +558,6 @@ Finally, we unembed!
 
 This just consists of applying a linear map $W_U$, going from final residual stream to a vector of logits - this is the output.
 """)
-
     with st.expander("Aside - tied embeddings"):
         st.markdown(r"""
 Note - sometimes we use something called a **tied embedding** - this is where we use the same weights for our $W_E$ and $W_U$ matrices. In other words, to get the logit score for a particular token at some sequence position, we just take the vector in the residual stream at that sequence position and take the inner product with the corresponding token embedding vector. This is more training-efficient (because there are fewer parameters in our model), and it might seem pricipled at first. After all, if two words have very similar meanings, shouldn't they have similar embedding vectors because the model will treat them the same, and similar unembedding vectors because they could both be substituted for each other in most output?
@@ -663,7 +617,8 @@ It's important to distinguish between parameters and activations in the model.
     * We can think of these values as only existing for the duration of a single forward pass, and disappearing afterwards.
     * We can use hooks to access these values during a forward pass (more on hooks later), but it doesn't make sense to talk about a model's activations outside the context of some particular input.
     * Attention scores and patterns are activations (this is slightly non-intuitve because they're used in a matrix multiplication with another activation).
-
+""")
+    st.markdown(r"""
 The dropdown below contains a diagram of a single layer (called a `TransformerBlock`) for an attention-only model with no biases. Each box corresponds to an **activation** (and also tells you the name of the corresponding hook point, which we will eventually use to access those activations). The red text below each box tells you the shape of the activation (ignoring the batch dimension). Each arrow corresponds to an operation on an activation; where there are **parameters** involved these are labelled on the arrows.
 
 #### Print All Activation Shapes of Reference Model
@@ -671,19 +626,21 @@ The dropdown below contains a diagram of a single layer (called a `TransformerBl
 Run the following code to print all the activation shapes of the reference model:
 
 ```python
-for activation_name, activation in cache.items():
-    # Only print for first layer
-    if ".0." in activation_name or "blocks" not in activation_name:
-        print(f"{activation_name:30} {tuple(activation.shape)}")
+if MAIN:
+    for activation_name, activation in cache.items():
+        # Only print for first layer
+        if ".0." in activation_name or "blocks" not in activation_name:
+            print(f"{activation_name:30} {tuple(activation.shape)}")
 ```
 
 #### Print All Parameters Shapes of Reference Model
 
 ```python
-for name, param in reference_gpt2.named_parameters():
-    # Only print for first layer
-    if ".0." in name or "blocks" not in name:
-        print(f"{name:18} {tuple(param.shape)}")
+if MAIN:
+    for name, param in reference_gpt2.named_parameters():
+        # Only print for first layer
+        if ".0." in name or "blocks" not in name:
+            print(f"{name:18} {tuple(param.shape)}")
 ```
 
 The diagram below shows the name of all activations and parameters in a fully general transformer model from transformerlens (except for a few at the start and end, like the embedding and unembedding). Lots of this won't make sense at first, but you can return to this diagram later and check that you understand most/all parts of it.
@@ -718,8 +675,11 @@ class Config:
     n_heads: int = 12
     n_layers: int = 12
 
+    
 cfg = Config()
-print(cfg)
+
+if MAIN:
+    print(cfg)
 ```
 
 ### Tests
@@ -731,30 +691,30 @@ Tests are great, write lightweight ones to use as you go!
 ```python
 def rand_float_test(cls, shape):
     cfg = Config(debug=True)
-    layer = cls(cfg).cuda()
-    random_input = t.randn(shape).cuda()
+    layer = cls(cfg).to(device)
+    random_input = t.randn(shape).to(device)
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
 
 def rand_int_test(cls, shape):
     cfg = Config(debug=True)
-    layer = cls(cfg).cuda()
-    random_input = t.randint(100, 1000, shape).cuda()
+    layer = cls(cfg).to(device)
+    random_input = t.randint(100, 1000, shape).to(device)
     print("Input shape:", random_input.shape)
     output = layer(random_input)
     print("Output shape:", output.shape, "\n")
 
 def load_gpt2_test(cls, gpt2_layer, input):
     cfg = Config(debug=True)
-    layer = cls(cfg).cuda()
+    layer = cls(cfg).to(device)
     layer.load_state_dict(gpt2_layer.state_dict(), strict=False)
     print("Input shape:", input.shape)
     output = layer(input)
     print("Output shape:", output.shape)
-    reference_output = gpt2_layer(input)
+    try: reference_output = gpt2_layer(input)
+    except: reference_output = gpt2_layer(input, input, input)
     print("Reference output shape:", reference_output.shape, "\n")
-
     comparison = t.isclose(output, reference_output, atol=1e-4, rtol=1e-3)
     print(f"{comparison.sum()/comparison.numel():.2%} of the values are correct\n")
 ```
@@ -792,7 +752,13 @@ class LayerNorm(nn.Module):
         # residual: [batch, position, d_model]
         # output: [batch, position, d_model]
         pass
-```""")
+        
+
+if MAIN:
+    rand_float_test(LayerNorm, [2, 4, 768])
+    load_gpt2_test(LayerNorm, reference_gpt2.ln_final, cache["resid_post", 11])
+```
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -815,11 +781,6 @@ class LayerNorm(nn.Module):
 ```
 """)
     st.markdown(r"""
-```python
-rand_float_test(LayerNorm, [2, 4, 768])
-load_gpt2_test(LayerNorm, reference_gpt2.ln_final, cache["resid_post", 11])
-```
-
 ### Embedding
 
 Basically a lookup table from tokens to residual stream vectors.
@@ -839,9 +800,12 @@ class Embed(nn.Module):
         # output: [batch, position, d_model]
         pass
 
-rand_int_test(Embed, [2, 4])
-load_gpt2_test(Embed, reference_gpt2.embed, tokens)
-```""")
+        
+if MAIN
+    rand_int_test(Embed, [2, 4])
+    load_gpt2_test(Embed, reference_gpt2.embed, tokens)
+```
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -857,13 +821,9 @@ class Embed(nn.Module):
         # tokens: [batch, position]
         # output: [batch, position, d_model]
         return self.W_E[tokens]
-
-rand_int_test(Embed, [2, 4])
-load_gpt2_test(Embed, reference_gpt2.embed, tokens)
-```""")
-
+```
+""")
     st.markdown(r"""
-
 ### Positional Embedding
 
 ```python
@@ -879,9 +839,12 @@ class PosEmbed(nn.Module):
         # output: [batch, position, d_model]
         pass
 
-rand_int_test(PosEmbed, [2, 4])
-load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
-```""")
+        
+if MAIN:
+    rand_int_test(PosEmbed, [2, 4])
+    load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
+```
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -899,9 +862,13 @@ class PosEmbed(nn.Module):
         batch, seq_len = tokens.shape
         return einops.repeat(self.W_pos[:seq_len], "seq d_model -> batch seq d_model", batch=batch)
 
-rand_int_test(PosEmbed, [2, 4])
-load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
-```""")
+        
+if MAIN:
+    rand_int_test(PosEmbed, [2, 4])
+    load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
+```
+""")
+    # start
     st.markdown(r"""
 
 ### Attention Layer
@@ -915,10 +882,16 @@ load_gpt2_test(PosEmbed, reference_gpt2.pos_embed, tokens)
     * Linear map from input -> value `[batch, key_pos, head_index, d_head]`
     * Mix along the `key_pos` with attn pattern to get `z`, which is a weighted average of the value vectors `[batch, query_pos, head_index, d_head]`
     * Map to output, `[batch, position, d_model]` (position = query_pos, we've summed over all heads)
-
-Below is a much larger, more detailed version of the attention head diagram from earlier. Note that this diagram assumes a batch size of 1 (in the general case, all terms except the model weights $W_Q$, $b_Q$ etc will have a batch dimension at the start). Also, this diagram shows how the attention layer works for all heads (whenever there are three dimensional tensors in the diagram, the depth axis represents different heads).
 """)
-    st_image("transformer-attn-2.png", 1200)
+    # end
+    st.markdown(r"""
+Below is a much larger, more detailed version of the attention head diagram from earlier. This should give you an idea of the actual tensor operations involved. A few clarifications on this diagram:
+
+* Whenever there is a third dimension shown in the pictures, this refers to the `head_index` dimension. We can see that all operations within the attention layer are done independently for each head.
+* The objects in the box are activations; they have a batch dimension (for simplicity, we assume the batch dimension is 1 in the diagram). The objects to the right of the box are our parameters (weights and biases); they have no batch dimension.
+* We arrange the keys, queries and values as `(batch, seq_pos, head_idx, d_head)`, because the biases have shape `(head_idx, d_head)`, so this makes it convenient to add the biases (recall the rules of array broadcasting!).
+""")
+    st_image("transformer-attn-2.png", 1250)
     with st.expander("A few extra notes on attention (optional)"):
         st.markdown(r"""
 Usually we have the relation `e = n * h` (i.e. `d_model = num_heads * d_head`). There are some computational justifications for this, but mostly this is just done out of convention (just like how we usually have `d_mlp = 4 * d_model`!).
@@ -983,19 +956,17 @@ class Attention(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.W_K = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_K, std=self.cfg.init_range)
-        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_V, std=self.cfg.init_range)
-        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
-
         self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
-        nn.init.normal_(self.W_O, std=self.cfg.init_range)
+        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
-
+        nn.init.normal_(self.W_Q, std=self.cfg.init_range)
+        nn.init.normal_(self.W_K, std=self.cfg.init_range)
+        nn.init.normal_(self.W_V, std=self.cfg.init_range)
+        nn.init.normal_(self.W_O, std=self.cfg.init_range)
         self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
 
     def forward(self, normalized_resid_pre: t.Tensor):
@@ -1009,8 +980,9 @@ class Attention(nn.Module):
         pass
 
 
-rand_float_test(Attention, [2, 4, 768])
-load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
+if MAIN:
+    rand_float_test(Attention, [2, 4, 768])
+    load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
 ```
 """)
     with st.expander("Hint (pseudocode for both functions)"):
@@ -1040,19 +1012,17 @@ class Attention(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.W_Q = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_Q, std=self.cfg.init_range)
-        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.W_K = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_K, std=self.cfg.init_range)
-        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.W_V = nn.Parameter(t.empty((cfg.n_heads, cfg.d_model, cfg.d_head)))
-        nn.init.normal_(self.W_V, std=self.cfg.init_range)
-        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
-
         self.W_O = nn.Parameter(t.empty((cfg.n_heads, cfg.d_head, cfg.d_model)))
-        nn.init.normal_(self.W_O, std=self.cfg.init_range)
+        self.b_Q = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_K = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
+        self.b_V = nn.Parameter(t.zeros((cfg.n_heads, cfg.d_head)))
         self.b_O = nn.Parameter(t.zeros((cfg.d_model)))
-
+        nn.init.normal_(self.W_Q, std=self.cfg.init_range)
+        nn.init.normal_(self.W_K, std=self.cfg.init_range)
+        nn.init.normal_(self.W_V, std=self.cfg.init_range)
+        nn.init.normal_(self.W_O, std=self.cfg.init_range)
         self.register_buffer("IGNORE", t.tensor(-1e5, dtype=t.float32, device="cuda"))
 
     def forward(self, normalized_resid_pre: t.Tensor):
@@ -1097,8 +1067,9 @@ class Attention(nn.Module):
         return attn_scores
 
 
-rand_float_test(Attention, [2, 4, 768])
-load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
+if MAIN:
+    rand_float_test(Attention, [2, 4, 768])
+    load_gpt2_test(Attention, reference_gpt2.blocks[0].attn, cache["normalized", 0, "ln1"])
 ```
 """)
 
@@ -1125,9 +1096,12 @@ class MLP(nn.Module):
         # output: [batch, position, d_model]
         pass
 
-rand_float_test(MLP, [2, 4, 768])
-load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["blocks.0.ln2.hook_normalized"])
-```""")
+        
+if MAIN:
+    rand_float_test(MLP, [2, 4, 768])
+    load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["blocks.0.ln2.hook_normalized"])
+```
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -1156,9 +1130,6 @@ class MLP(nn.Module):
             post, self.W_out
         ) + self.b_out
         return mlp_out
-
-rand_float_test(MLP, [2, 4, 768])
-load_gpt2_test(MLP, reference_gpt2.blocks[0].mlp, cache["normalized", 0, "ln2"])
 ```
 """)
 
@@ -1181,9 +1152,12 @@ class TransformerBlock(nn.Module):
         # output: [batch, position, d_model]
         pass
 
-rand_float_test(TransformerBlock, [2, 4, 768])
-load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
-```""")
+        
+if MAIN:
+    rand_float_test(TransformerBlock, [2, 4, 768])
+    load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
+```
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -1204,9 +1178,6 @@ class TransformerBlock(nn.Module):
         resid_mid = self.attn(self.ln1(resid_pre)) + resid_pre
         resid_post = self.mlp(self.ln2(resid_mid)) + resid_mid
         return resid_post
-
-rand_float_test(TransformerBlock, [2, 4, 768])
-load_gpt2_test(TransformerBlock, reference_gpt2.blocks[0], cache["resid_pre", 0])
 ```
 """)
 
@@ -1227,8 +1198,10 @@ class Unembed(nn.Module):
         # output: [batch, position, d_vocab]
         pass
 
-rand_float_test(Unembed, [2, 4, 768])
-load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
+        
+if MAIN:
+    rand_float_test(Unembed, [2, 4, 768])
+    load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
 ```
 """)
 
@@ -1249,8 +1222,10 @@ class Unembed(nn.Module):
         logits = einsum("batch position d_model, d_model d_vocab -> batch position d_vocab", normalized_resid_final, self.W_U) + self.b_U
         return logits
 
-rand_float_test(Unembed, [2, 4, 768])
-load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
+        
+if MAIN:
+    rand_float_test(Unembed, [2, 4, 768])
+    load_gpt2_test(Unembed, reference_gpt2.unembed, cache["ln_final.hook_normalized"])
 ```
 """)
 
@@ -1273,9 +1248,12 @@ class DemoTransformer(nn.Module):
         # output: [batch, position, d_vocab]
         pass
 
-rand_int_test(DemoTransformer, [2, 4])
-load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
-```""")
+        
+if MAIN:
+    rand_int_test(DemoTransformer, [2, 4])
+    load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
+```
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -1303,8 +1281,10 @@ class DemoTransformer(nn.Module):
         # logits have shape [batch, position, logits]
         return logits
 
-rand_int_test(DemoTransformer, [2, 4])
-load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
+        
+if MAIN:
+    rand_int_test(DemoTransformer, [2, 4])
+    load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
 ```
 """)
 
@@ -1313,9 +1293,10 @@ load_gpt2_test(DemoTransformer, reference_gpt2, tokens)
 ## Try it out!
 
 ```python
-demo_gpt2 = DemoTransformer(Config(debug=False))
-demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
-demo_gpt2.cuda()
+if MAIN:
+    demo_gpt2 = DemoTransformer(Config(debug=False))
+    demo_gpt2.load_state_dict(reference_gpt2.state_dict(), strict=False)
+    demo_gpt2.to(device)
 ```
 
 Let's take a test string, and calculate the loss!
@@ -1335,9 +1316,10 @@ $$
 in other words, the negative log prob of the true classification. 
 
 ```python
-test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
-test_tokens = reference_gpt2.to_tokens(test_string).cuda()
-demo_logits = demo_gpt2(test_tokens)
+if MAIN:
+    test_string = '''There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.'''
+    test_tokens = reference_gpt2.to_tokens(test_string).to(device)
+    demo_logits = demo_gpt2(test_tokens)
 ```
 
 ```python
@@ -1360,12 +1342,15 @@ if MAIN:
 We can also greedily generate text:
 
 ```python
-for i in tqdm.tqdm(range(100)):
-    test_tokens = reference_gpt2.to_tokens(test_string).to(device)
-    demo_logits = demo_gpt2(test_tokens)
-    test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
-print(test_string)
+if MAIN:
+    for i in tqdm.tqdm(range(100)):
+        test_tokens = reference_gpt2.to_tokens(test_string).to(device)
+        demo_logits = demo_gpt2(test_tokens)
+        test_string += reference_gpt2.tokenizer.decode(demo_logits[-1, -1].argmax())
+    print(test_string)
 ```
+
+In later sections, we'll learn to generate text in slightly more interesting ways than just argmaxing the output.
 """)
 
 def section_training():
@@ -1392,18 +1377,17 @@ def section_training():
 """)
     st.markdown(r"""
 ***Note - this section provides a demo rather than exercises. If you've got more time today, you might wnat to to jump to the next section (Training and Sampling) to go through the process of building dataloaders and training loops by yourself, without looking at this section first. It's totally up to you!***
-
-This is a lightweight demonstration of how you can actually train your own GPT-2 with this code! Here we train a tiny model on a tiny dataset, but it's fundamentally the same code for training a larger/more real model (though you'll need beefier GPUs and data parallelism to do it remotely efficiently, and fancier parallelism for much bigger ones).
-
-For our purposes, we'll train 2L 4 heads per layer model, with context length 256, for 1000 steps of batch size 8, just to show what it looks like.
 """)
-
     st.error(r"""
 You should use the Colab to run this code, since it will put quite a strain on your GPU otherwise! You can access a complete version of the Colab (with solutions for all the earlier exercises filled in) [here](https://colab.research.google.com/drive/1kP27XsoJsPeCyVtzeolNMlVAsLFEmxZ6?usp=sharing#scrollTo=QfeyG6NZm4SC).
 
 Alternatively, if you just want to read the code and look at the outputs, you can still do it on this page.
 """)
+    st.markdown(r"""
+This is a lightweight demonstration of how you can actually train your own GPT-2 with this code! Here we train a tiny model on a tiny dataset, but it's fundamentally the same code for training a larger/more real model (though you'll need beefier GPUs and data parallelism to do it remotely efficiently, and fancier parallelism for much bigger ones).
 
+For our purposes, we'll train 2L 4 heads per layer model, with context length 256, for 1000 steps of batch size 8, just to show what it looks like.
+""")
     st.markdown(r"""
 ```python
 import datasets
@@ -1428,18 +1412,20 @@ model_cfg = Config(debug=False, d_model=256, n_heads=4, d_head=64, d_mlp=1024, n
 We load in a tiny dataset I made, with the first 10K entries in the Pile (inspired by Stas' version for OpenWebText!)
 
 ```python
-dataset = datasets.load_dataset("NeelNanda/pile-10k", split="train")
-print(dataset)
-print(dataset[0]['text'][:100])
-tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
-data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+if MAIN:
+    dataset = datasets.load_dataset("NeelNanda/pile-10k", split="train")
+    print(dataset)
+    print(dataset[0]['text'][:100])
+    tokens_dataset = tokenize_and_concatenate(dataset, reference_gpt2.tokenizer, streaming=False, max_length=model_cfg.n_ctx, column_name="text", add_bos_token=True, num_proc=4)
+    data_loader = t.utils.data.DataLoader(tokens_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 ```
 
 ## Create Model
 
 ```python
-model = DemoTransformer(model_cfg)
-model.to(device)
+if MAIN:
+    model = DemoTransformer(model_cfg)
+    model.to(device)
 ```
 
 ## Create Optimizer
@@ -1447,7 +1433,8 @@ model.to(device)
 We use AdamW - it's a pretty standard optimizer.
 
 ```python
-optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+if MAIN:
+    optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 ```
 
 ## Run Training Loop
@@ -1455,36 +1442,38 @@ optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 This is a pretty standard template for a training loop. There are annotations to explain the different parts of the code.
 
 ```python
-losses = []
-print("Number of batches:", len(data_loader))
+if MAIN:
+    losses = []
+    print("Number of batches:", len(data_loader))
 
-for epoch in range(num_epochs):
-    
-    for c, batch in tqdm.tqdm(enumerate(data_loader)):
+    for epoch in range(num_epochs):
         
-        # Get batch of tokens, and run your model on them
-        tokens = batch['tokens'].cuda()
-        logits = model(tokens)
-        # Get the avg cross entropy loss of your predictions
-        loss = -get_log_probs(logits, tokens).mean()
-        # Backprop on the loss (so our parameters store gradients)
-        loss.backward()
-        # Update the values of your parameters, using the Adam method
-        optimizer.step()
-        # Reset gradients to zero (since grads accumulate with each .backward() call)
-        optimizer.zero_grad()
+        for c, batch in tqdm.tqdm(enumerate(data_loader)):
+            
+            # Get batch of tokens, and run your model on them
+            tokens = batch['tokens'].to(device)
+            logits = model(tokens)
+            # Get the avg cross entropy loss of your predictions
+            loss = -get_log_probs(logits, tokens).mean()
+            # Backprop on the loss (so our parameters store gradients)
+            loss.backward()
+            # Update the values of your parameters, w/ Adam optimizer
+            optimizer.step()
+            # Reset gradients to zero (since grads accumulate with each .backward() call)
+            optimizer.zero_grad()
 
-        losses.append(loss.item())
-        if c % log_every == 0:
-            print(f"Step: {c}, Loss: {loss.item():.4f}")
-        if c > max_steps:
-            break
+            losses.append(loss.item())
+            if c % log_every == 0:
+                print(f"Step: {c}, Loss: {loss.item():.4f}")
+            if c > max_steps:
+                break
 ```
 
 We can now plot a loss curve!
 
 ```python
-px.line(y=losses, x=np.arange(len(losses))*(model_cfg.n_ctx * batch_size), labels={"y":"Loss", "x":"Tokens"}, title="Training curve for my tiny demo model!")
+if MAIN:
+    px.line(y=losses, x=np.arange(len(losses))*(model_cfg.n_ctx * batch_size), labels={"y":"Loss", "x":"Tokens"}, title="Training curve for my tiny demo model!")
 ```
 """)
     st.plotly_chart(fig_dict["training_curve_1"])
@@ -1498,10 +1487,11 @@ What's up with the shape of our loss curve? It seems like we start at around 10-
 When it starts out, your model will be outputting random noise, which might look a lot like "predict each token with approximately uniform probability", i.e. $Q(x) = 1/d_\text{vocab}$ for all $x$. This gives us a cross entropy loss of $\log (d_\text{vocab})$.
 
 ```python
-d_vocab = model.cfg.d_vocab
+if MAIN:
+    d_vocab = model.cfg.d_vocab
 
-print(f"d_vocab = {d_vocab}")
-print(f"Cross entropy loss on uniform distribution = {math.log(d_vocab)}")
+    print(f"d_vocab = {d_vocab}")
+    print(f"Cross entropy loss on uniform distribution = {math.log(d_vocab)}")
 ```
 
 The next thing we might expect the model to learn is the frequencies of words in the english language. After all, small common tokens like `" and"` or `" the"` might appear much more frequently than others. This would give us an average cross entropy loss of:
@@ -1515,33 +1505,36 @@ where $p_x$ is the actual frequency of the word in our training data.
 We can evaluate this quantity as follows:
 
 ```python
-toks = tokens_dataset[:]["tokens"].flatten()
+if MAIN:
+    toks = tokens_dataset[:]["tokens"].flatten()
 
-freqs = t.bincount(toks, minlength=model.cfg.d_vocab)
-probs = freqs.float() / freqs.sum()
+    freqs = t.bincount(toks, minlength=model.cfg.d_vocab)
+    probs = freqs.float() / freqs.sum()
 
-distn = t.distributions.categorical.Categorical(probs=probs)
-entropy = distn.entropy()
+    distn = t.distributions.categorical.Categorical(probs=probs)
+    entropy = distn.entropy()
 
-print(f"Entropy of training data = {entropy}")
+    print(f"Entropy of training data = {entropy}")
 ```
 
 Now, let's show these values on the graph, and see how they line up with the training pattern!
 
 ```python
-fig = px.line(y=losses, x=np.arange(len(losses))*(model_cfg.n_ctx * batch_size), labels={"y":"Loss", "x":"Tokens"}, title="Training curve for my tiny demo model!")
+if MAIN:
+    fig = px.line(y=losses, x=np.arange(len(losses))*(model_cfg.n_ctx * batch_size), labels={"y":"Loss", "x":"Tokens"}, title="Training curve for my tiny demo model!")
 
-for text, value in zip(["Entropy of uniform distribution", "Entropy of training data"], [math.log(d_vocab), entropy]):
-    fig.add_hline(x0=0, x1=1, y=value, line_color="red", line_dash="dash", annotation_text=text, annotation_position="top right")
+    for text, value in zip(["Entropy of uniform distribution", "Entropy of training data"], [math.log(d_vocab), entropy]):
+        fig.add_hline(x0=0, x1=1, y=value, line_color="red", line_dash="dash", annotation_text=text, annotation_position="top right")
 
-fig.show()
+    fig.show()
 ```
 """)
     st.plotly_chart(fig_dict["training_curve_2"])
+    # start
     st.markdown(r"""
 We can see this lines up pretty well with our model's observed training patterns.
 
-The next thing our model usually learns is **bigram frequencies** (i.e. the frequency of pairs of adjacent tokens in the training data). For instance, `"I"` and `" am"` are common tokens, but their bigram frequency is much higher than would be suggested if they occurred independently. Bigram frequencies actually take you pretty far, since it also covers:
+After unigram frequencies, the next thing our model usually learns is **bigram frequencies** (i.e. the frequency of pairs of adjacent tokens in the training data). For instance, `"I"` and `" am"` are common tokens, but their bigram frequency is much higher than would be suggested if they occurred independently. Bigram frequencies actually take you pretty far, since it also covers:
 
 * Simple grammatical rules (e.g. a full stop being followed by a capitalized word)
 * Weird quirks of tokenization (e.g. `" manip"` being followed by `"ulative"`)
@@ -1551,6 +1544,7 @@ Even a zero-layer model (i.e. no attention layers or MLPs) can approximate bigra
 
 After approximating bigram frequencies, we need to start using smarter techniques, like trigrams (which can only be implemented using attention heads), and **induction heads** (which we'll learn a lot more about in the next set of exercises!).
 """)
+    # end
 
 # ```python
 # %pip install datasets
@@ -1591,7 +1585,7 @@ After approximating bigram frequencies, we need to start using smarter technique
 
 # ```python
 # model = DemoTransformer(model_cfg)
-# model.cuda()
+# model.to(device)
 # ```
 
 # ```
@@ -1632,7 +1626,7 @@ After approximating bigram frequencies, we need to start using smarter technique
 # print("Number of batches:", len(data_loader))
 # for epoch in range(num_epochs):
 #     for c, batch in tqdm.tqdm(enumerate(data_loader)):
-#         tokens = batch['tokens'].cuda()
+#         tokens = batch['tokens'].to(device)
 #         logits = model(tokens)
 #         loss = lm_cross_entropy_loss(logits, tokens)
 #         loss.backward()
@@ -1664,10 +1658,39 @@ page_list = [page for func, page in func_page_list]
 
 page_dict = {page: idx for idx, (func, page) in enumerate(func_page_list)}
 
+
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
+    
 def page():
+    # st.session_state["something"] = ""
+    # st.session_state["input"] = ""
     with st.sidebar:
-        radio = st.radio("Section", page_list)
+        radio = st.radio("Section", page_list) #, on_change=toggle_text_generation)
         st.markdown("---")
-    func_list[page_dict[radio]]()
+        # st.write(st.session_state["current_page"])
+    idx = page_dict[radio]
+    func = func_list[idx]
+    func()
+    current_page = r"1_🛠️_Transformer_from_scratch"
+    st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    prepend = parse_text_from_page(current_page, func.__name__)
+    new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+    new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
+
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=False)
+
+    # st.sidebar.write(new_page)
+    # st.write(prepend)
+    # st.write(len(prepend))
+    # st.write(repr(prepend))
+    # from transformers import AutoTokenizer
+    # tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    # st.write(len(tokenizer.tokenize(prepend)))
+
 
 page()

@@ -4,3 +4,4 @@ __pycache__/
 *.pyo
 grokking
 interp_on_algorithmic_model_inline
+*.streamlit/*

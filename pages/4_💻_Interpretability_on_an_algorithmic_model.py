@@ -30,6 +30,7 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1puoiNww84IAEgkUMI0PnWp_aL1vai707?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1Xm2AlQtonkvSQ1tLyBJx31AYmVjopdcf?usp=sharing)
 """)
     st_image("gears.png", 350)
+    # start
     st.markdown(r"""
 # Interpretability on an algorithmic model
 
@@ -45,7 +46,9 @@ Working on algorithmic problems gives us the opportunity to:
 * Take the insights you've learned from reverse-engineering small models, and investigate which results will generalise, or whether any of the techniques you used to identify circuits can be automated and used at scale.
 
 The algorithmic problem we'll work on in these exercises is **bracket classification**, i.e. taking a string of parentheses like `"(())()"` and trying to output a prediction of "balanced" or "unbalanced". We will find an algorithmic solution for solving this problem, and reverse-engineer one of the circuits in our model that is responsible for implementing one part of this algorithm.
-
+""")
+    # end
+    st.markdown(r"""
 ## Imports
 
 ```python
@@ -75,12 +78,15 @@ import tests
 import plot_utils
 from solutions import LN_hook_names
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Overview of content
 
 ### 1️⃣ Bracket classifier
 
-We'll start by looking at our bracket classifier and dataset, and see how it works. We'll also write our own hand-coded solution to the balanced bracket problem (understanding what a closed-form solution looks like will be helpful as we discover how our transformer is solving the problem).""")
+We'll start by looking at our bracket classifier and dataset, and see how it works. We'll also write our own hand-coded solution to the balanced bracket problem (understanding what a closed-form solution looks like will be helpful as we discover how our transformer is solving the problem).
+""")
 
     st.info(r"""
 #### Learning Objectives
@@ -88,12 +94,14 @@ We'll start by looking at our bracket classifier and dataset, and see how it wor
 * Understand how we can use transformers as classifiers (via **bidirectional attention**, special **classification tokens**, and having a different **output vocabulary** than input vocabulary).
 * Review hooks, and understand how to use **permanent hooks** to modify your model's behaviour.
 * Understand the bracket classifier model and dataset.
-* Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).""")
+* Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).
+""")
 
     st.markdown(r"""
 ### 2️⃣ Moving backwards
 
-If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **residual stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.""")
+If we want to investigate which heads cause the model to classify a bracket string as balanced or unbalanced, we need to work our way backwards from the input. Eventually, we can find things like the **residual stream unbalanced directions**, which are the directions of vectors in the residual stream which contribute most to the model's decision to classify a string as unbalanced.
+""")
 
     st.info(r"""
 #### Learning Objectives
@@ -101,13 +109,13 @@ If we want to investigate which heads cause the model to classify a bracket stri
 * Understand the idea of having an **"unbalanced direction"** in the residual stream, which maximally points in the direction of classifying the bracket string as unbalanced.
 * Decompose the residual stream into a sum of terms, and use **logit attribution** to identify which components are important.
 * Generalize the "unbalanced direction" concept by thinking about the unbalanced direction for the inputs to different model components.
-* Classify unbalanced bracket strings by the different ways in which they can fail to be balanced, and observe that one of your attention heads seems to specialize in identifying a certain class of unbalanced strings.""")
-
+* Classify unbalanced bracket strings by the different ways in which they can fail to be balanced, and observe that one of your attention heads seems to specialize in identifying a certain class of unbalanced strings.
+""")
     st.markdown(r"""
-
 ### 3️⃣ Total elevation circuit
 
-In this section (which is the meat of the exercises), we'll hone in on a particular circuit and try to figure out what kinds of composition it is using.""")
+In this section (which is the meat of the exercises), we'll hone in on a particular circuit and try to figure out what kinds of composition it is using.
+""")
 
     st.info(r"""
 #### Learning Objectives
@@ -116,9 +124,7 @@ In this section (which is the meat of the exercises), we'll hone in on a particu
 * Interpret different attention patterns, as doing things like "copying information from sequence position $i$ to $j$", or as "averaging information over all sequence positions".
 * Understand the role of **MLPs** as taking a linear function of the sequence (e.g. difference between number of left and right brackets) and converting it into a nonlinear function (e.g. the boolean information `num_left_brackets == num_right_brackets`).
 """)
-
     st.markdown(r"""
-
 ## 4️⃣ Bonus exercises
 
 Now that we have a first-pass understanding of the total elevation circuit, we can try to go a bit deeper by:
@@ -126,9 +132,10 @@ Now that we have a first-pass understanding of the total elevation circuit, we c
 * Getting a first-pass understanding of the other important circuit in the model (the no negative failures circuit)
 * Exploiting our understanding of how the model classifies brackets to construct **advexes** (adversarial examples)
 """)
+    # end
 
-def section_1():
-    st.sidebar.markdown("""
+def section_classifier():
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -152,8 +159,8 @@ def section_1():
     <li><a class="contents-el" href="#the-model-s-solution">The Model's Solution</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
-
 # Bracket classifier
 """)
     st.info(r"""
@@ -162,7 +169,8 @@ def section_1():
 * Understand how we can use transformers as classifiers (via **bidirectional attention**, special **classification tokens**, and having a different **output vocabulary** than input vocabulary).
 * Review hooks, and understand how to use **permanent hooks** to modify your model's behaviour.
 * Understand the bracket classifier model and dataset.
-* Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).""")
+* Write a hand-coded vectorized solution to the balanced bracket problem, and understand the idea of transformers having an **inductive bias** towards certain types of solution (such as vectorized solutions).
+""")
     st.markdown(r"""
 One of the many behaviors that a large language model learns is the ability to tell if a sequence of nested parentheses is balanced. For example, `(())()`, `()()`, and `(()())` are balanced sequences, while `)()`, `())()`, and `((()((())))` are not.
 
@@ -174,13 +182,17 @@ Some questions we'd like to be able to answer are:
 - How does this behavior generalize out of distribution? For example, can it handle nesting depths or sequence lengths not seen in training?
 
 If we treat the model as a black box function and only consider the input/output pairs that it produces, then we're very limited in what we can guarantee about the behavior, even if we use a lot of compute to check many inputs. This motivates interpretibility: by digging into the internals, can we obtain insight into these questions? If the model is not robust, can we directly find adversarial examples that cause it to confidently predict the wrong thing? Let's find out!
-
+""")
+    # end
+    st.markdown(r"""
 ## Life On The Frontier
 
 Unlike many of the days in the curriculum which cover classic papers and well-trodden topics, today you're at the research frontier. This is pretty cool, but also means you should expect that things will be more confusing and complicated than other days. TAs might not know answers because in fact nobody knows the answer yet, or might be hard to explain because nobody knows how to explain it properly yet.
 
 Feel free to go "off-road" and follow your curiosity - you might discover uncharted lands 🙂
-
+""")
+    # start
+    st.markdown(r"""
 ## Today's Toy Model
 
 Today we'll study a small transformer that is trained to only classify whether a sequence of parentheses is balanced or not. It's small so we can run experiments quickly, but big enough to perform well on the task. The weights and architecture are provided for you.
@@ -197,10 +209,8 @@ GPT is trained via gradient descent on the cross-entropy loss between its predic
 
 Below is a schematic to compare the model architectures and how they're used:
 """)
-
     st_image("gpt-vs-bert.png", 1200)
     st.markdown("")
-
     st.markdown(r"""
 Note that, just because the outputs at all other sequence positions are discarded, doesn't mean those sequence positions aren't useful. They will almost certainly be the sites of important intermediate calculations. But it does mean that the model will always have to move the information from those positions to the 0th position in order for the information to be used for classification.
 
@@ -220,13 +230,12 @@ The end token goes at the end of every bracket sequence, and then we add padding
 
 When we calculate the attention scores, we mask them at all (query, key) positions where the key is a padding token. This makes sure that information doesn't flow from padding tokens to other tokens in the sequence (just like how GPT's causal masking makes sure that information doesn't flow from future tokens to past tokens).
 """)
+    # end
 
     st_image("gpt-vs-bert-3.png", 900)
     st.markdown("")
 
-    st.markdown(r"""
-
-""")
+    st.markdown(r"")
 
     with st.expander("Aside on how this relates to BERT"):
         st.markdown(r"""
@@ -237,7 +246,6 @@ This is all very similar to how the bidirectional transformer **BERT** works:
 
 If you're interested in reading more on this, you can check out [this link](https://albertauyeung.github.io/2020/06/19/bert-tokenization.html/).
 """)
-
     st.markdown(r"""
 We've implemented this type of masking for you, using TransformerLens's **permanent hooks** feature. We will discuss the details of this below (permanent hooks are a recent addition to TransformerLens which we havent' covered yet, and they're useful to understand).
 
@@ -263,7 +271,8 @@ To refer to attention heads, we'll again use the shorthand `layer.head` where bo
 
 ### Some useful diagrams
 
-Here is a high-level diagram of your model's architecture:""")
+Here is a high-level diagram of your model's architecture:
+""")
 
     with st.expander("Your transformer's architecture"):
         st_image("bracket-transformer-entire-model.png", 300)
@@ -288,7 +297,8 @@ Here is a high-level diagram of your model's architecture:""")
 #     end
 # ```
     st.markdown(r"""
-And here is a diagram showing the internal parts of your model, as well as a cheat sheet for getting activation hook names and model parameters.""")
+And here is a diagram showing the internal parts of your model, as well as a cheat sheet for getting activation hook names and model parameters.
+""")
 
     with st.expander("Cheat sheet"):
         st_image("diagram-tl.png", 1600)
@@ -341,13 +351,17 @@ if MAIN:
     state_dict = t.load("brackets_model_state_dict.pt")
     model.load_state_dict(state_dict)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Tokenizer
 
 There are only five tokens in our vocabulary: `[start]`, `[pad]`, `[end]`, `(`, and `)` in that order. See earlier sections for a reminder of what these tokens represent.
 
 You have been given a tokenizer `SimpleTokenizer("()")` which will give you some basic functions. Try running the following to see what they do:
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 if MAIN:
     tokenizer = SimpleTokenizer("()")
@@ -364,7 +378,6 @@ if MAIN:
     # Examples of decoding (all padding tokens are removed)
     print(tokenizer.decode(t.tensor([[0, 3, 4, 2, 1, 1]])))
 ```
-
 ### Implementing our masking
 
 Now that we have the tokenizer, we can use it to write hooks that mask the padding tokens. If you understand how the padding works, then don't worry if you don't follow all the implementational details of this code.
@@ -402,13 +415,17 @@ if MAIN:
     model.reset_hooks(including_permanent=True)
     model = add_perma_hooks_to_mask_pad_tokens(model, tokenizer.PAD_TOKEN)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Dataset
 
 Each training example consists of `[start]`, up to 40 parens, `[end]`, and then as many `[pad]` as necessary.
 
 In the dataset we're using, half the sequences are balanced, and half are unbalanced. Having an equal distribution is on purpose to make it easier for the model.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 if MAIN:
     N_SAMPLES = 5000
@@ -434,6 +451,7 @@ As is good practice, examine the dataset and plot the distribution of sequence l
 
 ```python
 if MAIN:
+    pass
     # YOUR CODE HERE: plot the distribution of sequence lengths
 ```
 """)
@@ -545,14 +563,16 @@ def is_balanced_forloop(parens: str) -> bool:
 """)
 
     with st.columns(1)[0]:
+        # start
         st.markdown(r"""
-
-#### Exercise -  handwritten solution (vectorized)
+#### Exercise - handwritten solution (vectorized)
 
 A transformer has an **inductive bias** towards vectorized operations, because at each sequence position the same weights "execute", just on different data. So if we want to "think like a transformer", we want to get away from procedural for/if statements and think about what sorts of solutions can be represented in a small number of transformer weights.
 
 Being able to represent a solutions in matrix weights is necessary, but not sufficient to show that a transformer could learn that solution through running SGD on some input data. It could be the case that some simple solution exists, but a different solution is an attractor when you start from random initialization and use current optimizer algorithms.
-
+""")
+        # end
+        st.markdown(r"""
 ```python
 def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
     '''
@@ -594,6 +614,7 @@ def is_balanced_vectorized(tokens: TT["seq"]) -> bool:
     return no_total_elevation_failure & no_negative_failure
 ```
 """)
+    # start
     st.markdown(r"""
 ## The Model's Solution
 
@@ -612,9 +633,10 @@ For English readers, it's natural to process the sequence from left to right and
 
 We'll spend today inspecting different parts of the network to try to get a first-pass understanding of how various layers implement this algorithm. However, we'll also see that neural networks are complicated, even those trained for simple tasks, and we'll only be able to explore a minority of the pieces of the puzzle.
 """)
+    # end
 
-def section_2():
-    st.sidebar.markdown("""
+def section_moving_bwards():
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -633,7 +655,7 @@ def section_2():
    <li><a class="contents-el" href="#summary">Summary</a></li>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # Moving backwards
 """)
@@ -643,7 +665,8 @@ def section_2():
 * Understand the idea of having an **"unbalanced direction"** in the residual stream, which maximally points in the direction of classifying the bracket string as unbalanced.
 * Decompose the residual stream into a sum of terms, and use **logit attribution** to identify which components are important.
 * Generalize the "unbalanced direction" concept by thinking about the unbalanced direction for the inputs to different model components.
-* Classify unbalanced bracket strings by the different ways in which they can fail to be balanced, and observe that one of your attention heads seems to specialize in identifying a certain class of unbalanced strings.""")
+* Classify unbalanced bracket strings by the different ways in which they can fail to be balanced, and observe that one of your attention heads seems to specialize in identifying a certain class of unbalanced strings.
+""")
     st.markdown(r"""
 Suppose we run the model on some sequence and it outputs the classification probabilities `[0.99, 0.01]`, i.e. highly confident classification as "unbalanced".
 
@@ -657,7 +680,7 @@ We'll do this by starting from the model outputs and working backwards, finding 
 
 The final part of the model is the classification head, which has three stages - the final layernorm, the unembedding, and softmax, at the end of which we get our probabilities.
 """)
-
+    # end
     st_image("bracket-transformer-first-attr-0.png", 550)
 
     st.markdown(r"""
@@ -669,7 +692,9 @@ Some notes on the shapes of the objects in the diagram:
 * `final_ln_output` has shape `(seq_len, d_model)`.
 * `W_U` has shape `(d_model, 2)`, and so `logits` has shape `(seq_len, 2)`.
 * We get `P(unbalanced)` by taking the 0th element of the softmaxed logits, for sequence position 0.
-
+""")
+    # start
+    st.markdown(r"""
 ### Stage 1: Translating through softmax
 
 Let's get `P(unbalanced)` as a function of the logits. Luckily, this is easy. Since we're doing the softmax over two elements, it simplifies to the sigmoid of the difference of the two logits:
@@ -699,6 +724,7 @@ logit_diff = (final_LN_output @ W_U)[0, 0] - (final_LN_output @ W_U)[0, 1]
 
 So a high difference in the logits follows from a high dot product of the output of the LayerNorm with the vector `W_U[0, :] - W_U[1, :]`. We can call this the **unbalanced direction** for inputs to the unembedding matrix. We can now ask, "What leads to LayerNorm's output having high dot product with this vector?".
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -729,8 +755,8 @@ def get_post_final_ln_dir(model: HookedTransformer) -> TT["d_model"]:
 tests.test_get_post_final_ln_dir(get_post_final_ln_dir, model)
 ```
 """)
+    # start
     st.markdown(r"""
-
 ### Step 3: Translating through LayerNorm
 
 We want to find the unbalanced direction before the final layer norm, since this is where we can write the residual stream as a sum of terms. LayerNorm messes with this sort of direction analysis, since it is nonlinear. For today, however, we will approximate it with a linear fit. This is good enough to allow for interesting analysis (see for yourself that the $R^2$ values are very high for the fit)!
@@ -751,6 +777,8 @@ However, in this case it turns out to be a decent approximation to use a linear 
 
 When applying this kind of analysis to LLMs, it's sometimes harder to abstract away layernorm as just a linear transformation. For instance, many large transformers use layernorm to "clear" parts of their residual stream, e.g. they learn a feature 100x as large as everything else and use it with layer norm to clear the residual stream of everything but that element. Clearly, this kind of behaviour is not well-modelled by a linear fit.
 """)
+    # end
+
 #     with st.expander("A note on what this linear approximation is actually representing:"):
 #         st.info(r"""
 
@@ -793,11 +821,15 @@ These exercises are split into three parts:
 3. Finally, estimate `L_final` using a batch of 5000 input sequences, and use it to calculate `pre_final_ln_dir`.
 
 ---
-
+""")
+        # start
+        st.markdown(r"""
 #### 1. Getting activations
 
 First, we'll deal with getting activations from our model. Note that we could just use a cache (particularly as this is a very small model), but it's good practice to use hooks, because for larger models they're usually much more efficient (since they waste much less memory).
-
+""")
+        # end
+        st.markdown(r"""
 You should implement the function `get_activations` below. This should use `model.run_with_hooks` to return the activations corresponding to the `activation_names` parameter. For extra ease of use, we suggest you implement this function as follows:
 
 * If `activation_names` is a string, return the tensor of those activations.
@@ -855,12 +887,14 @@ def get_activations(model: HookedTransformer, data: BracketsDataset, names: Unio
     return ActivationCache(activations_dict, model) if isinstance(names, list) else activations_dict[hook_names_list[0]]
 ```
 """)
-
+        # start
         st.markdown(r"""
 #### 2. Fitting a linear regression
 
 Now, use these functions and the [sklearn LinearRegression class](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html) to find a linear fit to the inputs and outputs of your model's layernorms.
-
+""")
+        # end
+        st.markdown(r"""
 A few notes:
 
 * We've provided you with the helper function `LN_hook_names`.
@@ -942,11 +976,14 @@ def get_ln_fit(
     return (final_ln_fit, r2)
 ```
 """)
+        # start
         st.markdown(r"""
 #### 3. Calculating `pre_final_ln_dir`
 
 Armed with our linear fit, we can now identify the direction in the residual stream before the final layer norm that most points in the direction of unbalanced evidence.
-
+""")
+        # end
+        st.markdown(r"""
 ```python
 def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT["d_model"]:
     '''
@@ -984,6 +1021,7 @@ def get_pre_final_ln_dir(model: HookedTransformer, data: BracketsDataset) -> TT[
 ```
 """)
 
+    # start
     st.markdown(r"""
 ## Writing the residual stream as a sum of terms
 
@@ -999,6 +1037,7 @@ In order to answer this question, we need the following tools:
  - A way to break down the input to the LN by component.
  - A tool to identify a direction in the embedding space that causes the network to output 'unbalanced' (we already have this)
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1052,7 +1091,8 @@ if MAIN:
 
     t.testing.assert_close(summed_terms, final_ln_input)
     print("Tests passed!")
-```""")
+```
+""")
 
         with st.expander("Hint"):
             st.markdown(r"""
@@ -1092,7 +1132,7 @@ def get_out_by_components(
     return out
 ```
 """)
-
+    # start
     st.markdown(r"""
 ### Which components matter?
 
@@ -1110,6 +1150,7 @@ For example, suppose that one of our components produced bimodal output like thi
     st.markdown(r"""
 This would be **strong evidence that this component is important for the model's output being unbalanced**, since it's pushing the unbalanced bracket inputs further in the unbalanced direction (i.e. the direction which ends up contributing to the inputs being classified as unbalanced) relative to the balanced inputs.
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1190,7 +1231,7 @@ The heads in layer 2 (i.e. `2.0` and `2.1`) seem to be the most important, becau
 
 We might guess that some kind of composition is going on here. The outputs of layer 0 heads can't be involved in composition because they in effect work like a one-layer transformer. But the later layers can participate in composition, because their inputs come from not just the embeddings, but also the outputs of the previous layer. This means they can perform more complex computations.
 """)
-
+    # start
     st.markdown(r"""
 ### Head influence by type of failures
 
@@ -1198,6 +1239,7 @@ Those histograms showed us which heads were important, but it doesn't tell us wh
 
 We'll also ignore sentences that start with a close paren, as the behaviour is somewhat different on them (they can be classified as unbalanced immediately, so they don't require more complicated logic).
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - classify bracket strings by failure type
@@ -1320,7 +1362,9 @@ if MAIN:
 Think about how this fits in with your understanding of what 2.0 is doing.
 
 ---
-
+""")
+    # start
+    st.markdown(r"""
 ## Summary
 
 Let's review what we've learned in this section.
@@ -1332,9 +1376,10 @@ Once we've identified the direction in our residual stream which points in the "
 
 We made a scatter plot of their contributions, color-coded by the type of bracket failure (there are two different ways a bracket sequence can be unbalanced). From this, we observed that head `2.0` seemed particularly effective at identifying bracket strings which had non-zero elevation (i.e. a different number of left and right brackets). In the next section, we'll dive a little deeper on how this **total elevation circuit** works.
 """)
+    # end
 
-def section_3():
-    st.sidebar.markdown("""
+def section_total_elevation():
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -1353,7 +1398,7 @@ def section_3():
     
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # Understanding the total elevation circuit
 """)
@@ -1369,6 +1414,7 @@ def section_3():
 
 Which tokens is 2.0 paying attention to when the query is an open paren at token 0? Recall that we focus on sequences that start with an open paren because sequences that don't can be ruled out immediately, so more sophisticated behavior is unnecessary.
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - get attention probabilities
@@ -1431,12 +1477,14 @@ if MAIN:
         st.markdown(r"""
 You should see an average attention of around 0.5 on position 1, and an average of about 0 for all other tokens. So `2.0` is just moving information from residual stream 1 to residual stream 0. In other words, `2.0` passes residual stream 1 through its `W_OV` circuit (after `LayerNorm`ing, of course), weighted by some amount which we'll pretend is constant. Importantly, this means that **the necessary information for classification must already have been stored in sequence position 1 before this head**. The plot thickens!
 """)
-
+    # start
     st.markdown(r"""
 ### Identifying meaningful direction before this head
 
 If we make the simplification that the vector moved to sequence position 0 by head 2.0 is just `layernorm(x[1]) @ W_OV` (where `x[1]` is the vector in the residual stream before head 2.0, at sequence position 1), then we can do the same kind of logit attribution we did before. Rather than decomposing the input to the final layernorm (at sequence position 0) into the sum of ten components and measuring their contribution in the "pre final layernorm unbalanced direction", we can decompose the input to head 2.0 (at sequence position 1) into the sum of the seven components before head 2.0, and measure their contribution in the "pre head 2.0 unbalanced direction".
-
+""")
+    # end
+    st.markdown(r"""
 Here is an annotated diagram to help better explain exactly what we're doing.
 """)
 
@@ -1544,8 +1592,7 @@ if MAIN:
         # with st.expander("Click here to see the output you should be getting."):
         #     st.plotly_chart(fig_dict["attribution_fig_2"])
 
-        st.markdown(r"""
-What do you observe?""")
+        st.markdown(r"What do you observe?")
 
         with st.expander("Some things to notice"):
             st.markdown(r"""
@@ -1584,6 +1631,7 @@ if MAIN:
         #         st.plotly_chart(fig_dict["mlp_attribution_1"], use_container_width=True)
         #         st.session_state["got_mlp_attribution"] = True
 
+    # start
     st.markdown(r"""
 ### Breaking down an MLP's contribution by neuron
 
@@ -1592,7 +1640,9 @@ We've already learned that an attention layer can be broken down as a sum of sep
 Ignoring biases, let $MLP(\vec x) = f(\vec x^T W^{in}) W^{out}$ for matrices $W^{in}, W^{out}$, and $f$ is our nonlinear activation function (in this case ReLU). Note that $f(\vec x^T W^{in})$ is what we refer to as the **neuron activations**, let $n$ be its length (the intermediate size of the MLP, which is called `d_mlp` in the config).
 
 (Note - when I write $f(z)$ for a vector $z$, this means the vector with $f(z)_i = f(z_i)$, i.e. we're applying the activation function elementwise.)
-
+""")
+    # end
+    st.markdown(r"""
 So, how do we write an MLP as a sum of per-neuron contributions? 
 
 Firstly, remember that MLPs act exactly the same on each sequence position, so we can ignore the sequence dimension and treat the MLP as a map from vectors $\vec x$ of length `emb_dim` to vectors which also have length `emb_dim` (these output vectors are written directly into the residual stream).
@@ -1635,20 +1685,21 @@ or if we include biases on the Linear layers:
 $$
 MLP(\vec x) = \sum_{i=0}^{n-1}f(\vec x^T W^{in}_{[:, i]} + b^{in}_i) W^{out}_{[i,:]} + b^{out}
 $$
-
+""")
+    # start
+    st.markdown(r"""
 Summary:
 """)
-
     st.info(r"""
 We can write an MLP as a collection of neurons, where each one writes a vector to the residual stream independently of the others.
  
 We can view the $i$-th column of $W^{in}$ as being the **"in-direction"** of neuron $i$, as the activation of neuron $i$ depends on how high the dot product between $x$ and that row is. And then we can think of the $i$-th row of $W^{out}$ as the corresponding **"out-direction"** signifying neuron $i$'s special output vector, which it scales by its activation and then adds into the residual stream.
-
 """)
     with st.expander("Aside - MLPs & memory management"):
         st.markdown(r"""
 Interestingly, there is some evidence that certain neurons in MLPs perform memory management. For instance, in an idealized case, we might find that the $i$-th neuron satisfies $W^{in}_{[:, i]} \approx - W^{out}_{[i, :]} \approx \vec v$ for some unit vector $\vec v$, meaning it may be responsible for erasing the positive component of vector $\vec x$ in the direction $\vec v$ (exercise - can you show why this is the case?). This can free up space in the residual stream for other components to write to.
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1797,7 +1848,7 @@ def get_out_by_neuron_in_20_dir_less_memory(model: HookedTransformer, data: Brac
     return out_by_neuron_in_20_dir
 ```
 """)
-
+    # start
     st.markdown(r"""
 #### Interpreting the neurons
 
@@ -1808,7 +1859,9 @@ For instance, you can do this by seeing which neurons have the largest differenc
 Use the `plot_neurons` function to get a sense of what an individual neuron does on differen open-proportions.
 
 One note: now that we are deep in the internals of the network, our assumption that a single direction captures most of the meaningful things going on in this overall-elevation circuit is highly questionable. This is especially true for using our `2.0` direction to analyize the output of `mlp0`, as one of the main ways this mlp has influence is through more indirect paths (such as `mlp0 -> mlp1 -> 2.0`) which are not the ones we chose our direction to capture. Thus, it is good to be aware that the intuitions you get about what different layers or neurons are doing are likely to be incomplete.
-
+""")
+    # end
+    st.markdown(r"""
 *Note - these plots will open in your browser, because the scatterplots are quite large and they run faster that way.*
 
 ```python
@@ -1819,12 +1872,11 @@ if MAIN:
         # Plot neurons' activations
         plot_utils.plot_neurons(neurons_in_unbalanced_dir, model, data, failure_types_dict, layer)
 ```
-
-#### Your output
-
-Click the button below to see your output.
 """)
 
+    # #### Your output
+
+    # Click the button below to see your output.
     # button7 = st.button("Show my output", key="button7")
     # if button7 or "got_neuron_contributions" in st.session_state:
     #     if "neuron_contributions_0" not in fig_dict:
@@ -1835,6 +1887,7 @@ Click the button below to see your output.
     #         st.session_state["got_neuron_contributions"] = True
 
     with st.expander("Some observations:"):
+        # start
         st.markdown(r"""
 The important neurons in layer 1 can be put into three broad categories:
 
@@ -1846,7 +1899,9 @@ The important neurons in layer 1 can be put into three broad categories:
     - It's much harder for a single neuron in layer 0 to do this by themselves, given that ReLU is monotonic and it requires the output to be a non-monotonic function of the open-paren proportion. It is possible, however, to take advantage of the layernorm before **`mlp0`** to approximate this -- **`0.19`** and **`0.34`** are good examples of this.
 
 Note, there are some neurons which appear to work in the opposite direction (e.g. `0.0`). It's unclear exactly what the function of these neurons is (especially since we're only analysing one particular part of one of our model's circuits, so our intuitions about what a particular neuron does might be incomplete). However, what is clear and unambiguous from this plot is that our neurons seem to be detecting the open proportion of brackets, and responding differently if the proportion is strictly more / strictly less than 1/2. And we can see that a large number of these seem to have their main impact via being copied in head `2.0`.
-
+""")
+        # end
+        st.markdown(r"""
 ---
 
 Below: plots of neurons **`0.21`** and **`1.53`**. You can observe the patterns described above.
@@ -1872,7 +1927,8 @@ We want to play around with the attention patterns in our heads. For instance, w
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - extracting queries and keys using hooks""")
+#### Exercise - extracting queries and keys using hooks
+""")
         st.error(r"""
 *This exercise isn't very difficult (it just involves using your `get_activations` function from before), but it's also not very conceptually valuable so don't spend more than 10 mins on it.*
 """)
@@ -1957,8 +2013,7 @@ if MAIN:
         ]
     )
 ```
-
-#### Your output""")
+""")
 
     # button8 = st.button("Show my output", key="button8")
     # if button8 or "got_attn_plot" in st.session_state:
@@ -1977,14 +2032,16 @@ The most noteworthy feature is the diagonal pattern - most query tokens pay almo
 
 We can also observe roughly the same pattern when the query is a right paren (try running the last bit of code above, but using `all_right_parens` instead of `all_left_parens`), but the pattern is less pronounced.
 """)
-
+    # start
     st.markdown(r"""
 We are most interested in the attention pattern at query position 1, because this is the position we move information to that is eventually fed into attention head `2.0`, then moved to position 0 and used for prediction.
 
 (Note - we've chosen to focus on the scenario when the first paren is an open paren, because the model actually deals with bracket strings that open with a right paren slightly differently - these are obviously unbalanced, so a complicated mechanism is unnecessary.)
 
 Let's plot a bar chart of the attention probability paid by the the open-paren query at position 1 to all the other positions. Here, rather than patching in both the key and query from artificial sequences, we're running the model on our entire dataset and patching in an artificial value for just the query (all open parens). Both methods are reasonable here, since we're just looking for a general sense of how our query vector at position 1 behaves when it's an open paren.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 def hook_fn_display_attn_patterns_for_single_query(
     pattern: TT["batch", "heads", "seqQ", "seqK"],
@@ -2015,9 +2072,9 @@ if MAIN:
     )
 ```
 
-#### Your output
 """)
 
+    # #### Your output
     # button9 = st.button("Show my output", key="button9")
     # if button9 or "got_attn_probs_00" in st.session_state:
     #     if "attn_probs_00" not in fig_dict:
@@ -2033,11 +2090,12 @@ if MAIN:
         st.markdown(r"""
 This shows that the attention pattern is almost exactly uniform over all tokens. This means the vector written to sequence position 1 will be approximately some scalar multiple of the vectors at each source position, transformerd via the matrix $W_{OV}^{0.0}$.
 """)
-
+    # start
     st.markdown(r"""
 ### Proposing a hypothesis
 
-Before we connect all the pieces together, let's list the facts that we know about our model so far (going chronologically from our observations):""")
+Before we connect all the pieces together, let's list the facts that we know about our model so far (going chronologically from our observations):
+""")
 
     st.info(r"""
 * Attention head `2.0` seems to be largely responsible for classifying brackets as unbalanced when they have non-zero net elevation (i.e. have a different number of left and right parens).
@@ -2050,7 +2108,8 @@ Before we connect all the pieces together, let's list the facts that we know abo
 """)
 
     st.markdown(r"""
-Based on all this, can you formulate a hypothesis for how the elevation circuit works, which ties all three of these observations together?""")
+Based on all this, can you formulate a hypothesis for how the elevation circuit works, which ties all three of these observations together?
+""")
 
     with st.expander("Hypothesis"):
         st.markdown("The hypothesis might go something like this:")
@@ -2071,6 +2130,7 @@ This is based on the fact that we already saw head `2.0` is strongly attending t
         st.markdown(r"""
 At this point, we've pretty much empirically verified all the observations above. One thing we haven't really proven yet is that **(1)** is working as we've described above. We want to verify that head `0.0` is calculating some kind of difference between the number of left and right brackets, and writing this information to the residual stream. In the next section, we'll find a way to test this hypothesis.
 """)
+        # end
 
     st.markdown(r"""
 
@@ -2140,7 +2200,8 @@ if MAIN:
     "YOUR CODE HERE: define v_L and v_R, as described above."
     
     print("Cosine similarity: ", t.cosine_similarity(v_L, v_R, dim=0).item())
-```""")
+```
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -2246,23 +2307,27 @@ def avg_squared_cos_sim(v: TT["d_model"], n_samples: int = 1000) -> float:
         st.markdown(r"""
 As an _extra_-bonus exercise, you can also compare the squared cosine similarities per neuron to your neuron contribution plots you made earlier (the ones with sliders). Do the neurons which have particularly high cosine similarity with $v_R$ correspond to the neurons which write to the unbalanced direction of head `2.0` in a big way whenever the proportion of open parens is not 0.5? (This would provide further evidence that the main source of information about total open proportion of brackets which is used in the net elevation circuit is provided by the multiples of $v_R$ and $v_L$ written to the residual stream by head `0.0`). You can go back to your old plots and check.
 """)
+    # start
     st.markdown(r"""
 ## Summary
-
+""")
+    # end
+    st.markdown(r"""
 Great! Let's stop and take stock of what we've learned about this circuit. 
 """)
-
+    # start
     st.success(r"""
 Head 0.0 pays attention uniformly to the suffix following each token, tallying up the amount of open and close parens that it sees and writing that value to the residual stream. This means that it writes a vector representing the total elevation to residual stream 1. The MLPs in residual stream 1 then operate nonlinearly on this tally, writing vectors to the residual stream that distinguish between the cases of zero and non-zero total elevation. Head 2.0 copies this signal to residual stream 0, where it then goes through the classifier and leads to a classification as unbalanced. Our first-pass understanding of this behavior is complete.
 """)
+    # end
     st.markdown(r"""
 An illustration of this circuit is given below. It's pretty complicated with a lot of moving parts, so don't worry if you don't follow all of it!
 
 Key: the thick black lines and orange dotted lines show the paths through our transformer constituting the elevation circuit. The orange dotted lines indicate the skip connections. Each of the important heads and MLP layers are coloured bold. The three important parts of our circuit (head `0.0`, the MLP layers, and head `2.0`) are all give annotations explaining what they're doing, and the evidence we found for this.
 """)
     st_image("bracket-transformer-attribution.png", 1200)
-def section_4():
-    st.sidebar.markdown("""
+def section_bonus():
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -2271,6 +2336,7 @@ def section_4():
     <li><a class="contents-el" href="#adversarial-attacks">Adversarial Attacks</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
 # Bonus exercises
 
@@ -2350,6 +2416,7 @@ def tallest_balanced_bracket(length: int) -> str:
 example = tallest_balanced_bracket(15) + ")(" + tallest_balanced_bracket(4)
 ```
 """)
+        # end
 
         st_image("graph.png", 900)
 
@@ -2363,10 +2430,13 @@ if MAIN:
     probs = model(toks)[:, 0].softmax(-1)[:, 1]
     print("\n".join([f"{ex:{m}} -> {p:.4%} balanced confidence" for (ex, p) in zip(examples, probs)]))
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Dealing with early closing parens
 
-We mentioned that our model deals with early closing parens differently. One of our components in particular is responsible for classifying any sequence that starts with a closed paren as unbalnced - can you find the component that does this? """)
+We mentioned that our model deals with early closing parens differently. One of our components in particular is responsible for classifying any sequence that starts with a closed paren as unbalnced - can you find the component that does this?
+""")
 
     with st.expander("Hint"):
         st.markdown(r"""
@@ -2374,25 +2444,36 @@ It'll have to be one of the attention heads, since these are the only things whi
 
 Which of your attention heads was previously observed to move information from position 1 to position 0?
 """)
-
+    # end
     st.markdown(r"""
 Can you plot the outputs of this component when there is a closed paren at first position? Can you prove that this component is responsible for this behavior, and show exactly how it happens?
 """)
 
-func_list = [section_home, section_1, section_2, section_3, section_4]
+func_list = [section_home, section_classifier, section_moving_bwards, section_total_elevation, section_bonus]
 
 page_list = ["🏠 Home", "1️⃣ Bracket classifier", "2️⃣ Moving backwards", "3️⃣ Total elevation circuit", "4️⃣ Bonus exercises"]
 page_dict = {name: idx for idx, name in enumerate(page_list)}
+
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
 
 def page():
     with st.sidebar:
         radio = st.radio("Section", page_list)
         st.markdown("---")
-    func_list[page_dict[radio]]()
+    idx = page_dict[radio]
+    func = func_list[idx]
+    func()
+    current_page = r"4_💻_Interpretability_on_an_algorithmic_model"
+    st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    prepend = parse_text_from_page(current_page, func.__name__)
+    new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+    new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
 
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=True)
+ 
 # if is_local or check_password():
-#     page()
-
 page()
-
-

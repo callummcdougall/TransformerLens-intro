@@ -88,6 +88,7 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/17i8LctAgVLTJ883Nyo8VIEcCNeKNCYnr?usp=share_link), [**solutions**](https://colab.research.google.com/drive/15p2TgU7RLaVjLVJFpwoMhxOWoAGmTlI3?usp=share_link)
 """)
     st_image("circuit.png", 350)
+    # start
     st.markdown(r"""
 # TransformerLens & induction circuits
 
@@ -95,7 +96,7 @@ In order to get the most out of these exercises, you should have read the **Math
 
 ## Introduction
 
-These pages are designed to get you introduced to Neel's **TransformerLens** library.
+These pages are designed to get you introduced to Neel Nanda's **TransformerLens** library.
 
 Most of the sections are constructed in the following way:
 
@@ -104,7 +105,7 @@ Most of the sections are constructed in the following way:
 
 The throughline of the exercises is **induction circuits**. Induction circuits are a particular type of circuit in a transformer, which can perform basic in-context learning. You should read the [corresponding section of Neel's glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing. This [LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated) might also help; it contains some diagrams (like the one below) which walk through the induction mechanism step by step.
 """)
-
+    # end
     st.markdown("")
     st_image("kcomp_diagram.png", 850)
     st.markdown("")
@@ -153,7 +154,9 @@ def scatter(x, y, xaxis="", yaxis="", caxis="", **kwargs):
     y = utils.to_numpy(y)
     return px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Overview of content
 
 We've included a summary of each section, as well as the learning objectives, so you can get a sense of what the general flow of the material is. You can also return here to check that you've understood all the material.
@@ -211,9 +214,10 @@ Lastly, these exercises show you how you can reverse-engineer a circuit by looki
 * Use the factored matrix class to inspect the QK and OV circuits within an induction circuit.
 * Perform further exploration of induction circuits: composition scores, and targeted ablations.
 """)
+    # end
 
 def section_intro():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -232,15 +236,12 @@ def section_intro():
     <li><a class="contents-el" href="#visualising-attention-heads">Visualising Attention Heads</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
 # TransformerLens: Introduction
 """)
     st.markdown(r"")
 
-#    <li><ul class="contents">
-#        <li><a class="contents-el" href="#activation-hook-names">Activation + Hook Names</a></li>
-#        <li><a class="contents-el" href="#folding-layernorm-for-the-curious">Folding LayerNorm (For the Curious)</a></li>
-#     </ul></li>
     st.info(r"""
 ### Learning Objectives
 
@@ -249,23 +250,21 @@ def section_intro():
 * Use the model's tokenizer to convert text to tokens, and vice versa.
 * Know how to cache activations, and to access activations from the cache.
 * Use `circuitsvis` to visualise attention heads.
-
 """)
-
     st.markdown(r"""
-
 ## Introduction
 
 This is a demo notebook for [TransformerLens](https://github.com/neelnanda-io/TransformerLens), **a library I ([Neel Nanda](neelnanda.io)) wrote for doing [mechanistic interpretability](https://distill.pub/2020/circuits/zoom-in/) of GPT-2 Style language models.** The goal of mechanistic interpretability is to take a trained model and reverse engineer the algorithms the model learned during training from its weights. It is a fact about the world today that we have computer programs that can essentially speak English at a human level (GPT-3, PaLM, etc), yet we have no idea how they work nor how to write one ourselves. This offends me greatly, and I would like to solve this! Mechanistic interpretability is a very young and small field, and there are a *lot* of open problems - if you would like to help, please try working on one! **Check out my [list of concrete open problems](https://docs.google.com/document/d/1WONBzNqfKIxERejrrPlQMyKqg7jSFW92x5UMXNrMdPo/edit#) to figure out where to start.**
 
 I wrote this library because after I left the Anthropic interpretability team and started doing independent research, I got extremely frustrated by the state of open source tooling. There's a lot of excellent infrastructure like HuggingFace and DeepSpeed to *use* or *train* models, but very little to dig into their internals and reverse engineer how they work. **This library tries to solve that**, and to make it easy to get into the field even if you don't work at an industry org with real infrastructure! The core features were heavily inspired by [Anthropic's excellent Garcon tool](https://transformer-circuits.pub/2021/garcon/index.html). Credit to Nelson Elhage and Chris Olah for building Garcon and showing me the value of good infrastructure for accelerating exploratory research!
 
-The core design principle I've followed is to enable exploratory analysis - one of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. This notebook demonstrates how the library works and how to use it, but if you want to see how well it works for exploratory research, check out [my notebook analysing Indirect Objection Identification](https://github.com/neelnanda-io/TransformerLens/blob/main/Exploratory_Analysis_Demo.ipynb) or [my recording of myself doing research](https://www.youtube.com/watch?v=yo4QvDn-vsU)!""")
-
+The core design principle I've followed is to enable exploratory analysis - one of the most fun parts of mechanistic interpretability compared to normal ML is the extremely short feedback loops! The point of this library is to keep the gap between having an experiment idea and seeing the results as small as possible, to make it easy for **research to feel like play** and to enter a flow state. This notebook demonstrates how the library works and how to use it, but if you want to see how well it works for exploratory research, check out [my notebook analysing Indirect Objection Identification](https://github.com/neelnanda-io/TransformerLens/blob/main/Exploratory_Analysis_Demo.ipynb) or [my recording of myself doing research](https://www.youtube.com/watch?v=yo4QvDn-vsU)!
+""")
+    # end
     st.markdown(r"""
 ## Loading and Running Models
 
-TransformerLens comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. For this demo notebook we'll look at GPT-2 Small, an 80M parameter model, see the Available Models section for info on the rest.
+TransformerLens comes loaded with over 40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. For this demo notebook we'll look at GPT-2 Small, an 80M parameter model, see the Available Models section for info on the rest.
 
 ```python
 if MAIN:
@@ -280,7 +279,7 @@ Alternatively, you can define a config object, then call `HookedTransformer.from
 
 Even if you don't define your model in this way, you can still access the config object through the `cfg` attribute of the model.
 """)
-
+    
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - inspect your model
@@ -303,6 +302,7 @@ cfg.n_heads == 12
 cfg.n_ctx == 2048
 ```
 """)
+    # start
     st.markdown(r"""
 ### Running your model
 
@@ -317,7 +317,7 @@ Models can be run on a single string or a tensor of tokens (shape: `[batch, posi
 if MAIN:
     model_description_text = '''## Loading Models
 
-HookedTransformer comes loaded with >40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. Each model is loaded into the consistent HookedTransformer architecture, designed to be clean, consistent and interpretability-friendly. 
+HookedTransformer comes loaded with over 40 open source GPT-style models. You can load any of them in with `HookedTransformer.from_pretrained(MODEL_NAME)`. Each model is loaded into the consistent HookedTransformer architecture, designed to be clean, consistent and interpretability-friendly. 
 
 For this demo notebook we'll look at GPT-2 Small, an 80M parameter model. To try the model the model out, let's find the loss on this paragraph!'''
 
@@ -334,7 +334,6 @@ HookedTransformer is a somewhat adapted GPT-2 architecture, but is computational
     * The activations all have shape `[batch, position, head_index, d_head]`.
     * `W_K`, `W_Q`, `W_V` have shape `[head_index, d_model, d_head]` and `W_O` has shape `[head_index, d_head, d_model]`
 """)
-
     st.info(r"""
 * **Important - we generally follow the convention that weight matrices multiply on the right rather than the left.** In other words, they have shape `[input, output]`, and we have `new_activation = old_activation @ weights + bias`.
     * Click the dropdown below for examples of this, if it seems unintuitive.
@@ -348,10 +347,12 @@ HookedTransformer is a somewhat adapted GPT-2 architecture, but is computational
     * The embedding matrix `W_E` has shape `[d_vocab, d_model]`. 
     * So if `A` is a one-hot-encoded vector of length `d_vocab` corresponding to a particular token, then the embedding vector for this token is `A @ W_E`, which has length `d_model`.
 """)
+    # end
     st.markdown(r"""
-
 The actual code is a bit of a mess, as there's a variety of Boolean flags to make it consistent with the various different model families in TransformerLens - to understand it and the internal structure, I instead recommend reading the code in [CleanTransformerDemo](https://colab.research.google.com/github/neelnanda-io/TransformerLens/blob/clean-transformer-demo/Clean_Transformer_Demo.ipynb).
-
+""")
+    # start
+    st.markdown(r"""
 ### Parameters and Activations
 
 It's important to distinguish between parameters and activations in the model.
@@ -363,7 +364,9 @@ It's important to distinguish between parameters and activations in the model.
     * We can think of these values as only existing for the duration of a single forward pass, and disappearing afterwards.
     * We can use hooks to access these values during a forward pass (more on hooks later), but it doesn't make sense to talk about a model's activations outside the context of some particular input.
     * Attention scores and patterns are activations (this is slightly non-intuitve because they're used in a matrix multiplication with another activation).
-
+""")
+    # end
+    st.markdown(r"""
 The dropdown below contains a diagram of a single layer (called a `TransformerBlock`) for an attention-only model with no biases. Each box corresponds to an **activation** (and also tells you the name of the corresponding hook point, which we will eventually use to access those activations). The red text below each box tells you the shape of the activation (ignoring the batch dimension). Each arrow corresponds to an operation on an activation; where there are **parameters** involved these are labelled on the arrows.
 """)
 
@@ -451,16 +454,18 @@ if MAIN:
 """)
 
     with st.expander("Aside - <|endoftext|> (optional - don't worry about fully understanding this)"):
+        # start
         st.markdown(r"""
 A weirdness you may have noticed in the above is that `to_tokens` and `to_str_tokens` added a weird `<|endoftext|>` to the start of each prompt. TransformerLens does this by default, and it can easily trip up new users. Notably, **this includes `model.forward`** (which is what's implicitly used when you do eg `model("Hello World")`). This is called a **Beginning of Sequence (BOS)** token, and it's a special token used to mark the beginning of the sequence. Confusingly, in GPT-2, the End of Sequence (EOS), Beginning of Sequence (BOS) and Padding (PAD) tokens are all the same, `<|endoftext|>` with index `50256`.
-
+""")
+        # end
+        st.markdown(r"""
 You can disable this behaviour by setting the flag `prepend_bos=False` in `to_tokens`, `to_str_tokens`, `model.forward` and any other function that converts strings to multi-token tensors.
 
 `prepend_bos` is a bit of a hack, and I've gone back and forth on what the correct default here is. The reason I do this is that transformers tend to treat the first token weirdly - this doesn't really matter in training (where all inputs are >1000 tokens), but this can be a big issue when investigating short prompts! The reason for this is that attention patterns are a probability distribution and so need to add up to one, so to simulate being "off" they normally look at the first token. Giving them a BOS token lets the heads rest by looking at that, preserving the information in the first "real" token.
 
 Further, *some* models are trained to need a BOS token (OPT and my interpretability-friendly models are, GPT-2 and GPT-Neo are not). But despite GPT-2 not being trained with this, empirically it seems to make interpretability easier.
 """)
-
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - how many words does your model guess correctly?
@@ -501,11 +506,13 @@ Model accuracy: 32/112
 Correct words: ['\n', '\n', 'former', ' with', ' models', '.', ' can', ' of', 'ooked', 'Trans', 'former', '_', 'NAME', '`.', ' model', ' the', 'Trans', 'former', ' to', ' be', ' and', '-', '.', '\n', ' at', 'PT', '-', ',', ' model', ',', "'s", ' the']
 ```
 
-So the model got 32 out of 112 words correct. Not bad!""")
-
+So the model got 32 out of 112 words correct. Not bad!
+""")
+        # start
         st.markdown(r"""
 **Induction heads** are a special kind of attention head which we'll examine a lot more in coming exercises. They allow a model to perform in-context learning of a specific form: generalising from one observation that token `B` follows token `A`, to predict that token `B` will follow `A` in future occurrences of `A`, even if these two tokens had never appeared together in the model's training data. **Can you see evidence of any induction heads at work?**
 """)
+        # end
 
         with st.expander("Evidence of induction heads"):
             st.markdown(r"""
@@ -521,7 +528,6 @@ if MAIN:
 
 The first basic operation when doing mechanistic interpretability is to break open the black box of the model and look at all of the internal activations of a model. This can be done with `logits, cache = model.run_with_cache(tokens)`. Let's try this out, on the first sentence from the GPT-2 paper.
 """)
-
     with st.expander("Aside - a note on remove_batch_dim"):
         st.markdown(r"""
 Every activation inside the model begins with a batch dimension. Here, because we only entered a single batch dimension, that dimension is always length 1 and kinda annoying, so passing in the `remove_batch_dim=True` keyword removes it. 
@@ -560,7 +566,8 @@ You can use the diagram from the **Transformer Architecture** section to help yo
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - verify activations""")
+#### Exercise - verify activations
+""")
         st.error(r"""
 *If you're already comfortable implementing things like attention calculations (e.g. having gone through Neel's transformer walkthrough) you can skip this exercise. However, it might serve as a useful refresher.*
 """)
@@ -603,14 +610,16 @@ if MAIN:
     print("Tests passed!")
 ```
 """)
+    # start
     st.markdown(r"""
-
 ## Visualising Attention Heads
 
 A key insight from the Mathematical Frameworks paper is that we should focus on interpreting the parts of the model that are intrinsically interpretable - the input tokens, the output logits and the attention patterns. Everything else (the residual stream, keys, queries, values, etc) are compressed intermediate states when calculating meaningful things. So a natural place to start is classifying heads by their attention patterns on various texts.
 
 When doing interpretability, it's always good to begin by visualising your data, rather than taking summary statistics. Summary statistics can be super misleading! But now that we have visualised the attention patterns, we can create some basic summary statistics and use our visualisations to validate them! (Accordingly, being good at web dev/data visualisation is a surprisingly useful skillset! Neural networks are very high-dimensional object.)
-
+""")
+    # end
+    st.markdown(r"""
 Let's visualize the attention pattern of all the heads in layer 0, using [Alan Cooney's CircuitsVis library](https://github.com/alan-cooney/CircuitsVis) (based on Anthropic's PySvelte library). We will use the function `cv.attention.attention_heads`, which takes two arguments:
 
 * `attention`: Attention head activations. 
@@ -657,7 +666,7 @@ Then the file should pop up in your explorer on the left of VSCode. Right click 
 """)
 
 def section_finding_induction_heads():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -672,8 +681,10 @@ def section_finding_induction_heads():
        <li><a class="contents-el" href="#looking-for-induction-attention-patterns">Looking for Induction Attention Patterns</a></li>
 </ul>
 """, unsafe_allow_html=True)    
+    # start
     st.markdown(r"""
-# Finding Induction Heads""")
+# Finding Induction Heads
+""")
     st.markdown(r"")
 
     st.info(r"""
@@ -682,8 +693,8 @@ def section_finding_induction_heads():
 * Understand what induction heads are, and the algorithm they are implementing.
 * Inspect activation patterns to identify basic attention head patterns, and write your own functions to detect attention heads for you.
 * Identify induction heads by looking at the attention patterns produced from a repeating random sequence.
-
 """)
+    # end
     st.markdown(r"""
 
 ## Introducing Our Toy Attention-Only Model
@@ -717,7 +728,6 @@ if MAIN:
     )
 ```
 """)
-
     with st.expander("An aside about tokenizers"):
         st.markdown(r"""
 In the last section, we defined a tokenizer explicitly, and passed it into our model. But here, we just pass a tokenizer name. The model automatically creates a tokenizer for us (under the hood, it calls `AutoTokenizer.from_pretrained(tokenizer_name)`).
@@ -733,9 +743,7 @@ if MAIN:
     pretrained_weights = t.load(WEIGHT_PATH, map_location=device)
     model.load_state_dict(pretrained_weights)
 ```
-
 """)
-
     with st.expander("Click here to remind yourself of the relevant hook names."):
         st.markdown(r"""
 This is for a model with just attention layers, and no MLPs, LayerNorms, or biases (like the one we're using).
@@ -769,8 +777,8 @@ This is for a model with just attention layers, and no MLPs, LayerNorms, or bias
 
     with st.columns(1)[0]:
         st.markdown(r"""
-
-#### Exercise - visualise attention patterns""")
+#### Exercise - visualise attention patterns
+""")
         st.error(r"""
 *This exercise should be very quick - you can reuse code from the previous section. You should look at the solution if you're still stuck after 5-10 minutes.*
 """)
@@ -801,8 +809,6 @@ with open("attn_patterns.html", "w") as f:
     f.write(str(html))
 ```
 """)
-
-
         with st.expander("Solution"):
             st.markdown(r"""
 We visualise attention patterns with the following code:
@@ -814,7 +820,9 @@ if MAIN:
         attention_pattern = cache["pattern", layer]
         display(cv.attention.attention_patterns(tokens=str_tokens, attention=attention_pattern))
 ```
-
+""")
+            # start
+            st.markdown(r"""
 We notice that there are three basic patterns which repeat quite frequently:
 
 * `prev_token_heads`, which attend mainly to the previous token (e.g. head `0.7`)
@@ -825,6 +833,7 @@ The `prev_token_heads` and `current_token_heads` are perhaps unsurprising, becau
 
 The `first_token_heads` are a bit more surprising. The basic intuition here is that the first token in a sequence is often used as a resting or null position for heads that only sometimes activate (since our attention probabilities always have to add up to 1).
 """)
+            # end
     st.markdown(r"""
 ### Summarising attention patterns
 
@@ -839,7 +848,6 @@ Now that we've observed our three basic attention patterns, it's time to make de
 *These exercises shouldn't be too challenging, if you understand attention patterns. Use the hint if you're stuck on things like how to correctly index your tensors, or how to access the activation patterns from the cache. You shouldn't spend more than 10-15 minutes on these exercises.*
 """)
         st.markdown(r"""
-
 You should fill in the functions below, which act as detectors for particular types of heads. Validate your detectors by comparing these results to the visual attention patterns above - summary statistics on their own can be dodgy, but are much more reliable if you can validate it by directly playing with the data.
 
 Tasks like this are useful, because we need to be able to take our observations / intuitions about what a model is doing, and translate these into quantitative measures. As the exercises proceed, we'll be creating some much more interesting tools and detectors!
@@ -912,14 +920,13 @@ def current_attn_detector(cache: ActivationCache) -> List[str]:
 Note - choosing `0.4` as a threshold is a bit arbitrary, but it seems to work well enough. In this particular case, a threshold of `0.5` results in no head being classified as a current-token head.
 """)
         st.markdown(r"""
-
 Compare the printouts to your attention visualisations above. Do they seem to make sense?
 
 #### Bonus exercise - try different text
 
 Try inputting different text, and see how stable your results are. Do you always get the same classifications for heads?
 """)
-
+    # start
     st.markdown(r"""
 Now, it's time to turn our attention to induction heads.
 
@@ -944,7 +951,9 @@ There's a few particularly striking things about induction heads:
     st.markdown(r"""
 Again, you are strongly recommended to read the [corresponding section of the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=_Jzi6YHRHKP1JziwdE02qdYZ), before continuing (or [this LessWrong post](https://www.lesswrong.com/posts/TvrfY4c9eaGLeyDkE/induction-heads-illustrated)). In brief, however, the induction circuit consists of a previous token head in layer 0 and an induction head in layer 1, where the induction head learns to attend to the token immediately *after* copies of the current token via K-Composition with the previous token head.
 """)
-    st.markdown("#### Question - why couldn't an induction head form in a 1L model?")
+    st.markdown(r"""
+#### Question - why couldn't an induction head form in a 1L model?
+""")
     with st.expander("Solution"):
         st.markdown(r"""
 Because this would require a head which attends a key position based on the *value of the token before it*. Attention scores are just a function of the key token and the query token, and are not a function of other tokens.
@@ -953,7 +962,6 @@ Because this would require a head which attends a key position based on the *val
 
 Note that a key detail is that the value of adjacent tokens are (approximately) unrelated - if the model wanted to attend based on relative *position* this is easy.
 """)
-
     st.markdown(r"""
 ## Checking for the induction capability
 
@@ -963,7 +971,7 @@ To check that this model has induction heads, we're going to run it on exactly t
 
 Note - we're using small sequences (and just one sequence), since the results are very obvious and this makes it easier to visualise. In practice we'd obviously use larger ones on more subtle tasks. But it's often easiest to iterate and debug on small tasks.
 """)
-
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - plot per-token loss on repeated sequence
@@ -1065,20 +1073,20 @@ def run_and_cache_model_repeated_tokens(model: HookedTransformer, seq_len: int, 
     return rep_tokens, rep_logits, rep_cache
 ```
 """)
-        st.markdown(r"""
-#### Your output
+#         st.markdown(r"""
+# #### Your output
 
-Once you've run the code above without error, press the button below to display your output in this page.
-""")
-        button1 = st.button("Show my output", key="button1")
-        if button1 or "got_repeated_tokens" in st.session_state:
-            if "repeated_tokens" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["repeated_tokens"])
-                st.session_state["got_repeated_tokens"] = True
-        # with st.expander("Click here to see the output you should be getting:"):
-        #     st.plotly_chart(fig_dict["repeated_tokens"], use_container_width=False)
+# Once you've run the code above without error, press the button below to display your output in this page.
+# """)
+#         button1 = st.button("Show my output", key="button1")
+#         if button1 or "got_repeated_tokens" in st.session_state:
+#             if "repeated_tokens" not in fig_dict:
+#                 st.error("No figure was found in your directory. Have you run the code above yet?")
+#             else:
+#                 st.plotly_chart(fig_dict["repeated_tokens"])
+#                 st.session_state["got_repeated_tokens"] = True
+#         # with st.expander("Click here to see the output you should be getting:"):
+#         #     st.plotly_chart(fig_dict["repeated_tokens"], use_container_width=False)
 
     st.markdown(r"""
 ### Looking for Induction Attention Patterns
@@ -1118,7 +1126,8 @@ For instance, here is `cv.attention.attention_patterns` for head 4. We can see h
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - induction head detector""")
+#### Exercise - induction head detector
+""")
         st.error(r"""
 *This exercise should be similar to the earlier detector exercises. It shouldn't take more than 5-10 minutes, if you understand the previous exercises.*
 """)
@@ -1167,7 +1176,7 @@ def induction_attn_detector(cache: ActivationCache) -> List[str]:
 """)
 
 def section_hooks():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -1189,9 +1198,10 @@ def section_hooks():
 </ul></li>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
-# TransformerLens: Hooks""")
+# TransformerLens: Hooks
+""")
     st.markdown(r"")
     st.info(r"""
 ### Learning Objectives
@@ -1249,11 +1259,10 @@ Let's break this code down.
 * `fwd_hooks` is a list of 2-tuples of (hook name, hook function).
     * The hook name is a string that specifies which activation we want to hook. 
     * The hook function gets run with the corresponding activation as its first argument.
-
-### A few extra notes on hooks, before we start using them
 """)
-
+    # end
     st.markdown(r"""
+### A few extra notes on hooks, before we start using them
 
 Here are a few extra notes for how to squeeze even more functionality out of hooks. If you'd prefer, you can [jump ahead](#hooks-accessing-activations) to see an actual example of hooks being used, and come back to this section later.""", unsafe_allow_html=True)
 
@@ -1329,7 +1338,7 @@ for head_idx in range(12):
 
 They also come with a range of other quality of life improvements. PyTorch's hooks are global state, which can be a massive pain if you accidentally leave a hook on a model. TransformerLens hooks are also global state, but `run_with_hooks` tries tries to create an abstraction where these are local state by removing all hooks at the end of the function (and they come with a helpful `model.reset_hooks()` method to remove all hooks).
 """)
-
+    # start
     st.markdown(r"""
 ## Hooks: Accessing Activations
 
@@ -1342,16 +1351,14 @@ Why might we want to do this? It turns out to be useful for things like:
 
 Note that, in theory, this could all be done using the `run_with_cache` function we used in the previous section, combined with post-processing of the cache result. But using hooks can be more intuitive and memory efficient.
 """)
-
+    # end
     with st.columns(1)[0]:
-
         st.markdown(r"""
 #### Exercise - calculate induction scores using hooks
 """)
         st.error(r"""
 *Since this will be your first time using heads, if you're still confused after trying for 10-15 minutes you should look at the solutions. There is also a hint we've provided for you in a dropdown below the code, and you should try using this hint before reading the solution. This exercise is pretty conceptually important, so you should make sure you understand the solutions before moving on.*
 """)
-
         st.markdown(r"""
 To start with, we'll look at how hooks can be used to get the same results as from the previous section (where we ran our induction head detector functions on the values in the cache).
 
@@ -1437,16 +1444,16 @@ def induction_score_hook(
     induction_score_store[hook.layer(), :] = induction_score
 ```
 """)
-        st.markdown(r"""
-#### Your output
-""")
-        button2 = st.button("Show my output", key="button2")
-        if button2 or "got_induction_scores" in st.session_state:
-            if "induction_scores" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["induction_scores"])
-                st.session_state["got_induction_scores"] = True
+#         st.markdown(r"""
+# #### Your output
+# """)
+#         button2 = st.button("Show my output", key="button2")
+#         if button2 or "got_induction_scores" in st.session_state:
+#             if "induction_scores" not in fig_dict:
+#                 st.error("No figure was found in your directory. Have you run the code above yet?")
+#             else:
+#                 st.plotly_chart(fig_dict["induction_scores"])
+#                 st.session_state["got_induction_scores"] = True
         # with st.expander("Click to see what your result should look like (although the numbers will be slightly different due to randomness):"):
         #     st.plotly_chart(fig_dict["induction_scores"], use_container_width=True)
     st.markdown("")
@@ -1520,9 +1527,8 @@ if MAIN:
         st.markdown(r"""
 Note - if you're using VSCode, don't forget to clear your output periodically, because having too many plots open in your interpreter will slow down performance.
 """)
-
+    # start
     st.markdown(r"""
-
 ## Building interpretability tools
 
 In order to develop a mechanistic understanding for how transformers perform certain tasks, we need to be able to answer questions like:
@@ -1545,7 +1551,7 @@ Let's say that our model knows that the token Harry is followed by the token Pot
 
 We can be even more specific, and *just* look at the logit of the Potter token - this corresponds to a row of `W_U`, and so a direction in the residual stream - our logit is now a single number that is the sum of `(embed @ potter_U) + (attn_out_0 @ potter_U) + (attn_out_1 @ potter_U)`. Even better, we can decompose each attention layer output into the sum of the result of each head, and use this to get many terms.
 """)
-
+    # end
     st.markdown(r"""
 Your mission here is to write a function to look at how much each component contributes to the correct logit. Your components are:
 
@@ -1621,7 +1627,8 @@ if MAIN:
         t.testing.assert_close(logit_attr.sum(1), correct_token_logits, atol=1e-3, rtol=0)
 ```
 
-If you're stuck, you can look at the solution below.""")
+If you're stuck, you can look at the solution below.
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -1674,19 +1681,17 @@ if MAIN:
     plot_utils.save_fig(fig, "logit_attribution")
     fig.show()
 ```
-
-#### Your output
 """)
 
-    button3 = st.button("Show my output", key="button3")
-    if button3 or "got_logit_attribution" in st.session_state:
-        if "logit_attribution" not in fig_dict:
-            st.error("No figure was found in your directory. Have you run the code above yet?")
-        else:
-            st.plotly_chart(fig_dict["logit_attribution"])
-            st.session_state["got_logit_attribution"] = True
-    # with st.expander("Click here to see the output you should be getting."):
-    #     st.plotly_chart(fig_dict["logit_attribution"], use_container_width=True)
+    # button3 = st.button("Show my output", key="button3")
+    # if button3 or "got_logit_attribution" in st.session_state:
+    #     if "logit_attribution" not in fig_dict:
+    #         st.error("No figure was found in your directory. Have you run the code above yet?")
+    #     else:
+    #         st.plotly_chart(fig_dict["logit_attribution"])
+    #         st.session_state["got_logit_attribution"] = True
+    # # with st.expander("Click here to see the output you should be getting."):
+    # #     st.plotly_chart(fig_dict["logit_attribution"], use_container_width=True)
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1710,7 +1715,8 @@ See later for a discussion of all the ~infuriating~ fun quirks of tokenization!
 """)
 
         st.markdown(r"""
-Another feature of the plot - the heads in the second layer seem to have much higher contributions than the heads in the first layer. Why do you think this might be?""")
+Another feature of the plot - the heads in the second layer seem to have much higher contributions than the heads in the first layer. Why do you think this might be?
+""")
         with st.expander("Hint"):
             st.markdown(r"""
 Think about what this graph actually represents, in terms of paths through the transformer.
@@ -1777,15 +1783,17 @@ second_half_logit_attr = logit_attribution(embed[seq_len:], l1_results[seq_len:]
 Click below to see your output, when you've run the code above. We only show the second plot, since as discussed, the first plot is meaningless.
 """)
 
-        button4 = st.button("Show my output", key="button4")
-        if button4 or "got_rep_logit_attribution" in st.session_state:
-            if "rep_logit_attribution" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["rep_logit_attribution"])
-                st.session_state["got_rep_logit_attribution"] = True
+        # button4 = st.button("Show my output", key="button4")
+        # if button4 or "got_rep_logit_attribution" in st.session_state:
+        #     if "rep_logit_attribution" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["rep_logit_attribution"])
+        #         st.session_state["got_rep_logit_attribution"] = True
 
-        st.markdown(r"""What is the interpretation of this plot, in the context of our induction head circuit?""")
+        st.markdown(r"""
+What is the interpretation of this plot, in the context of our induction head circuit?
+""")
         with st.expander("Answer"):
             st.markdown(r"""
 Previously, we observed that heads `1.4` and `1.10` seemed to be acting as induction heads.
@@ -1794,7 +1802,7 @@ This plot gives further evidence that this is the case, since these two heads ha
 
 This also agrees with our attention scores result, in showing tht `1.10` is a stronger induction head than `1.4`.
 """)
-
+    # start
     st.markdown(r"""
 ### Aside - typechecking
 
@@ -1839,7 +1847,7 @@ Let's start with a simple example: **ablation**. An ablation is a simple causal 
 
 As mentioned in [the glossary](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=fh-HJyz1CgUVrXuoiban6bYx), there are many ways to do ablation. We'll focus on the simplest: zero-ablation (even though it's somewhat unprincipled).
 """)
-
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - zero-ablation for induction heads
@@ -1855,7 +1863,6 @@ The code below provides a template for performing zero-ablation on the value vec
             st.write("""<figure style="max-width:620px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNrNVsFu2zAM_RVBh7UDYnQLdnKyHIasOfQwFCu2Q10EikXHhmVJkWQ3Sd1_H-U4dR2kQLFDEx0kUibtR_pR1BONFQca0qVhOiV300gSHLZc7DYiOraaSWLdRsD3i0RJF9hsC-Hwm15fTO4MkzZRpgDzQ6g4J5fMOUmUFJvP4yvvOYno7pV-xIJZO4WEQKHdhjxm3KXhF70epJAtU-fF0RFrDxEnoUxogKNFZ2PAZnyuDdxH9EUe86zaI14ow8EETulwqNfEKpFxshAszkcFM8tMNo-aYMZX6DcZN19rvbuPdpF_HXrjSwurAeHzAq0Fxuq9MNaHIAim9-QhDMMmxiCY1IzzusWmrOuwd9J7090k9xMUVo_6y7G9dyz_Nx_5sX5UfXXVV_O-6iOZ21hhXvoPrvuqRkMwsr8566vbvoqvLMWrNIPkR_jif8zf-Z-6QuJUH0cYmQLjnjd-7dNmdkCbx6YmgBNWLYlKSMVECaSC2Clj6y3i3p4eN0GkBBP5q96lfVeGKJwA2mEpemy1LQuiKjDEW9m64Z0qPc69eOrT4k1y3tYrhLk6C3JeH5CTK0e0UbyMHWFCyWXrNSA2ZgIIk5wUzOb1q0Lf53ynfUhYbUQY3W0z3_SiQnaoxBVsXbfHDCJspTNAF8zeZMZNnSPU_DyYcayhde2u68uonLLUDmFiW6ADiheXgmUcL0BPfjuiLoUCIhqiyCFhvpNgn3tG01Jz5uAnz_D8pWHChIUBZaVTvzcypqEzJeyNphnDfl60Vs__ANh9IJM" /></figure>""", unsafe_allow_html=True)
 
         st.markdown(r"""
-
 The only thing left for you to do is fill in the function `head_ablation_hook` so that it performs zero-ablation on the head given by `head_index_to_ablate`. In other words, your function should return a modified version of `value` with this head ablated. (Technically you don't have to return any tensor if you're modifying `value` in-place; this is just convention.)
 
 A few notes to help explain the code below:
@@ -1944,13 +1951,13 @@ def head_ablation_hook(
 ```
 """)
 
-        button5 = st.button("Show my output", key="button5")
-        if button5 or "got_ablation_scores" in st.session_state:
-            if "ablation_scores" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["ablation_scores"])
-                st.session_state["got_ablation_scores"] = True
+        # button5 = st.button("Show my output", key="button5")
+        # if button5 or "got_ablation_scores" in st.session_state:
+        #     if "ablation_scores" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["ablation_scores"])
+        #         st.session_state["got_ablation_scores"] = True
         # with st.expander("Click here to see the output you should be getting."):
         #     st.plotly_chart(fig_dict["ablation_scores"], use_container_width=True)
         
@@ -2059,8 +2066,10 @@ def section_reverse_engineering():
     </ul></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
-# Reverse-engineering induction circuits""")
+# Reverse-engineering induction circuits
+""")
     st.markdown(r"")
     st.info(r"""
 ### Learning Objectives
@@ -2070,12 +2079,13 @@ def section_reverse_engineering():
 * Perform further exploration of induction circuits: composition scores, and targeted ablations.
 * Optional bonus exercises to investigate induction heads still further (e.g. looking for them in larger models).
 """)
-
     st.markdown(r"""
 In previous exercises, we looked at the attention patterns and attributions of attention heads to try and identify which ones were important in the induction circuit. This might be a good way to get a feel for the circuit, but it's not a very rigorous way to understand it. It would be better described as **feature analysis**, where we observe *that* a particular head seems to be performing some task on a certain class of inputs, without identifying *why* it does so.
 
 Now we're going to do some more rigorous mechanistic analysis - digging into the weights and using them to reverse engineer the induction head algorithm and verify that it is really doing what we think it is.
-
+""")
+    # end
+    st.markdown(r"""
 ## Refresher - do you understand the induction circuit?
 
 Before we get into the meat of this section, let's refresh the results we've gotten so far from investigating induction heads. We've found:
@@ -2090,7 +2100,7 @@ Based on all these observations, try and summarise the induction circuit and how
 
 You can use the dropdown below to check your understanding.
 """)
-
+    # start
     with st.expander("My summary of the algorithm"):
         st.markdown(r"""
 * Head `0.7` is a previous token head (the QK-circuit ensures it always attends to the previous token).
@@ -2099,14 +2109,16 @@ You can use the dropdown below to check your understanding.
 * The OV-circuit of head `1.10` copies the *value* of the source token to the same output logit.
     * Note that this is copying from the embedding subspace, *not* the `0.7` output subspace - it is not using V-Composition at all.
 * `1.4` is also performing the same role as `1.10` (so together they can be more accurate - we'll see exactly how later).
-
+""")
+        # end
+        st.markdown(r"""
 To emphasise - the sophisticated hard part is computing the *attention* pattern of the induction head - this takes careful composition. The previous token and copying parts are fairly easy. This is a good illustrative example of how the QK circuits and OV circuits act semi-independently, and are often best thought of somewhat separately. And that computing the attention patterns can involve real and sophisticated computation!
 
 Below is a diagram of the induction circuit, with the heads indicated in the weight matrices.
 """)
         st_image("kcomp_diagram_described_3.png", 1000)
         st.markdown("")
-
+    # start
     st.markdown(r"""
 ## Refresher - QK and OV circuits (and some terminology)
 
@@ -2121,8 +2133,8 @@ Lastly, I'll refer to special matrix products as follows:
 
 Note that the order of these matrices are slightly different from the **Mathematical Frameworks** paper - this is a consequence of the way TransformerLens stores its weight matrices.
 """)
+    # end
     st.markdown("")
-
     st.markdown(r"""
 #### Question - what is the interpretation of each of the following matrices?
 """)
@@ -2265,10 +2277,11 @@ To further break this down, if it still seems confusing:
 
 Note that the actual attention score will be a sum of multiple terms, not just this one (in fact, we'd have a different term for every combination of query and key input). But this term describes the particular contribution to the attention score from this combination of query and key input, and it might be the case that this term is the only one that matters (i.e. all other terms don't much affect the final probabilities).
 """)
-
     st.markdown(r"""
 Before we start, there's a problem that we might run into when calculating all these matrices. Some of them are massive, and might not fit on our GPU. For instance, both full circuit matrices have shape $(d_\text{vocab}, d_\text{vocab})$, which in our case means $50278\times 50278 \approx 2.5\times 10^{9}$ elements. Even if your GPU can handle this, it still seems inefficient. Is there any way we can meaningfully analyse these matrices, without actually having to calculate them?
-
+""")
+    # start
+    st.markdown(r"""
 ## Factored Matrix class
 
 In transformer interpretability, we often need to analyse low rank factorized matrices - a matrix $M = AB$, where M is `[large, large]`, but A is `[large, small]` and B is `[small, large]`. This is a common structure in transformers. 
@@ -2279,6 +2292,7 @@ The `FactoredMatrix` class is a convenient way to work with these. It implements
 
 This is all possible because knowing the factorisation of a matrix gives us a much easier way of computing its important properties. Intuitively, since $M=AB$ is a very large matrix that operates on very small subspaces, we shouldn't expect knowing the actual values $M_{ij}$ to be the most efficient way of storing it!
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -2523,9 +2537,8 @@ t.testing.assert_close(AB_unfactored, AB)
 # print(f"De-Tokenizing the example tokens: {model.to_string(example_text_tokens.squeeze())}")
 # ```
 # """)
-
+    # start
     st.markdown(r"""
-
 ## Reverse-engineering circuits
 
 Within our induction circuit, we have four individual circuits: the OV and QK circuits in our previous token head, and the OV and QK circuits in our attention head. In the following sections of the exercise, we'll reverse-engineer each of these circuits in turn.
@@ -2535,20 +2548,22 @@ Within our induction circuit, we have four individual circuits: the OV and QK ci
 * The third section (**K-composition**) is a bit trickier, because it involves looking at the composition of the layer-0 OV circuit **and** layer-1 QK circuit. We will have to do two things: 
     1. Show that these two circuits are composing (i.e. that the output of the layer-0 OV circuit is the main determinant of the key vectors in the layer-1 QK circuit).
     2. Show that the joint operation of these two circuits is "make the second instance of a token attend to the token *following* an earlier instance.
-
+""")
+    # end
+    st.markdown(r"""
 The dropdown below contains a diagram explaining how the three sections relate to the different components of the induction circuit. You can open it in a new tab if the details aren't clear.
 """)
     # As an analogy, pretend each of the attention heads is a person reading coded messages from the airwaves, and sending coded messages forwards to people further down the line. We might not be able to crack the code that Alice and Bob are using to communicate with each other, but as long as we can (1) show that they are communicating with each other more than with anyone else, and (2) deduce how they function as a single unit (i.e. how our coded message changes when it passes through Alice *and* Bob), then we can consider their joint function as having been fully reverse-engineered.
-
     with st.expander("Diagram"):
         st.markdown("")
         st_image(r"kcomp_diagram_described_2.png", 1400)
         st.markdown("")
 
     st.markdown(r"""
-
 After this, we'll have a look at composition scores, which are a more mathematically justified way of showing that two attention heads are composing (without having to look at their behaviour on any particular class of inputs, since it is a property of the actual model weights).
-
+""")
+    # start
+    st.markdown(r"""
 ### OV copying circuit
 
 Let's start with an easy parts of the circuit - the copying OV circuit of `1.4` and `1.10`. Let's start with head 4. The only interpretable (read: **privileged basis**) things here are the input tokens and output logits, so we want to study the matrix:
@@ -2560,10 +2575,11 @@ $$
 (and same for `1.10`). This is the $(d_\text{vocab}, d_\text{vocab})$-shape matrix that combines with the attention pattern to get us from input to output.
 
 We want to calculate this matrix, and inspect it. We should find that its diagonal values are very high, and its non-diagonal values are much lower.
-
+""")
+    # end
+    st.markdown(r"""
 **Question - why should we expect this observation?** (you may find it helpful to refer back to the previous section, where you described what the interpretation of different matrices was.)
 """)
-
     with st.expander("Hint"):
         st.markdown(r"""
 Suppose our repeating sequence is `A B ... A B`. Let $A$, $B$ be the corresponding one-hot encoded tokens. The `B`-th row of this matrix is:
@@ -2729,13 +2745,13 @@ if MAIN:
         st.markdown(r"""
 #### Your output
 """)
-        button6 = st.button("Show my output", key="button6")
-        if button6 or "got_OV_circuit_sample" in st.session_state:
-            if "OV_circuit_sample" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["OV_circuit_sample"])
-                st.session_state["got_OV_circuit_sample"] = True
+        # button6 = st.button("Show my output", key="button6")
+        # if button6 or "got_OV_circuit_sample" in st.session_state:
+        #     if "OV_circuit_sample" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["OV_circuit_sample"])
+        #         st.session_state["got_OV_circuit_sample"] = True
         st.markdown(r"""
 You should observe a pretty distinct diagonal pattern here, which is a good sign. However, the matrix is pretty noisy so it probably won't be exactly the identity. Instead, we should come up with a summary statistic to capture a rough sense of "closeness to the identity".
 
@@ -2817,7 +2833,8 @@ if MAIN:
 ```
 """)
         st.markdown(r"""
-This should return about 30.79% - pretty underwhelming. It goes up to 47.73% for top-5. What's up with that?""")
+This should return about 30.79% - pretty underwhelming. It goes up to 47.73% for top-5. What's up with that?
+""")
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - compute circuit for both induction heads
@@ -2859,7 +2876,7 @@ if MAIN:
 
 You should get an accuracy of 95.6% for top-1, and 98% for top-5 - much better!
 """)
-
+    # start
     st.markdown(r"""
 ### QK prev-token circuit
 
@@ -2872,12 +2889,13 @@ W_\text{pos} W_Q^{0.7} (W_K^{0.7})^T W_\text{pos}^T
 $$
 
 to get a matrix `pos_by_pos` of shape `[max_ctx, max_ctx]` (max ctx = max context length, i.e. maximum length of a sequence we're allowing, which is set by our choice of dimensions in $W_\text{pos}$).
-
+""")
+    # end
+    st.markdown(r"""
 Note that in this case, our max context window is 2048 (we can check this via `model.cfg.n_ctx`). This is much smaller than the 50k-size matrices we were working with in the previous section, so we shouldn't need to use the factored matrix class here.
 
 Once we calculate it, we can then mask it and apply a softmax, and should get a clear stripe on the lower diagonal (Tip: Click and drag to zoom in, hover over cells to see their values and indices!)
 """)
-
     with st.expander("Question - why should we expect this matrix to have a lower-diagonal stripe?"):
         st.markdown(r"""
 The full QK circuit $W_\text{pos} W_{QK}^{0.7} W_\text{pos}^T$ has shape `[n_ctx, n_ctx]`. After masking and scaling, the $(i, j)$th element of the matrix is the **attention score** paid by the token with position $i$ to the token with position $j$ (ignoring token encoding). We expect this to be very large when $j = i - 1$, because this is a **previous head token**.
@@ -2887,7 +2905,6 @@ After applying softmax over keys (i.e. over $j$), the $(i, j)$th element is the 
         st_image("kcomp_diagram_described-QK.png", 900)
         st.markdown("")
         st.markdown(r"""
-
 #### Optional bonus exercise
 
 Why is it justified to ignore token encodings? In this case, it turns out that the positional encodings have a much larger effect on the attention scores than the token encodings. You can verify this for yourself - after going through the next section (reverse-engineering K-composition), you'll have a better sense of how to perform attribution on the inputs to attention heads, and assess their importance).
@@ -2948,19 +2965,21 @@ if MAIN:
         st.markdown(r"""
 #### Your output
 """)
-        button10 = st.button("Show my output", key="button10")
-        if button10 or "got_pos_by_pos_pattern" in st.session_state:
-            if "pos_by_pos_pattern" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["pos_by_pos_pattern"])
-                st.session_state["got_pos_by_pos_pattern"] = True
-
+        # button10 = st.button("Show my output", key="button10")
+        # if button10 or "got_pos_by_pos_pattern" in st.session_state:
+        #     if "pos_by_pos_pattern" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["pos_by_pos_pattern"])
+        #         st.session_state["got_pos_by_pos_pattern"] = True
+    # start
     st.markdown(r"""
 ### K-composition circuit
 
 We now dig into the hard part of the circuit - demonstrating the K-Composition between the previous token head and the induction head.
-
+""")
+    # end
+    st.markdown(r"""
 #### Splitting activations
 
 We can repeat the trick from the logit attribution scores. The QK-input for layer 1 is the sum of 14 terms (2+n_heads) - the token embedding, the positional embedding, and the results of each layer 0 head. So for each head $\text{H}$ in layer 1, the query tensor (ditto key) corresponding to sequence position $i$ is:
@@ -3099,14 +3118,14 @@ def decompose_k(decomposed_qk_input: t.Tensor, ind_head_index: int) -> t.Tensor:
 
 You should see that the most important query components are the token and positional embeddings. The most important key components are those from $y_9$, which is $x_7$, i.e. from head `0.7`.
 """)
-        button7 = st.button("Show my output", key="button7")
-        if button7 or "got_norms_of_query_components" in st.session_state:
-            if "norms_of_query_components" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["norms_of_query_components"])
-                st.plotly_chart(fig_dict["norms_of_key_components"])
-                st.session_state["got_norms_of_query_components"] = True
+        # button7 = st.button("Show my output", key="button7")
+        # if button7 or "got_norms_of_query_components" in st.session_state:
+        #     if "norms_of_query_components" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["norms_of_query_components"])
+        #         st.plotly_chart(fig_dict["norms_of_key_components"])
+        #         st.session_state["got_norms_of_query_components"] = True
         # with st.expander("Click to see the output you should be getting."):
         #     st.plotly_chart(fig_dict["norms_of_query_components"], use_container_width=True)
         #     st.plotly_chart(fig_dict["norms_of_key_components"], use_container_width=True)
@@ -3214,20 +3233,21 @@ def decompose_attn_scores(decomposed_q: t.Tensor, decomposed_k: t.Tensor) -> t.T
     )
 ```
 """)
-        st.markdown(r"""
-#### Your output""")
+#         st.markdown(r"""
+# #### Your output
+# """)
 
-        button8 = st.button("Show my output", key="button8")
-        if button8 or "got_attn_scores_per_component" in st.session_state:
-            if "attn_scores_per_component" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["attn_scores_per_component"])
-                st.plotly_chart(fig_dict["attn_scores_std_devs"])
-                st.session_state["got_attn_scores_per_component"] = True
-        # with st.expander("Click here to see the output you should be getting"):
-        #     st.plotly_chart(fig_dict["attn_scores_per_component"], use_container_width=True)
-        #     st.plotly_chart(fig_dict["attn_scores_std_devs"], use_container_width=True)
+#         button8 = st.button("Show my output", key="button8")
+#         if button8 or "got_attn_scores_per_component" in st.session_state:
+#             if "attn_scores_per_component" not in fig_dict:
+#                 st.error("No figure was found in your directory. Have you run the code above yet?")
+#             else:
+#                 st.plotly_chart(fig_dict["attn_scores_per_component"])
+#                 st.plotly_chart(fig_dict["attn_scores_std_devs"])
+#                 st.session_state["got_attn_scores_per_component"] = True
+#         # with st.expander("Click here to see the output you should be getting"):
+#         #     st.plotly_chart(fig_dict["attn_scores_per_component"], use_container_width=True)
+#         #     st.plotly_chart(fig_dict["attn_scores_std_devs"], use_container_width=True)
 
         with st.expander("Question - what is the interpretation of these plots?"):
             st.markdown(r"""
@@ -3240,7 +3260,7 @@ To summarise:
 * The first plot tells us that the pair `(q_component=tok_emb, k_component=0.7)` produces the characteristic induction-head pattern we see in attention head `1.4`.
 * The second plot confirms that this pair is the only important one for influencing the attention pattern in `1.4`; all other pairs have very small contributions.
 """)
-
+    # start
     st.markdown(r"""
 #### Interpreting the full circuit
 
@@ -3249,13 +3269,14 @@ Now we know that head `1.4` is composing with head `0.7` via K composition, we c
 $$
 W_E\, W_{QK}^{1.4}\, (W_{OV}^{0.7})^T\, W_E^T
 $$
-
+""")
+    # end
+    st.markdown(r"""
 and verify that it's the identity. (Note, when we say identity here, we're again thinking about it as a distribution over logits, so this should be taken to mean "high diagonal values", and we'll be using our previous metric of `top_1_acc`.)
-
+""")
+    st.markdown(r"""
 ##### Question - why should this be the identity?
 """)
-
-
     with st.expander("Answer"):
         st.markdown(r"""
 Like before, we'll consider the repeating sequence `A B ... A B`, denoting $A$ and $B$ as the one-hot encoded vectors. The `(A, A)`-th element of this matrix is:
@@ -3370,7 +3391,7 @@ Note - unlike last time, it doesn't make sense to consider the "effective circui
             st.markdown(r"""
 Because the weight matrices we're dealing with here are from the QK circuit, not the OV circuit. These don't get combined in a linear way; instead we take softmax over each head's QK-circuit output individually.
 """)
-
+    # start
     st.markdown(r"""
 ## Further Exploration of Induction Circuits
 
@@ -3381,12 +3402,13 @@ I now consider us to have fully reverse engineered an induction circuit - by bot
 A particularly cool idea in the paper is the idea of [virtual weights](https://transformer-circuits.pub/2021/framework/index.html#residual-comms), or compositional scores. (Though I came up with it, so I'm deeply biased!). This is used [to identify induction heads](https://transformer-circuits.pub/2021/framework/index.html#analyzing-a-two-layer-model).
 
 The key idea of compositional scores is that the residual stream is a large space, and each head is reading and writing from small subspaces. By default, any two heads will have little overlap between their subspaces (in the same way that any two random vectors have almost zero dot product in a large vector space). But if two heads are deliberately composing, then they will likely want to ensure they write and read from similar subspaces, so that minimal information is lost. As a result, we can just directly look at "how much overlap there is" between the output space of the earlier head and the K, Q, or V input space of the later head. 
-
+""")
+    # end
+    st.markdown(r"""
 We represent the **output space** with $W_{OV}=W_V W_O$. Call matrices like this $W_A$.
 
 We represent the **input space** with $W_{QK}=W_Q W_K^T$ (for Q-composition), $W_{QK}^T=W_K  W_Q^T$ (for K-Composition) or $W_{OV}=W_V W_O$ (for V-Composition, of the later head). Call matrices like these $W_B$ (we've used this notation so that $W_B$ refers to a later head, and $W_A$ to an earlier head).
 """)
-
     with st.expander("Help - I don't understand what motivates these definitions."):
         st.markdown(r"""
 Recall that we can view each head as having three input wires (keys, queries and values), and one output wire (the outputs). The different forms of composition come from the fact that keys, queries and values can all be supplied from the output of a different head.
@@ -3538,15 +3560,15 @@ if MAIN:
 
 #### Your output
 """)
-        button9 = st.button("Show my output", key="button9")
-        if button9 or "got_q_comp_scores" in st.session_state:
-            if "q_comp_scores" not in fig_dict:
-                st.error("No figure was found in your directory. Have you run the code above yet?")
-            else:
-                st.plotly_chart(fig_dict["q_comp_scores"])
-                st.plotly_chart(fig_dict["k_comp_scores"])
-                st.plotly_chart(fig_dict["v_comp_scores"])
-                st.session_state["got_q_comp_scores"] = True
+        # button9 = st.button("Show my output", key="button9")
+        # if button9 or "got_q_comp_scores" in st.session_state:
+        #     if "q_comp_scores" not in fig_dict:
+        #         st.error("No figure was found in your directory. Have you run the code above yet?")
+        #     else:
+        #         st.plotly_chart(fig_dict["q_comp_scores"])
+        #         st.plotly_chart(fig_dict["k_comp_scores"])
+        #         st.plotly_chart(fig_dict["v_comp_scores"])
+        #         st.session_state["got_q_comp_scores"] = True
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
@@ -3749,7 +3771,6 @@ def get_batched_comp_scores(
 """)
 
     st.markdown(r"""
-
 ### Targeted Ablations
 
 We can refine the ablation technique to detect composition by looking at the effect of the ablation on the attention pattern of an induction head, rather than the loss. Let's implement this!
@@ -3876,16 +3897,36 @@ func_page_list = [
     # (section_other_features, "5️⃣ TransformerLens: Other Features"), 
 ]
 
-func_list = [func for func, page in func_page_list]
-page_list = [page for func, page in func_page_list]
+# func_list = [func for func, page in func_page_list]
+# page_list = [page for func, page in func_page_list]
+
+func_list, page_list = list(zip(*func_page_list))
 
 page_dict = {page: idx for idx, (func, page) in enumerate(func_page_list)}
 
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
 def page():
+    # st.session_state["something"] = ""
+    # st.session_state["input"] = ""
     with st.sidebar:
-        radio = st.radio("Section", page_list)
+        radio = st.radio("Section", page_list) #, on_change=toggle_text_generation)
         st.markdown("---")
-    func_list[page_dict[radio]]()
+        # st.write(st.session_state["current_page"])
+    idx = page_dict[radio]
+    func = func_list[idx]
+    func()
+    current_page = r"3_🔬_TransformerLens_&_induction_circuits"
+    st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    prepend = parse_text_from_page(current_page, func.__name__)
+    new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+    new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
+
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=True)
  
 # if is_local or check_password():
 page()
