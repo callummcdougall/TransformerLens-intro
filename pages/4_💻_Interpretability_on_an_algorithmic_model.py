@@ -2224,8 +2224,9 @@ if MAIN:
     print("Cosine similarity: ", t.cosine_similarity(v_L, v_R, dim=0).item())
 ```
 """)
-        st.markdown(r"""
-Note - we don't actually require $\boldsymbol{\color{orange}\vec v_L}$ and $\boldsymbol{\color{orange}\vec v_R}$ to have the same magnitude for this idea to work. This is because, if we have $\boldsymbol{\color{orange}\vec v_L} \approx -\alpha \boldsymbol{\color{orange}\vec v_R}$ for some $\alpha > 0$, then when projecting along the $\boldsymbol{\color{orange}\vec v_L}$ direction we will get $\|\boldsymbol{\color{orange}\vec v_L}\| (n_L - \alpha n_R) / n$. This always equals $\|\boldsymbol{\color{orange}\vec v_L}\| (1 - \alpha) / 2$ when the number of left and right brackets match, regardless of the sequence length. It doesn't matter that this value isn't zero; the MLPs' neurons can still learn to detect when the vector's component in this direction is more or less than this value by adding a bias term.
+        with st.expander("Extra technicality about these two vectors (optional)"):
+            st.markdown(r"""
+Note - we don't actually require $\boldsymbol{\color{orange}\vec v_L}$ and $\boldsymbol{\color{orange}\vec v_R}$ to have the same magnitude for this idea to work. This is because, if we have $\boldsymbol{\color{orange}\vec v_L} \approx -\alpha \boldsymbol{\color{orange}\vec v_R}$ for some $\alpha > 0$, then when projecting along the $\boldsymbol{\color{orange}\vec v_L}$ direction we will get $\|\boldsymbol{\color{orange}\vec v_L}\| (n_L - \alpha n_R) / n$. This always equals $\|\boldsymbol{\color{orange}\vec v_L}\| (1 - \alpha) / 2$ when the number of left and right brackets match, regardless of the sequence length. It doesn't matter that this value isn't zero; the MLPs' neurons can still learn to detect when the vector's component in this direction is more or less than this value by adding a bias term. The important thing is that (1) the two vectors are parallel and pointing in opposite directions, and (2) the projection in this direction *for balanced sequences* is always the same.
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
