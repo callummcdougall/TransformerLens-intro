@@ -88,6 +88,9 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/17i8LctAgVLTJ883Nyo8VIEcCNeKNCYnr?usp=share_link), [**solutions**](https://colab.research.google.com/drive/15p2TgU7RLaVjLVJFpwoMhxOWoAGmTlI3?usp=share_link)
 """)
     st_image("circuit.png", 350)
+    st.error(r"""
+Warning - this material is out of date and maybe a bit buggy. If you're in Neel's SERI MATS stream, please see the colab which is also linked in the Google Sheets. If you're not, please ping me an email at cal.s.mcdougall@gmail.com.
+""")
     # start
     st.markdown(r"""
 # TransformerLens & induction circuits

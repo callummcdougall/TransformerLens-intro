@@ -14,6 +14,9 @@ def section_home():
 *Note - this section hasn't been trialled yet, so it may have some bugs.*
 """)
     st_image("wheel3.png", 350)
+    st.error(r"""
+Warning - this material is out of date and maybe a bit buggy. If you're in Neel's SERI MATS stream, please see the colab which is also linked in the Google Sheets. If you're not, please ping me an email at cal.s.mcdougall@gmail.com.
+""")
     st.sidebar.markdown(r"""
 ## Table of Contents
 

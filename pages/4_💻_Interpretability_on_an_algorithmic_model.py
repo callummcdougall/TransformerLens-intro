@@ -30,6 +30,9 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1puoiNww84IAEgkUMI0PnWp_aL1vai707?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1Xm2AlQtonkvSQ1tLyBJx31AYmVjopdcf?usp=sharing)
 """)
     st_image("gears2.png", 350)
+    st.error(r"""
+Warning - this material is out of date and maybe a bit buggy. If you're in Neel's SERI MATS stream, please see the colab which is also linked in the Google Sheets. If you're not, please ping me an email at cal.s.mcdougall@gmail.com.
+""")
     # start
     st.markdown(r"""
 # Interpretability on an algorithmic model

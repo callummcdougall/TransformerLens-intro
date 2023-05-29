@@ -56,6 +56,9 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1CzqjUwFyvjvodKq5s41mBPrvhuCtE7ny?usp=share_link), [**solutions**](https://colab.research.google.com/drive/1y006XhAjInACWhne66zlHoUHx9ncNv3p?usp=share_link)
 """)
     st_image("sampling.png", 350)
+    st.error(r"""
+Warning - this material is out of date and maybe a bit buggy. If you're in Neel's SERI MATS stream, please see the colab which is also linked in the Google Sheets. If you're not, please ping me an email at cal.s.mcdougall@gmail.com.
+""")
     # start
     st.markdown(r"""
 # Training and Sampling
@@ -1921,7 +1924,7 @@ if "current_section" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state["current_page"] = ["", ""]
 
-    
+
 def page():
     # st.session_state["something"] = ""
     # st.session_state["input"] = ""
