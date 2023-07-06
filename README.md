@@ -1,5 +1,7 @@
 <!-- # Introduction
 
+**Note - this is an old version of the page. See the [ARENA 2.0](https://github.com/callummcdougall/ARENA_2.0) page for more a updated version (specifically, chapter 1 of the ARENA course).**
+
 This page contains a collation of resources and exercises on interpretability. The focus is on [`TransformerLens`](https://github.com/neelnanda-io/TransformerLens), a library maintained by Neel Nanda.
 
 The exercise are hosted on Streamlit, but there are also Colabs available. You can go to the Streamlit homepage [here](https://transformerlens-intro.streamlit.app/), which gives you instructions for how to run the Streamlit page locally (or links to the Colabs, if you prefer doing it that way). -->
