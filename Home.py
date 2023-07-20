@@ -93,6 +93,12 @@ st.sidebar.markdown(r"""
 def section_home():
     st_image("magnifying-glass-2.png", width=600)
     # start
+    st.sidebar.error(r"""
+Note - these exercises have now been supplanted by chapter 1 of the [ARENA material](https://arena-ch1-transformers.streamlit.app/), which covers everything in this page and then some. This page will no longer be updated going forwards.
+""")
+    st.error(r"""
+Note - these exercises have now been supplanted by chapter 1 of the [ARENA material](https://arena-ch1-transformers.streamlit.app/), which covers everything in this page and then some. This page will no longer be updated going forwards.
+""")
     st.markdown(r"""
 # Mechanistic Interpretability & TransformerLens
     
