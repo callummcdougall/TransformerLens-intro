@@ -62,8 +62,7 @@ Links to Colab: [**exercises**](https://colab.research.google.com/drive/1LpDxWwL
     st_image("transformer-building.png", 350)
     # start
     st.error(r"""
-Warning - this material is out of date and maybe a bit buggy. If you're in Neel's SERI MATS stream, please see the colab which is also linked in the Google Sheets. If you're not, please ping me an email at cal.s.mcdougall@gmail.com.
-""")
+Note - these exercises have now been supplanted by chapter 1 of the [ARENA material](https://arena3-chapter1-transformer-interp.streamlit.app/), which covers everything in this page and then some. This page will no longer be updated going forwards.""")
     st.markdown(r"""
 # Transformer from scratch
 
